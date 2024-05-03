@@ -104,21 +104,21 @@ def _wandb_log_data(metrics, log_data = None, iters = None):
         return
     wandb.log(log_data, step=iters)  # Log all data including the metrics
 
-def wandb_log_train_data(gpt_ccnet_metrics, encoder_ccnet_metrics, time_cost, lr, images=None):
+def wandb_log_train_data(encoder_metric, gpt_metric, time_cost, lr, images=None):
     # Define step_logs as a dictionary with relevant key-value pairs
     
-    gpt_ccnet_losses = dict(gpt_ccnet_metrics.losses.data)
-    gpt_ccnet_errors = dict(gpt_ccnet_metrics.errors.data)
+    gpt_ccnet_losses = dict(gpt_metric.losses.data)
+    gpt_ccnet_errors = dict(gpt_metric.errors.data)
     
-    gpt_ccnet_metrics = {
+    gpt_metric = {
     'GPT/losses': gpt_ccnet_losses,
     'GPT/errors': gpt_ccnet_errors,
     }
 
-    encoder_ccnet_losses = dict(encoder_ccnet_metrics.losses.data)
-    encoder_ccnet_errors = dict(encoder_ccnet_metrics.errors.data)
+    encoder_ccnet_losses = dict(encoder_metric.losses.data)
+    encoder_ccnet_errors = dict(encoder_metric.errors.data)
     
-    encoder_ccnet_metrics = {
+    encoder_metric = {
     'Encoder/losses': encoder_ccnet_losses,
     'Encoder/errors': encoder_ccnet_errors,
     }    
@@ -130,7 +130,7 @@ def wandb_log_train_data(gpt_ccnet_metrics, encoder_ccnet_metrics, time_cost, lr
         additional_logs["WB Images"] = images
     
     log_data = {**additional_logs}
-    train_metrics = {**gpt_ccnet_metrics, **encoder_ccnet_metrics}
+    train_metrics = {**gpt_metric, **encoder_metric}
     _wandb_log_data(train_metrics, log_data)
 
 def log_to_wandb(metrics):

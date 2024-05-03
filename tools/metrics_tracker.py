@@ -73,16 +73,22 @@ class MetricsTracker:
 
         self.losses = losses or PredictionLossMetrics()
         self.errors = errors or CoopErrorMetrics()
-
+    
+    def reset(self):
+        self.losses = PredictionLossMetrics()
+        self.errors = CoopErrorMetrics()
+        
     def __iadd__(self, other):
         self.losses += other.losses
         self.errors += other.errors
         return self
 
-    def __itruediv__(self, divisor):
-        self.losses /= divisor
-        self.errors /= divisor
-        return self
+    def __truediv__(self, divisor):
+        if divisor == 0:
+            raise ValueError("Cannot divide by zero")
+        new_losses = PredictionLossMetrics(**{k: v / divisor for k, v in self.losses.items()})
+        new_errors = CoopErrorMetrics(**{k: v / divisor for k, v in self.errors.items()})
+        return MetricsTracker(losses=new_losses, errors=new_errors)
     
     def __iter__(self):
         yield from self.losses.items()

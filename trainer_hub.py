@@ -18,11 +18,12 @@ from tools.setting.data_config import DataConfig
 from torch.utils.data import Dataset
 
 from tools.loader import get_data_loader, get_test_loader
-from nn.utils.init import set_random_seed, setup_directories
+from nn.utils.init import set_random_seed
 from tools.wandb_logger import wandb_end
-from tools.print import print_ml_params
-from tools.report import calculate_metrics
+from tools.report import calculate_test_results
 from tools.wandb_logger import log_to_wandb
+from tools.tensor import convert_to_device
+import torch
 
 from framework.ccnet.cooperative_network import CooperativeNetwork
 from framework.ccnet.cooperative_encoding_network import CooperativeEncodingNetwork
@@ -82,27 +83,40 @@ class TrainerHub:
         
         for epoch in tqdm_notebook(range(self.max_epoch), desc='Epochs', leave=False):
             dataloader = get_data_loader(trainset, self.adjusted_batch_size(len(trainset)))
+
             if self.should_end_training(epoch = epoch):
                 break
 
             for iters, (source_batch, target_batch) in enumerate(tqdm_notebook(dataloader, desc='Iterations', leave=False)):
                 self.train_iteration(iters, source_batch, target_batch, epoch, len(dataloader), testset)
 
-    def test(self, testset):
-        """
-        Evaluates the model's performance on a provided test dataset.
-        """
-        dataloader = get_test_loader(testset, self.adjusted_batch_size(len(testset)))
-        random_batch = random.choice(list(dataloader))
+    def evaluate(self, eval_dataset):
+        batch_size = self.batch_size
+        num_batches = len(eval_dataset) // batch_size
+        
+        random_index = random.randint(0, num_batches - 1) if num_batches > 0 else 0
+        start_index = random_index * batch_size
+        end_index = start_index + batch_size
+        
+        batch = [eval_dataset[i] for i in range(start_index, min(end_index, len(eval_dataset)))]
+        source_batch, target_batch = zip(*batch)
+        
+        # Convert tuples to tensors if not already tensors
+        source_batch = torch.stack(source_batch)  # Assumes source_batch elements are tensors
+        if all(isinstance(x, torch.Tensor) for x in target_batch):
+            target_batch = torch.stack(target_batch)  # Use torch.stack if target_batch elements are tensors
+        else:
+            target_batch = torch.tensor(target_batch)  # This line assumes all elements are numeric
+        
+        source_batch, target_batch = convert_to_device(source_batch, target_batch, self.device)
 
-        source_batch, target_batch = self.helper.convert_to_device(*random_batch)
         inferred_y = self.gpt_ccnet.infer(source_batch)
-        metrics = calculate_metrics(inferred_y, target_batch, self.task_type, label_size=self.label_size)
+        test_results = calculate_test_results(inferred_y, target_batch, self.task_type, label_size=self.label_size)
         
         if self.use_wandb:
-            log_to_wandb({'Test': metrics})
+            log_to_wandb({'Test': test_results})
         
-        return metrics
+        return test_results
 
     def should_end_training(self, epoch):
         return self.helper.iters > self.max_iters or epoch > self.max_epoch
@@ -116,12 +130,13 @@ class TrainerHub:
         
     def train_iteration(self, iters, source_batch, target_batch, epoch, dataloader_length, testset):
         set_random_seed(iters)
-        source_batch, target_batch = self.helper.convert_to_device(source_batch, target_batch)
         
-        encoding_metrics = self.encoder_trainer.train_models(source_batch)
+        source_batch, target_batch = convert_to_device(source_batch, target_batch, device=self.device)
+        
+        encoder_metric = self.encoder_trainer.train_models(source_batch)
         
         state_trajectory, target_trajectory, padding_mask = self.helper.setup_training_step(source_batch, target_batch)
         
-        gpt_metrics = self.gpt_trainer.train_models(state_trajectory, target_trajectory, padding_mask)
+        gpt_metric = self.gpt_trainer.train_models(state_trajectory, target_trajectory, padding_mask)
         
-        self.helper.finalize_training_step(epoch, iters, dataloader_length, gpt_metrics, encoding_metrics, testset)
+        self.helper.finalize_training_step(epoch, iters, dataloader_length, encoder_metric, gpt_metric, testset)

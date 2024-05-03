@@ -1,11 +1,9 @@
-'''
-COPYRIGHT (c) 2022. CCNets. All Rights reserved.
-'''
+import numpy as np
 import torch
 import torchvision.utils as vutils
-import matplotlib.pyplot as plt
-import numpy as np
-from IPython import display
+from PIL import Image as PILImage
+from IPython.display import display, Image, clear_output
+import io
 
 class ImageDebugger:
     def __init__(self, model, dataset, data_config, device):
@@ -17,24 +15,26 @@ class ImageDebugger:
         self.n_canvas_row = min(self.n_canvas_col, 4)
         stack_images, stack_labels = None, None
         n_img_w, n_img_h = data_config.obs_shape[1:]
-        m_img_canvas = np.ones((n_img_h*(self.n_canvas_row+1), n_img_w*(self.n_canvas_col+1), 3))
+        m_img_canvas = np.ones((n_img_h*(self.n_canvas_row+1), n_img_w*(self.n_canvas_col+1), 3), dtype=np.uint8) * 255
     
         for i, idx in enumerate(selected_indices):
             images = dataset[idx][0].unsqueeze(0)
             labels = dataset[idx][1].unsqueeze(0).type(torch.float)
 
-            if stack_images==None:
+            if stack_images is None:
                 stack_images, stack_labels = images, labels
             else:
-                stack_images = torch.cat([stack_images, images], dim = 0)
-                stack_labels = torch.cat([stack_labels, labels], dim = 0)
+                stack_images = torch.cat([stack_images, images], dim=0)
+                stack_labels = torch.cat([stack_labels, labels], dim=0)
 
-            img = np.transpose(vutils.make_grid(images[:self.n_canvas_col], padding = 0, normalize=True).numpy(), (1,2,0))
-            m_img_canvas[ :n_img_h*1, n_img_w*(i+1):n_img_w*(i+2)] = img.copy()
+            img = np.transpose(vutils.make_grid(images[:self.n_canvas_col], padding=0, normalize=True).numpy(), (1,2,0))
+            m_img_canvas[:n_img_h*1, n_img_w*(i+1):n_img_w*(i+2)] = (img * 255).astype(np.uint8)
         stack_images = stack_images.to(self.device).float()
         stack_labels = stack_labels.to(self.device).float()
         
-        self.canvas_image, self.debug_images, self.debug_labels = m_img_canvas, stack_images, stack_labels 
+        self.canvas_image = m_img_canvas
+        self.debug_images = stack_images
+        self.debug_labels = stack_labels 
         self.n_img_w, self.n_img_h = n_img_w, n_img_h
         
     def update_images(self):
@@ -46,21 +46,17 @@ class ImageDebugger:
             inferred_labels = self.model.reason(self.debug_images, explains)
         
         for i in range(n_canvas_row):
-            selected_labels = self.debug_labels[i:i + 1,:].clone().detach().expand_as(inferred_labels)
+            selected_labels = self.debug_labels[i:i + 1, :].clone().detach().expand_as(inferred_labels)
             
             with torch.no_grad():
                 generated_images = self.model.produce(selected_labels, explains).cpu()
-            m_img_canvas[self.n_img_h*(i+1):self.n_img_h*(i+2), self.n_img_w*1:] = \
-                np.transpose(vutils.make_grid(generated_images[:n_canvas_col], padding = 0, normalize=True).numpy(), (1,2,0))
+            img_section = np.transpose(vutils.make_grid(generated_images[:n_canvas_col], padding=0, normalize=True).numpy(), (1,2,0))
+            m_img_canvas[self.n_img_h*(i+1):self.n_img_h*(i+2), self.n_img_w*1:] = (img_section * 255).astype(np.uint8)
 
-    def display_image(self, figsize=(13, 13)):
-        plt.figure(figsize=figsize)
-        display.clear_output(wait=True)
-        plt.imshow(self.canvas_image)
-        plt.axis("off")
-        labels = ["Female, No-smile", "Male, No-smile", "Female, Smile", "Male, Smile"]
-        for i, label in enumerate(labels):
-            plt.text(60, 128 * (i + 2) - 128 // 2, label, fontsize=12, va='center', ha='center')
-        plt.show()
-        
-        return self.canvas_image
+    def display_image(self):
+        clear_output(wait=True)
+        """Display the image using IPython's display module."""
+        img = PILImage.fromarray(self.canvas_image)
+        with io.BytesIO() as output:
+            img.save(output, format="PNG")
+            display(Image(data=output.getvalue(), format="png"))

@@ -11,7 +11,7 @@
 import torch
 from framework.ccnet.cooperative_encoding_network import CooperativeEncodingNetwork as Encoder
 from framework.train.trainer_base import TrainerBase
-from framework.train.utils.metrics_tracker import create_causal_training_metrics
+from tools.metrics_tracker import create_causal_training_metrics
 
 class CausalEncodingTrainer(TrainerBase):
     """

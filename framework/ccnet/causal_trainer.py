@@ -9,7 +9,7 @@
 
     COPYRIGHT (c) 2022. CCNets. All Rights reserved.
 '''
-from framework.train.utils.metrics_tracker import create_causal_training_metrics
+from tools.metrics_tracker import create_causal_training_metrics
 from framework.ccnet.cooperative_network import CooperativeNetwork
 from framework.train.trainer_base import TrainerBase
 

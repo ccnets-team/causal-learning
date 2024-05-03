@@ -62,7 +62,7 @@ def log_train_data(tensorboard, iters, metrics):
         tensorboard.add_scalar("Train/producer_error", errors["producer_error"], iters)
     tensorboard.flush()
 
-def log_test_data(tensorboard, iters, metrics):
+def log_test_results(tensorboard, iters, results):
     """
         Log Test metric into tensorboard.
 
@@ -79,6 +79,6 @@ def log_test_data(tensorboard, iters, metrics):
                 Specifies the type of label or metric used for evaluation.
     """
     if tensorboard is not None:
-        for label_type, metric in metrics.items():
+        for label_type, metric in results.items():
             tensorboard.add_scalar(f"{label_type}", metric, iters)
         tensorboard.flush()

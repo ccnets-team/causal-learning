@@ -12,7 +12,7 @@ import numpy as np
 import torch
 from tools.print import print_metrics
 
-def calculate_metrics(inferred_y, target_y, task_type, label_size):
+def calculate_test_results(inferred_y, target_y, task_type, label_size):
     """
     Calculates performance metrics for binary classification, multiclass classification, and regression tasks using PyTorch.
     Parameters:
