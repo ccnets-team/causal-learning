@@ -29,23 +29,25 @@ from framework.ccnet.cooperative_encoding_network import CooperativeEncodingNetw
 import random
     
 class TrainerHub:
-    def __init__(self, ml_params: MLParameters, data_config: DataConfig, device, use_print=False, use_wandb=False):
+    def __init__(self, ml_params: MLParameters, data_config: DataConfig, device, use_encoder = True, use_print=False, use_wandb=False):
         print_ml_params(ml_params)
         
         training_params, model_params, optimization_params = ml_params
 
-        encoding_d_model = model_params.encoding_params.d_model
-        gpt_d_model = model_params.explainer_params.d_model
-        data_config.initialize_(encoding_d_model=encoding_d_model, gpt_d_model=gpt_d_model)
-        
-        obs_shape = data_config.obs_shape
-        stoch_size, det_size = data_config.stoch_size, data_config.det_size
-        self.encoder_ccnet = CooperativeEncodingNetwork(model_params, obs_shape, stoch_size, det_size, device)
-        self.encoder_ccnet_trainer = CausalEncodingTrainer(self.encoder_ccnet, training_params, optimization_params)
+        label_size = data_config.label_size
+        if use_encoder:
+            obs_shape = data_config.obs_shape
+            d_model = model_params.encoding_params.d_model
+            stoch_size, det_size = d_model, d_model
+            self.encoder_ccnet = CooperativeEncodingNetwork(model_params, obs_shape, stoch_size, det_size, device)
+            self.encoder_trainer = CausalEncodingTrainer(self.encoder_ccnet, training_params, optimization_params)
+            state_size = stoch_size + det_size
+        else:
+            state_size = obs_shape[-1]
+        explain_size = model_params.core_params.d_model
 
-        state_size, label_size, explain_size = data_config.state_size, data_config.label_size, data_config.explain_size
         self.gpt_ccnet = CooperativeNetwork(model_params, state_size, label_size, explain_size, device, encoder=self.encoder_ccnet)
-        self.gpt_ccnet_trainer = CausalTrainer(self.gpt_ccnet, training_params, optimization_params)
+        self.gpt_trainer = CausalTrainer(self.gpt_ccnet, training_params, optimization_params)
         
         self.model_path, self.temp_path, self.log_path = setup_directories()
         self.batch_size = ml_params.training.batch_size
@@ -83,13 +85,13 @@ class TrainerHub:
                 source_batch, target_batch = self.helper.convert_to_device(source_batch, target_batch)
                 
                 # Train state encoding model and capture metrics
-                obs_encoding_metrics = self.encoder_ccnet_trainer.train_models(source_batch)
+                encoding_metrics = self.encoder_trainer.train_models(source_batch)
                 
                 state_trajectory, target_trajectory, padding_mask = self.helper.setup_training_step(source_batch, target_batch)
 
-                learning_metrics = self.gpt_ccnet_trainer.train_models(state_trajectory, target_trajectory, padding_mask)
+                gpt_metrics = self.gpt_trainer.train_models(state_trajectory, target_trajectory, padding_mask)
                 
-                self.helper.finalize_training_step(epoch, iters, len_dataloader, learning_metrics, obs_encoding_metrics, testset)
+                self.helper.finalize_training_step(epoch, iters, len_dataloader, gpt_metrics, encoding_metrics, testset)
 
     def test(self, testset):
         """
@@ -100,12 +102,12 @@ class TrainerHub:
         set_random_seed(self.helper.iters)  # Example seed setting
         
         # Set the model to evaluation mode
-        self.gpt_ccnet_trainer.set_train(train = False)
+        self.gpt_trainer.set_train(train = False)
         # Determine batch size, capped at the size of the test set
-        test_batch_size = min(len(testset), self.batch_size)
+        batch_size = min(len(testset), self.batch_size)
         # Get a DataLoader for the test dataset
 
-        dataloader = get_testloader(testset, test_batch_size)
+        dataloader = get_testloader(testset, batch_size)
         # Convert dataloader to a list
         dataloader_list = list(dataloader)
 

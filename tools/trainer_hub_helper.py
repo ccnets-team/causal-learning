@@ -58,7 +58,7 @@ class TrainerHubHelper:
     
     def _save_models(self, model_path = None):
         ccnet = self.parent.gpt_ccnet
-        ccnet_trainer = self.parent.gpt_ccnet_trainer
+        ccnet_trainer = self.parent.gpt_trainer
         
         model_path = self.model_path if model_path is None else model_path
 
@@ -76,7 +76,7 @@ class TrainerHubHelper:
         # Record the elapsed time for this checkpoint
         et = self._time_checkpoint()
         
-        optimizers = self.parent.gpt_ccnet_trainer.optimizers
+        optimizers = self.parent.gpt_trainer.optimizers
         
         if self.use_print:
             print_iter(epoch_idx, self.num_epoch, iter_idx, len_dataloader, et)
@@ -162,7 +162,7 @@ class TrainerHubHelper:
             
         self.iters += 1; self.cnt_checkpoints += 1
         
-        current_lr = self.parent.gpt_ccnet_trainer.get_lr()                
+        current_lr = self.parent.gpt_trainer.get_lr()                
         time_cost = time.time() - self.pvt_time
         # If wandb logging is enabled and there are wandb images to log, log the training data 
         if self.use_wandb:

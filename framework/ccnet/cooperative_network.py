@@ -25,13 +25,13 @@ class CooperativeNetwork:
             encoder (optional): Encoder object for input data preprocessing.
         """
         # Initialize model names and configurations.        
-        explainer_params = model_params.explainer_params
-        reasoner_params = model_params.reasoner_params
-        producer_params = model_params.producer_params
+        explainer_params = model_params.core_params
+        reasoner_params = model_params.core_params
+        producer_params = model_params.core_params
         
-        explainer_network = model_params.explainer_network
-        reasoner_network = model_params.reasoner_network
-        producer_network = model_params.producer_network
+        explainer_network = model_params.core_networks[0]
+        reasoner_network = model_params.core_networks[1]
+        producer_network = model_params.core_networks[2]
 
         self.encoder = encoder
 

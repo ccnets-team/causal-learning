@@ -31,17 +31,13 @@ class TrainingParameters:
         # Note: Training begins only after the replay buffer is filled to its full capacity.
 
 class ModelParameters:
-    def __init__(self, num_layers=5, d_model=256, dropout=0.05, ccnet_network=GPT, encoding_networks=[Discriminator, ConditionalDiscriminator, ConditionalGenerator]):
-        self.encoding_networks = encoding_networks
-        self.encoding_params = EncodingParameters(d_model=d_model, num_layers=num_layers)  # Parameters for the explainer network.
-        
-        self.explainer_network = ccnet_network
-        self.reasoner_network = ccnet_network
-        self.producer_network = ccnet_network
-        self.explainer_params = GPTParameters(d_model=d_model, num_layers=num_layers, dropout=dropout)  # Parameters for the explainer network.
-        self.reasoner_params = GPTParameters(d_model=d_model, num_layers=num_layers, dropout=dropout)  # Parameters for the reasoner network.
-        self.producer_params = GPTParameters(d_model=d_model, num_layers=num_layers, dropout=dropout)  # Parameters for the reverse environment network.
+    def __init__(self, num_layers=5, d_model=256, dropout=0.05, encoding_networks = [Discriminator, ConditionalDiscriminator, ConditionalGenerator]):
+        self.core_networks = [GPT, GPT, GPT]
+        self.core_params = GPTParameters(num_layers=num_layers, d_model=d_model, dropout=dropout)
 
+        self.encoding_networks = encoding_networks
+        self.encoding_params = EncodingParameters(num_layers=num_layers, d_model=d_model)
+    
 class OptimizationParameters:
     def __init__(self, learning_rate=2e-4, decay_rate_100k=0.01, scheduler_type='exponential', clip_grad_range=None, max_grad_norm=1.0): 
         self.learning_rate = learning_rate  # Learning rate for optimization algorithms, crucial for convergence.
