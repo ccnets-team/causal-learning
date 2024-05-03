@@ -65,7 +65,7 @@ class TrainerHubHelper:
         for model_name, network, opimizer, scheduler in zip(ccnet.network_names, ccnet.networks, ccnet_trainer.optimizers, ccnet_trainer.schedulers):
             save_model(model_path, model_name, network, opimizer, scheduler)
             
-    def process_checkpoint(self, epoch_idx, iter_idx, len_dataloader, ccnet_metrics, encoding_metrics, testset):
+    def process_checkpoint(self, epoch_idx, iter_idx, len_dataloader, gpt_ccnet_metrics, encoding_ccnet_metrics, testset):
         wb_image = None
          # If the data type is image, update and display images using the image debugger, then log them with wandb
         if self.use_image:
@@ -81,11 +81,11 @@ class TrainerHubHelper:
         if self.use_print:
             print_iter(epoch_idx, self.num_epoch, iter_idx, len_dataloader, et)
             print_lr(optimizers)
-            print_trainer("encoder_ccnet", encoding_metrics.losses, encoding_metrics.errors)
-            print_trainer("gpt_ccnet", ccnet_metrics.losses, ccnet_metrics.errors)
+            print_trainer("encoder_ccnet", encoding_ccnet_metrics.losses, encoding_ccnet_metrics.errors)
+            print_trainer("gpt_ccnet", gpt_ccnet_metrics.losses, gpt_ccnet_metrics.errors)
       
          # Log training data to TensorBoard if enabled
-        log_train_data(self.tensorboard, self.iters, ccnet_metrics.losses, ccnet_metrics.errors)
+        log_train_data(self.tensorboard, self.iters, gpt_ccnet_metrics.losses, gpt_ccnet_metrics.errors)
          # Determine the model saving path based on the iteration count and save the models
         save_path = self.model_path if self.cnt_print %2 == 0 else self.temp_path
         self._save_models(model_path = save_path)
@@ -161,7 +161,6 @@ class TrainerHubHelper:
             metrics, wb_image = self.process_checkpoint(epoch_idx, iter_idx, len_dataloader, gpt_ccnet_metrics, encoder_ccnet_metrics, testset)
             
         self.iters += 1; self.cnt_checkpoints += 1
-        total_iter = (epoch_idx + 1) * self.iters
         
         current_lr = self.parent.gpt_ccnet_trainer.get_lr()                
         time_cost = time.time() - self.pvt_time

@@ -26,17 +26,35 @@ class CooperativeEncodingNetwork:
         self.obs_shape = obs_shape
         self.det_size = det_size
         self.stoch_size = stoch_size
+            
+    def encode(self, input_data: torch.Tensor) -> torch.Tensor:
+        """
+        Encodes input data using the explainer and reasoner models.
 
-    def encode(self, x):
-        with torch.no_grad():
-            e = self.explainer(x)
-            f = self.reasoner(x, e)
-            z = torch.cat([f, e], dim = -1)
-        return z
+        Parameters:
+        - input_data: A tensor representing the input data.
 
-    def decode(self, z):
+        Returns:
+        - encoded_data: A concatenated tensor of encoded deterministic and stochastic variables.
+        """
         with torch.no_grad():
-            f = z[..., :self.stoch_size]
-            e = z[..., self.stoch_size:]
-            x = self.producer(f, e)
-        return x
+            deterministic_variables = self.explainer(input_data)
+            stochastic_variables = self.reasoner(input_data, deterministic_variables)
+            encoded_data = torch.cat([stochastic_variables, deterministic_variables], dim=-1)
+        return encoded_data
+
+    def decode(self, encoded_data: torch.Tensor) -> torch.Tensor:
+        """
+        Decodes the encoded tensor using the producer model to reconstruct the input data.
+
+        Parameters:
+        - encoded_data: A tensor containing concatenated deterministic and stochastic variables.
+
+        Returns:
+        - reconstructed_data: A tensor representing the reconstructed data.
+        """
+        with torch.no_grad():
+            stochastic_variables = encoded_data[..., :self.stoch_size]
+            deterministic_variables = encoded_data[..., self.stoch_size:]
+            reconstructed_data = self.producer(stochastic_variables, deterministic_variables)
+        return reconstructed_data

@@ -34,8 +34,9 @@ class TrainerHub:
         
         training_params, model_params, optimization_params = ml_params
 
-        d_model = model_params.encoding_params.d_model
-        data_config.initialize_(d_model=d_model)
+        encoding_d_model = model_params.encoding_params.d_model
+        gpt_d_model = model_params.explainer_params.d_model
+        data_config.initialize_(encoding_d_model=encoding_d_model, gpt_d_model=gpt_d_model)
         
         obs_shape = data_config.obs_shape
         stoch_size, det_size = data_config.stoch_size, data_config.det_size

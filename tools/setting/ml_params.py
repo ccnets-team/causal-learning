@@ -15,11 +15,10 @@ class GPTParameters:
         self.dropout = dropout
 
 class EncodingParameters:
-    def __init__(self, obs_shape = [], z_dim = None, condition_dim = None, channel_multiplier=64, num_layers=5, d_model=256):
+    def __init__(self, obs_shape = [], z_dim = None, condition_dim = None, num_layers=5, d_model=256):
         self.obs_shape = obs_shape
         self.z_dim = z_dim
         self.condition_dim = condition_dim
-        self.channel_multiplier = channel_multiplier
         self.num_layers = num_layers
         self.d_model = d_model
         

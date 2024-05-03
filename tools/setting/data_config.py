@@ -10,12 +10,12 @@ class DataConfig:
         self.obs_shape = obs_shape
         self.label_size = label_size
         
-    def initialize_(self, d_model:int):
+    def initialize_(self, encoding_d_model:int, gpt_d_model:int):
             
-        self.stoch_size = max(d_model, 1)
-        self.det_size = max(d_model, 1)
+        self.stoch_size = max(encoding_d_model, 1)
+        self.det_size = max(encoding_d_model, 1)
         
         self.state_size = self.stoch_size + self.det_size
         
-        self.explain_size = max(d_model, 1)
+        self.explain_size = max(gpt_d_model, 1)
         
