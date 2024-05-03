@@ -51,7 +51,7 @@ class ModelParameters:
         self.encoding_params = EncodingParams(num_layers=num_layers, d_model=d_model)
     
 class OptimizationParameters:
-    def __init__(self, learning_rate=2e-4, decay_rate_100k=0.01, scheduler_type='exponential', clip_grad_range=None, max_grad_norm=1.0):
+    def __init__(self, learning_rate=2e-4, decay_rate_100k=0.05, scheduler_type='exponential', clip_grad_range=None, max_grad_norm=1.0):
         """
         Parameters for optimization, including learning rate adjustments and gradient clipping.
         
@@ -69,7 +69,7 @@ class OptimizationParameters:
         self.max_grad_norm = max_grad_norm
 
 class TrainingParameters:
-    def __init__(self, num_epoch=100, total_iters=1e+5, batch_size=32, seq_len=1):
+    def __init__(self, num_epoch=100, max_iters=1e+6, batch_size=64, seq_len=1):
         """
         Initialize training parameters for machine learning models.
         
@@ -83,7 +83,7 @@ class TrainingParameters:
         ('total_iters') is reached, whichever comes first. This dual limit approach provides control over training duration and computational resources.
         """
         self.max_epoch = num_epoch
-        self.max_iters = int(total_iters)  # Ensure total_iters is an integer to avoid type issues.
+        self.max_iters = int(max_iters)  # Ensure total_iters is an integer to avoid type issues.
         self.batch_size = batch_size
         self.seq_len = seq_len
 
