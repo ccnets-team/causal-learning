@@ -71,7 +71,7 @@ class ConditionalGenerator(nn.Module):
 class Discriminator(nn.Module):
     def __init__(self, network_params):
         super().__init__()
-        output_size = network_params.d_model
+        output_size = network_params.z_dim
         channel_multiplier = network_params.channel_multiplier
         self.main = nn.Sequential(
             nn.Conv2d(3, channel_multiplier, 3, stride=1, padding=1),
@@ -92,12 +92,12 @@ class Discriminator(nn.Module):
 class ConditionalDiscriminator(nn.Module):
     def __init__(self, network_params):
         super().__init__()
-        output_size = network_params.d_model
+        output_size = network_params.condition_dim
         obs_shape = network_params.obs_shape
         z_dim = network_params.z_dim
         channel_multiplier = network_params.channel_multiplier
         self.image_width = obs_shape[1]
-        self.image_height = obs_shape[2]
+        self.image_height = obs_shape[2]    
         self.condition_layer = nn.Linear(z_dim, int(self.image_width * self.image_height))
         self.main = nn.Sequential(
             nn.Conv2d(3 + 1, channel_multiplier, 3, stride=1, padding=1),

@@ -25,9 +25,8 @@ class Reasoner(nn.Module):
             z_size = input_shape[-1] + explain_size
             self.input_embedding_layer = ContinuousFeatureEmbeddingLayer(z_size, d_model)
             self.net = net(network_params)
-            
-        self.relu = nn.ReLU()
-        self.final_layer = create_layer(d_model, output_size, act_fn = act_fn) 
+            self.relu = nn.ReLU()
+            self.final_layer = create_layer(d_model, output_size, act_fn = act_fn) 
 
         self.apply(init_weights)
     
@@ -38,6 +37,6 @@ class Reasoner(nn.Module):
             x = torch.cat([obs, e], dim=-1)
             x = self.input_embedding_layer(x)
             y = self.net(x) if padding_mask is None else self.net(x, padding_mask)
-        y = self.relu(y) 
-        y = self.final_layer(y)
+            y = self.relu(y) 
+            y = self.final_layer(y)
         return y
