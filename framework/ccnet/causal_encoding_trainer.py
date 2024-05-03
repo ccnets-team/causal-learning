@@ -9,7 +9,7 @@
         PARK, JunHo, junho@ccnets.org
 '''
 import torch
-from framework.ccnet.cooperative_encoding_network import CooperativeEncodingNetwork
+from framework.ccnet.cooperative_encoding_network import CooperativeEncodingNetwork as Encoder
 from framework.train.trainer_base import TrainerBase
 from framework.train.utils.metrics_tracker import create_causal_training_metrics
 
@@ -18,7 +18,7 @@ class CausalEncodingTrainer(TrainerBase):
     Trainer for the Causal Encoding Network, handling the training process across
     the network's components: Explainer, Reasoner, and Producer.
     """
-    def __init__(self, encoder: CooperativeEncodingNetwork, training_params, optimization_params):
+    def __init__(self, encoder: Encoder, training_params, optimization_params):
         """
         Initialize the trainer with an encoder network, training parameters, and optimization settings.
 
@@ -138,3 +138,8 @@ class CausalEncodingTrainer(TrainerBase):
         """        
         cooperative_error = (predict - target.detach()).abs()
         return cooperative_error
+
+    def update_step(self):
+        self.update_optimizers()    
+        self.update_schedulers()
+        self.update_seed()

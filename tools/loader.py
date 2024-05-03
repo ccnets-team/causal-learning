@@ -25,12 +25,12 @@ def load_dataset(path):
     testset = torch.load(path + "testset.pt")
     return trainset, testset
 
-def get_Dataloader(trainset, batch_size, shuffle = False, num_workers = 0, collate = None):
+def get_data_loader(trainset, batch_size, shuffle = False, num_workers = 0, collate = None):
     return torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle = shuffle, num_workers = num_workers, collate_fn=collate, drop_last=True)
 
-def get_testloader(testset, batch_size, shuffle = False, num_workers = 0, collate = None):
+def get_test_loader(testset, batch_size, shuffle = False, num_workers = 0, collate = None):
     return torch.utils.data.DataLoader(testset, batch_size= batch_size, shuffle = shuffle, num_workers = num_workers, collate_fn=collate, drop_last=True)
 
-def get_evalloader(evalset, batch_size, num_workers = 0):
+def get_eval_loader(evalset, batch_size, num_workers = 0):
     return torch.utils.data.DataLoader(evalset, batch_size=batch_size, shuffle = False, num_workers = num_workers, drop_last=True)
 

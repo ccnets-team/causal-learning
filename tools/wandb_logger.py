@@ -133,7 +133,7 @@ def wandb_log_train_data(gpt_ccnet_metrics, encoder_ccnet_metrics, time_cost, lr
     train_metrics = {**gpt_ccnet_metrics, **encoder_ccnet_metrics}
     _wandb_log_data(train_metrics, log_data)
 
-def wandb_log_test_data(metrics):
+def log_to_wandb(metrics):
     log_data = {}
     _wandb_log_data(metrics, log_data=log_data)
 

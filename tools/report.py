@@ -2,7 +2,6 @@
 Author:
         
         PARK, JunHo, junho@ccnets.org
-
         
         KIM, JoengYoong, jeongyoong@ccnets.org
         
@@ -11,9 +10,6 @@ Author:
 
 import numpy as np
 import torch
-import torch.nn.functional as F
-from pytorch_msssim import ssim # Structural Similarity Index
-
 from tools.print import print_metrics
 
 def calculate_metrics(inferred_y, target_y, task_type, label_size):
@@ -29,10 +25,9 @@ def calculate_metrics(inferred_y, target_y, task_type, label_size):
     - metrics: A dictionary containing relevant performance metrics.
     """
     metrics = {}
-    target_size = target_y.size(-1)
     
     if task_type in ['binary', 'classification']:
-        if task_type == 'binary' and target_size == 2:
+        if task_type == 'binary' and label_size == 2:
             inferred_y = (inferred_y > 0.5).long()
         else:
             inferred_y = torch.argmax(inferred_y, dim=-1)
@@ -107,26 +102,3 @@ def calculate_multiclass_classification_metrics(preds, labels, num_classes):
         macro_recall.item(),
         macro_f1.item()
     )
-    
-def perceptual_loss(vgg, original, reconstructed, layer_index=3):
-    with torch.no_grad():
-        original_features = vgg(original)
-        reconstructed_features = vgg(reconstructed)
-    loss = F.mse_loss(original_features, reconstructed_features)
-    return loss
-
-def calculate_ssim(original, reconstructed):
-    return ssim(original, reconstructed, data_range=original.max() - original.min(), size_average=True)
-
-def calculate_psnr(original, reconstructed):
-    mse = torch.mean((original - reconstructed) ** 2)
-    psnr = 20 * torch.log10(original.max() - original.min()) - 10 * torch.log10(mse)
-    return psnr
-
-def feature_matching(original, reconstructed, model, layer_index=5):
-    intermediate_layer = model.features[:layer_index]
-    with torch.no_grad():
-        original_features = intermediate_layer(original)
-        reconstructed_features = intermediate_layer(reconstructed)
-    loss = F.l1_loss(original_features, reconstructed_features)
-    return loss

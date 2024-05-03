@@ -28,14 +28,19 @@ class TrainerHubHelper:
         self.data_config = data_config
         if use_wandb:
             wandb_init(data_config, ml_params)
+        
         self.use_wandb = use_wandb
-        self.num_epoch = ml_params.training.num_epoch
-        self.obs_shape = self.data_config.obs_shape
-        self.use_image = len(self.obs_shape) != 1
-        self.label_size, self.selected_indices = data_config.label_size, ml_params.selected_indices
+        
+        self.use_image = len(self.data_config.obs_shape) != 1
+        
+        self.gpt_ccnet = self.parent.gpt_ccnet
+        self.gpt_trainer = self.parent.gpt_trainer
+        
+        self.encoder_trainer = self.parent.encoder_trainer
         
         self.num_checkpoints = DEFAULT_PRINT_INTERVAL
         self.save_interval = DEFAULT_SAVE_INTERVAL
+        
         self.logger = logging.getLogger(__name__)
 
         self.model_path, self.temp_path, self.log_path = setup_directories()
@@ -45,7 +50,7 @@ class TrainerHubHelper:
         self.iters, self.cnt_checkpoints, self.cnt_print = 0, 0, 0
         self.pvt_time = time.time()
         if self.use_image:
-            self.image_debugger = ImageDebugger(self.parent.gpt_ccnet, dataset, self.data_config, self.device, self.selected_indices)
+            self.image_debugger = ImageDebugger(self.gpt_ccnet, dataset, self.data_config, self.device)
     
     def should_checkpoint(self):
         return self.cnt_checkpoints % self.num_checkpoints == 0 and self.cnt_checkpoints != 0
@@ -57,15 +62,15 @@ class TrainerHubHelper:
         return et
     
     def _save_models(self, model_path = None):
-        ccnet = self.parent.gpt_ccnet
-        ccnet_trainer = self.parent.gpt_trainer
+        ccnet = self.gpt_ccnet
+        ccnet_trainer = self.gpt_trainer
         
         model_path = self.model_path if model_path is None else model_path
 
         for model_name, network, opimizer, scheduler in zip(ccnet.network_names, ccnet.networks, ccnet_trainer.optimizers, ccnet_trainer.schedulers):
             save_model(model_path, model_name, network, opimizer, scheduler)
             
-    def process_checkpoint(self, epoch_idx, iter_idx, len_dataloader, gpt_ccnet_metrics, encoding_ccnet_metrics, testset):
+    def process_checkpoint(self, epoch_idx, iter_idx, len_dataloader, gpt_metrics, encoding_metrics, testset):
         wb_image = None
          # If the data type is image, update and display images using the image debugger, then log them with wandb
         if self.use_image:
@@ -76,16 +81,18 @@ class TrainerHubHelper:
         # Record the elapsed time for this checkpoint
         et = self._time_checkpoint()
         
-        optimizers = self.parent.gpt_trainer.optimizers
+        gpt_optimizers = self.gpt_trainer.optimizers
+        encoder_optimizers = self.encoder_trainer.optimizers
         
         if self.use_print:
-            print_iter(epoch_idx, self.num_epoch, iter_idx, len_dataloader, et)
-            print_lr(optimizers)
-            print_trainer("encoder_ccnet", encoding_ccnet_metrics.losses, encoding_ccnet_metrics.errors)
-            print_trainer("gpt_ccnet", gpt_ccnet_metrics.losses, gpt_ccnet_metrics.errors)
+            print_iter(epoch_idx, self.parent.max_epoch, iter_idx, len_dataloader, et)
+            print_lr(encoder_optimizers, gpt_optimizers)
+            print('--------------------Training Metrics--------------------')
+            print_trainer('encoder_ccnet', encoding_metrics)
+            print_trainer("gpt_ccnet", gpt_metrics)
       
          # Log training data to TensorBoard if enabled
-        log_train_data(self.tensorboard, self.iters, gpt_ccnet_metrics.losses, gpt_ccnet_metrics.errors)
+        log_train_data(self.tensorboard, self.iters, gpt_metrics)
          # Determine the model saving path based on the iteration count and save the models
         save_path = self.model_path if self.cnt_print %2 == 0 else self.temp_path
         self._save_models(model_path = save_path)
@@ -101,11 +108,8 @@ class TrainerHubHelper:
         return metrics, wb_image
     
     def record_training_results(self, metrics):
-        losses = metrics.losses
-        errors = metrics.errors
-
-        losses_mean = np.mean([losses['inference_loss'], losses['generation_loss'], losses['reconstruction_loss']])
-        errors_mean = np.mean([errors['explainer_error'], errors['reasoner_error'], errors['producer_error']])
+        losses_mean = np.mean([metrics.losses['inference_loss'], metrics.losses['generation_loss'], metrics.losses['reconstruction_loss']])
+        errors_mean = np.mean([metrics.errors['explainer_error'], metrics.errors['reasoner_error'], metrics.errors['producer_error']])
         self.sum_losses = (self.sum_losses + losses_mean) if self.sum_losses is not None else losses_mean
         self.sum_errors = (self.sum_errors + errors_mean) if self.sum_errors is not None else errors_mean
         return losses_mean, errors_mean
@@ -137,13 +141,13 @@ class TrainerHubHelper:
         source_code, target_code = self.encode_inputs(source_batch, target_batch)
         
         # Adjust tensor dimensions for causal processing
-        source_trajectory = adjust_tensor_dim(source_code, target_dim=3)  # off when it's img data set
+        state_trajectory = adjust_tensor_dim(source_code, target_dim=3)  # off when it's img data set
         target_trajectory = adjust_tensor_dim(target_code, target_dim=3)  # off when it's img data set
         
         # Generate padding mask based on state trajectory
-        padding_mask = self.generate_padding_mask(source_trajectory)
+        padding_mask = self.generate_padding_mask(state_trajectory)
         
-        return source_trajectory, target_trajectory, padding_mask
+        return state_trajectory, target_trajectory, padding_mask
     
     def encode_inputs(self, observation, labels):
         with torch.no_grad():
@@ -162,7 +166,7 @@ class TrainerHubHelper:
             
         self.iters += 1; self.cnt_checkpoints += 1
         
-        current_lr = self.parent.gpt_trainer.get_lr()                
+        current_lr = self.gpt_trainer.get_lr()                
         time_cost = time.time() - self.pvt_time
         # If wandb logging is enabled and there are wandb images to log, log the training data 
         if self.use_wandb:

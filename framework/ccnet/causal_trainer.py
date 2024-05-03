@@ -76,3 +76,9 @@ class CausalTrainer(TrainerBase):
         discrepancy = (predict - target.detach()).abs()
         cooperative_error = discrepancy.mean(dim = 0) 
         return cooperative_error
+    
+    def update_step(self):
+        self.clip_gradients()    
+        self.update_optimizers()    
+        self.update_schedulers()
+        self.update_seed()

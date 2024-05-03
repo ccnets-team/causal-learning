@@ -8,11 +8,11 @@ import numpy as np
 from IPython import display
 
 class ImageDebugger:
-    def __init__(self, ccnet, dataset, data_config, device, selected_indices=None):
+    def __init__(self, model, dataset, data_config, device):
         self.device = device
-        self.ccnet = ccnet
+        self.model = model
+        selected_indices = data_config.show_image_indices
         self.label_size = data_config.label_size
-        self.selected_indices = selected_indices if selected_indices is not None else range(len(dataset))
         self.n_canvas_col = len(selected_indices)  
         self.n_canvas_row = min(self.n_canvas_col, 4)
         stack_images, stack_labels = None, None
@@ -37,20 +37,19 @@ class ImageDebugger:
         self.canvas_image, self.debug_images, self.debug_labels = m_img_canvas, stack_images, stack_labels 
         self.n_img_w, self.n_img_h = n_img_w, n_img_h
         
-        
     def update_images(self):
         n_canvas_col, n_canvas_row = self.n_canvas_col, self.n_canvas_row
         m_img_canvas = self.canvas_image
         
         with torch.no_grad():
-            explains = self.ccnet.explain(self.debug_images)
-            inferred_labels = self.ccnet.reason(self.debug_images, explains)
+            explains = self.model.explain(self.debug_images)
+            inferred_labels = self.model.reason(self.debug_images, explains)
         
         for i in range(n_canvas_row):
             selected_labels = self.debug_labels[i:i + 1,:].clone().detach().expand_as(inferred_labels)
             
             with torch.no_grad():
-                generated_images = self.ccnet.produce(selected_labels, explains).cpu()
+                generated_images = self.model.produce(selected_labels, explains).cpu()
             m_img_canvas[self.n_img_h*(i+1):self.n_img_h*(i+2), self.n_img_w*1:] = \
                 np.transpose(vutils.make_grid(generated_images[:n_canvas_col], padding = 0, normalize=True).numpy(), (1,2,0))
 

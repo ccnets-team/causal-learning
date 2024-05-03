@@ -16,26 +16,27 @@ def print_iter(epoch, num_epoch, iters, len_dataloader, et):
     print('[%d/%d][%d/%d][Time %.2f]'
         % (epoch, num_epoch, iters, len_dataloader, et))
 
-def print_trainer(trainer_name, losses, errors):
-    print('--------------------Training Metrics--------------------')
+def print_trainer(trainer_name, metrics):
+    losses = metrics.losses
+    errors = metrics.errors
     print("Trainer: ", trainer_name)
     print('Inf: %.4f\tGen: %.4f\tRec: %.4f\tE: %.4f\tR: %.4f\tP: %.4f'
         % (losses['inference_loss'], losses['generation_loss'], losses['reconstruction_loss'], errors['explainer_error'], errors['reasoner_error'], errors['producer_error']))
 
-def print_lr(optimizers):
-    cur_lr_E = optimizers[0].param_groups[0]['lr']
-    cur_lr_R = optimizers[1].param_groups[0]['lr']
-    cur_lr_P = optimizers[2].param_groups[0]['lr']
-    name_opt_E = type(optimizers[0]).__name__
-    name_opt_R = type(optimizers[1]).__name__
-    name_opt_P = type(optimizers[2]).__name__
+def print_lr(*_optimizers):
+    lr_list = []
+    for optimizers_group in _optimizers:
+        for optimizer in optimizers_group:
+            lr_list.append(optimizer.param_groups[0]['lr'])
     
-    if cur_lr_E == cur_lr_R == cur_lr_P and name_opt_E == name_opt_R == name_opt_P:
-        print('Opt-{0} lr_ERP: {1}'.format(type(optimizers[0]).__name__, optimizers[0].param_groups[0]['lr']))
+    # Check if all LRs in the list are the same
+    if all(lr == lr_list[0] for lr in lr_list):
+        print(f'Unified LR across all optimizers: {lr_list[0]}')
     else:
-        print('Opt-{0} lr_ERP: {1}'.format(type(optimizers[0]).__name__, optimizers[0].param_groups[0]['lr']))
-        print('Opt-{0} lr_ERP: {1}'.format(type(optimizers[1]).__name__, optimizers[1].param_groups[0]['lr']))
-        print('Opt-{0} lr_ERP: {1}'.format(type(optimizers[2]).__name__, optimizers[2].param_groups[0]['lr']))
+        print('Not all optimizers have synchronized LRs.')
+        for optimizers_group in _optimizers:
+            for optimizer in optimizers_group:
+                print(f'Opt-{type(optimizer).__name__} LR: {optimizer.param_groups[0]["lr"]}')
 
 def print_metrics(metrics):
     """

@@ -14,7 +14,7 @@ import torch
 class TrainerBase(OptimizationManager):
     def __init__(self, networks, training_params, optimization_params):
         self.train_iter = 0
-        total_iterations = training_params.total_iters
+        max_iters = training_params.max_iters
         learning_params = [
             {'lr': optimization_params.learning_rate, 
              'decay_rate_100k': optimization_params.decay_rate_100k,
@@ -23,7 +23,7 @@ class TrainerBase(OptimizationManager):
              'max_grad_norm': optimization_params.max_grad_norm}
             for _ in networks
         ]
-        OptimizationManager.__init__(self, networks, learning_params, total_iterations)
+        OptimizationManager.__init__(self, networks, learning_params, max_iters)
         self.networks = networks
 
     def set_train(self, train: bool):
@@ -33,12 +33,6 @@ class TrainerBase(OptimizationManager):
                 network.train()
             else:
                 network.eval()                
-
-    def update_step(self):
-        self.clip_gradients()    
-        self.update_optimizers()    
-        self.update_schedulers()
-        self.update_seed()
 
     def reset_seed(self):
         set_random_seed(self.train_iter)
