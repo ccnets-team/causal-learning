@@ -92,11 +92,18 @@ def setup_directories(base_path = './'):
     return set_model_path, set_temp_path, set_log_path
 
 class ContinuousFeatureEmbeddingLayer(nn.Module):
-    def __init__(self, num_features, embedding_size, act_fn='tanh'):
+    def __init__(self, num_features, embedding_size, act_fn='layer_norm'):
         super(ContinuousFeatureEmbeddingLayer, self).__init__()
         self.feature_embeddings = nn.Parameter(torch.randn(num_features, embedding_size))
         self.bias = nn.Parameter(torch.zeros(1, embedding_size))  # Shared bias across features
-        self.act_fn = act_fn
+
+        if act_fn in ACTIVATION_FUNCTIONS:
+            self.final = ACTIVATION_FUNCTIONS[act_fn]
+        elif act_fn == 'layer_norm':
+            self.final = nn.LayerNorm(embedding_size, elementwise_affine=False)
+        else:
+            self.final = nn.Sequential()
+
     def forward(self, features):
         # Input features shape: [B, S, F]
         # B: Batch size, S: Sequence length, F: Number of features
@@ -107,10 +114,7 @@ class ContinuousFeatureEmbeddingLayer(nn.Module):
         feature_emb_mul = features_expanded * self.feature_embeddings
         # Sum across the feature dimension F, resulting shape: [B, S, embedding_size]
         feature_emb_bias = feature_emb_mul.sum(dim=-2) + self.bias  # Sum first, then add bias
-        if self.act_fn == "tanh":
-            sequence_embeddings = torch.tanh(feature_emb_bias)
-        elif self.act_fn == "relu":
-            sequence_embeddings = torch.relu(feature_emb_bias)
-        else:
-            sequence_embeddings = feature_emb_bias
+
+        sequence_embeddings = self.final(feature_emb_bias)
+
         return sequence_embeddings

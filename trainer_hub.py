@@ -33,7 +33,7 @@ class TrainerHub:
         print_ml_params(ml_params)
         
         training_params, model_params, optimization_params = ml_params
-
+        task_type = data_config.task_type
         label_size = data_config.label_size
         if use_encoder:
             obs_shape = data_config.obs_shape
@@ -46,18 +46,18 @@ class TrainerHub:
             state_size = obs_shape[-1]
         explain_size = model_params.core_params.d_model
 
-        self.gpt_ccnet = CooperativeNetwork(model_params, state_size, label_size, explain_size, device, encoder=self.encoder_ccnet)
+        self.gpt_ccnet = CooperativeNetwork(model_params, task_type, state_size, label_size, explain_size, device, encoder=self.encoder_ccnet)
         self.gpt_trainer = CausalTrainer(self.gpt_ccnet, training_params, optimization_params)
+        
+        self.helper = TrainerHubHelper(self, data_config, ml_params, device, use_print, use_wandb)
         
         self.model_path, self.temp_path, self.log_path = setup_directories()
         self.batch_size = ml_params.training.batch_size
         self.num_epoch = ml_params.training.num_epoch
-
         self.device = device
         self.use_wandb = use_wandb
-        self.task_type = data_config.task_type
-
-        self.helper = TrainerHubHelper(self, data_config, ml_params, device, use_print, self.use_wandb)
+        self.task_type = task_type
+        self.label_size = label_size
 
     def __exit__(self):
         if self.use_wandb:
@@ -121,7 +121,7 @@ class TrainerHub:
         inferred_y = self.gpt_ccnet.infer(source_batch)
 
         # Calculate metrics based on the processed batch
-        metrics = calculate_metrics(inferred_y, target_batch, self.task_type)
+        metrics = calculate_metrics(inferred_y, target_batch, self.task_type, label_size=self.label_size)
 
         if self.use_wandb:
             wandb_metrics = {'Test': metrics}

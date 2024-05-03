@@ -39,8 +39,6 @@ class ImageDebugger:
         
         
     def update_images(self):
-        dst = self.debug_labels
-        device = self.device
         n_canvas_col, n_canvas_row = self.n_canvas_col, self.n_canvas_row
         m_img_canvas = self.canvas_image
         
@@ -49,20 +47,21 @@ class ImageDebugger:
             inferred_labels = self.ccnet.reason(self.debug_images, explains)
         
         for i in range(n_canvas_row):
-            controlled_labels = torch.zeros(self.label_size, dtype=torch.float)
-            selected_labels = dst[i:i + 1,:].clone().detach().expand_as(inferred_labels)
-                    
-            controlled_labels = controlled_labels.unsqueeze(0).repeat(n_canvas_col, 1).to(device)
+            selected_labels = self.debug_labels[i:i + 1,:].clone().detach().expand_as(inferred_labels)
+            
             with torch.no_grad():
                 generated_images = self.ccnet.produce(selected_labels, explains).cpu()
             m_img_canvas[self.n_img_h*(i+1):self.n_img_h*(i+2), self.n_img_w*1:] = \
                 np.transpose(vutils.make_grid(generated_images[:n_canvas_col], padding = 0, normalize=True).numpy(), (1,2,0))
 
-    def display_image(self, figsize = (13, 13)):
+    def display_image(self, figsize=(13, 13)):
         plt.figure(figsize=figsize)
-        plt.subplot(1, 1, 1)
         display.clear_output(wait=True)
-        show_image = plt.imshow(self.canvas_image)
+        plt.imshow(self.canvas_image)
         plt.axis("off")
+        labels = ["Female, No-smile", "Male, No-smile", "Female, Smile", "Male, Smile"]
+        for i, label in enumerate(labels):
+            plt.text(60, 128 * (i + 2) - 128 // 2, label, fontsize=12, va='center', ha='center')
         plt.show()
-        return show_image 
+        
+        return self.canvas_image

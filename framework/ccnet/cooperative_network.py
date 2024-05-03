@@ -11,7 +11,7 @@ from .roles.producer import Producer
 from tools.tensor import adjust_tensor_dim
                     
 class CooperativeNetwork:
-    def __init__(self, model_params, state_size, label_size, explain_size, device, 
+    def __init__(self, model_params, task_type, state_size, label_size, explain_size, device, 
                  encoder = None):
         """
         Initializes the Cooperative Network with specified model parameters and computational device.
@@ -34,11 +34,17 @@ class CooperativeNetwork:
         producer_network = model_params.core_networks[2]
 
         self.encoder = encoder
-
+        if task_type == "classification":
+            reasoner_act_fn = 'softmax'
+        elif task_type == "regression" or task_type == "binary":
+            reasoner_act_fn = 'sigmoid'
+        else:
+            raise ValueError(f"Invalid task type: {task_type}")
+            
         # Create and initialize each component model and move to the specified device.
         self.network_names = ["explainer", "reasoner", "producer"]
         self.explainer =  Explainer(explainer_network, explainer_params, [state_size], explain_size, act_fn="layer_norm").to(device)
-        self.reasoner =  Reasoner(reasoner_network, reasoner_params, [state_size], explain_size, label_size, act_fn="sigmoid").to(device)
+        self.reasoner =  Reasoner(reasoner_network, reasoner_params, [state_size], explain_size, label_size, act_fn=reasoner_act_fn).to(device)
         self.producer =  Producer(producer_network, producer_params, label_size, explain_size, [state_size], act_fn="none").to(device)
         self.networks = [self.explainer, self.reasoner, self.producer]
         

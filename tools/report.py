@@ -16,7 +16,7 @@ from pytorch_msssim import ssim # Structural Similarity Index
 
 from tools.print import print_metrics
 
-def calculate_metrics(inferred_y, target_y, task_type):
+def calculate_metrics(inferred_y, target_y, task_type, label_size):
     """
     Calculates performance metrics for binary classification, multiclass classification, and regression tasks using PyTorch.
     Parameters:
@@ -35,10 +35,10 @@ def calculate_metrics(inferred_y, target_y, task_type):
         if task_type == 'binary' and target_size == 2:
             inferred_y = (inferred_y > 0.5).long()
         else:
-            inferred_y = torch.argmax(inferred_y, dim=1)
-            target_y = torch.argmax(target_y, dim=1)
+            inferred_y = torch.argmax(inferred_y, dim=-1)
+            target_y = torch.argmax(target_y, dim=-1)
         
-        accuracy, precision, recall, f1_score = calculate_multiclass_classification_metrics(inferred_y, target_y)
+        accuracy, precision, recall, f1_score = calculate_multiclass_classification_metrics(inferred_y, target_y, num_classes = label_size)
         metrics['accuracy'] = accuracy
         metrics['precision'] = precision
         metrics['recall'] = recall
@@ -59,7 +59,7 @@ def calculate_metrics(inferred_y, target_y, task_type):
         
     return metrics
 
-def calculate_multiclass_classification_metrics(preds, labels):
+def calculate_multiclass_classification_metrics(preds, labels, num_classes):
     """
     Calculate accuracy, precision, recall, and F1 score for multi-class classification using PyTorch.
 
@@ -83,8 +83,7 @@ def calculate_multiclass_classification_metrics(preds, labels):
     f1_list = []
 
     # Calculate precision, recall, F1 for each class
-    classes = torch.unique(labels)
-    for c in classes:
+    for c in range(num_classes):
         TP = torch.sum((preds == c) & (labels == c)).float()
         FP = torch.sum((preds == c) & (labels != c)).float()
         FN = torch.sum((preds != c) & (labels == c)).float()
@@ -108,7 +107,7 @@ def calculate_multiclass_classification_metrics(preds, labels):
         macro_recall.item(),
         macro_f1.item()
     )
-
+    
 def perceptual_loss(vgg, original, reconstructed, layer_index=3):
     with torch.no_grad():
         original_features = vgg(original)
