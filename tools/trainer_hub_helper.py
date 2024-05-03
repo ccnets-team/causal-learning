@@ -37,7 +37,7 @@ class TrainerHubHelper:
         self.gpt_ccnet = self.parent.gpt_ccnet
         self.gpt_trainer = self.parent.gpt_trainer
         
-        self.encoder = self.parent.encoder_ccnet
+        self.encoder_ccnet = self.parent.encoder_ccnet
         self.encoder_trainer = self.parent.encoder_trainer
         
         self.num_checkpoints = DEFAULT_PRINT_INTERVAL
@@ -63,24 +63,34 @@ class TrainerHubHelper:
     def init_time_step(self):
         if self.pivot_time is None:
             self.pivot_time = time.time()
-    
+        
     def save_models(self):
         model_path = self.determine_save_path()
         
-        # Prepare lists of components to be saved
-        network_names = self.gpt_ccnet.network_names
-        networks = self.gpt_ccnet.networks
-        optimizers = self.gpt_trainer.optimizers
-        schedulers = self.gpt_trainer.schedulers
+        # Lists of components to be saved for GPT
+        gpt_network_names = self.gpt_ccnet.network_names
+        gpt_networks = self.gpt_ccnet.networks
+        gpt_optimizers = self.gpt_trainer.optimizers
+        gpt_schedulers = self.gpt_trainer.schedulers
+        
+        # Lists of components to be saved for encoder
+        encoder_network_names = self.encoder_ccnet.network_names
+        encoder_networks = self.encoder_ccnet.networks
+        encoder_optimizers = self.encoder_trainer.optimizers
+        encoder_schedulers = self.encoder_trainer.schedulers
         
         # Ensure all lists are synchronized in length
-        assert len(network_names) == len(networks) == len(optimizers) == len(schedulers), "Component lists must be of the same length"
+        assert len(gpt_network_names) == len(gpt_networks) == len(gpt_optimizers) == len(gpt_schedulers), "GPT component lists must be of the same length"
+        assert len(encoder_network_names) == len(encoder_networks) == len(encoder_optimizers) == len(encoder_schedulers), "Encoder component lists must be of the same length"
         
-        # Iterate over each component set and save
-        for model_name, network, optimizer, scheduler in zip(network_names, networks, optimizers, schedulers):
+        # Iterate over each GPT component set and save
+        for model_name, network, optimizer, scheduler in zip(gpt_network_names, gpt_networks, gpt_optimizers, gpt_schedulers):
+            save_model(model_path, model_name, network, optimizer, scheduler)
+        
+        # Iterate over each encoder component set and save
+        for model_name, network, optimizer, scheduler in zip(encoder_network_names, encoder_networks, encoder_optimizers, encoder_schedulers):
             save_model(model_path, model_name, network, optimizer, scheduler)
             
-
     def determine_save_path(self):
         """Determine the file path for saving models based on the current count."""
         return self.model_path if self.cnt_print % 2 == 0 else self.temp_path
@@ -90,7 +100,7 @@ class TrainerHubHelper:
         self.init_time_step()
 
         # Encode inputs to prepare them for causal training
-        source_code, target_code = encode_inputs(self.encoder, source_batch, target_batch)
+        source_code, target_code = encode_inputs(self.encoder_ccnet, source_batch, target_batch)
         
         # Adjust tensor dimensions for causal processing
         state_trajectory = adjust_tensor_dim(source_code, target_dim=3)  # off when it's img data set

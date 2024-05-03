@@ -12,7 +12,7 @@ from tools.tensor import adjust_tensor_dim
                     
 class CooperativeNetwork:
     def __init__(self, model_params, task_type, state_size, label_size, explain_size, device, 
-                 encoder = None):
+                 encoder = None, model_name = 'gpt'):
         """
         Initializes the Cooperative Network with specified model parameters and computational device.
 
@@ -41,8 +41,10 @@ class CooperativeNetwork:
         else:
             raise ValueError(f"Invalid task type: {task_type}")
             
-        # Create and initialize each component model and move to the specified device.
-        self.network_names = ["explainer", "reasoner", "producer"]
+        # Add model_name prefix to the network names
+        network_names = ["explainer", "reasoner", "producer"]
+        self.network_names = [f"{model_name}_{name}" for name in network_names]
+        
         self.explainer =  Explainer(explainer_network, explainer_params, [state_size], explain_size, act_fn="layer_norm").to(device)
         self.reasoner =  Reasoner(reasoner_network, reasoner_params, [state_size], explain_size, label_size, act_fn=reasoner_act_fn).to(device)
         self.producer =  Producer(producer_network, producer_params, label_size, explain_size, [state_size], act_fn="none").to(device)

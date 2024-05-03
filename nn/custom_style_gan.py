@@ -95,15 +95,16 @@ class ConditionalDiscriminator(nn.Module):
     def __init__(self, network_params):
         super().__init__()
         obs_shape = network_params.obs_shape
-        z_dim = network_params.z_dim
+        self.z_dim = network_params.z_dim
         d_model = network_params.d_model
         num_layers = network_params.num_layers
 
         self.image_width = obs_shape[1]
         self.image_height = obs_shape[2]    
-        self.condition_layer = nn.Linear(z_dim, int(self.image_width * self.image_height))
-
-        # Setting up dynamic layer construction
+        self.image_elements = torch.prod(torch.tensor(obs_shape[1:], dtype=torch.int)).item()
+        self.obs_shape = obs_shape
+        
+        # Initialize layers for dynamic construction
         layers = []
         in_channels = 4  # Starting from 3 + 1 for RGB channels and the additional condition channel
         for i in range(num_layers):
@@ -119,8 +120,20 @@ class ConditionalDiscriminator(nn.Module):
 
         self.main = nn.Sequential(*layers)
 
+    def _convert_explanation_to_image_shape(self, e):
+        """ Convert the explanation vector to match the target image shape with the first dimension set to 1. """
+        explain_shape = [1] + list(self.obs_shape[1:])  # Set first dim to 1, rest match target shape
+        e1 = e.repeat(1, self.image_elements // self.z_dim)
+        e2 = torch.zeros_like(e[:, :self.image_elements % self.z_dim])
+        expanded_e = torch.cat([e1, e2], dim=-1)  # Repeat to match the volume of target shape
+        expanded_e = expanded_e.view(-1, *explain_shape)  # Reshape explanation vector to the new explain_shape
+        return expanded_e
+
     def forward(self, img, y):
-        batch_size = img.size(0)
-        condition = self.condition_layer(y).view(batch_size, 1, self.image_width, self.image_height)
+        # Convert the explanation vector to match the target image shape
+        condition = self._convert_explanation_to_image_shape(y)
+        
+        # Concatenate the image and condition along the channel dimension
         x = torch.cat([img, condition], dim=1)
+        
         return self.main(x)

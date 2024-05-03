@@ -48,7 +48,7 @@ class ModelParameters:
         self.core_networks = [GPT, GPT, GPT]
         self.core_params = GPTParams(num_layers=num_layers, d_model=d_model, dropout=dropout)
         self.encoding_networks = encoding_networks
-        self.encoding_params = EncodingParams(num_layers=num_layers, d_model=d_model)
+        self.encoding_params = EncodingParams(num_layers=num_layers, d_model= int(1.5 * d_model))
     
 class OptimizationParameters:
     def __init__(self, learning_rate=2e-4, decay_rate_100k=0.05, scheduler_type='exponential', clip_grad_range=None, max_grad_norm=1.0):
