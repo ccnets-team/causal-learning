@@ -34,7 +34,7 @@ class EncodingParams:
         self.condition_dim = condition_dim
 
 class ModelParameters:
-    def __init__(self, num_layers=5, d_model=256, dropout=0.05, 
+    def __init__(self, num_layers=5, d_model=256, dropout=0.02, 
                  encoding_networks=[Discriminator, ConditionalDiscriminator, ConditionalGenerator]):
         """
         Comprehensive model parameters, combining core and encoding networks.

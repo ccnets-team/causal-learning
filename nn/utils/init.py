@@ -91,28 +91,23 @@ class ContinuousFeatureEmbeddingLayer(nn.Module):
 class ContinuousFeatureJointLayer(nn.Module):
     def __init__(self, num_features1, num_features2, embedding_size, act_fn='layer_norm'):
         super(ContinuousFeatureJointLayer, self).__init__()
-        # Initialize biases for each set of features
-        self.bias1 = nn.Parameter(torch.zeros(num_features1))  # Should be [1, 1, F1]
-        self.bias2 = nn.Parameter(torch.zeros(num_features2))  # Should be [1, 1, F2]
-        # Layer to process combined features
-        self.embedding_layer = create_layer(num_features1 + num_features2, embedding_size, act_fn)
+        
+        n_features1 = embedding_size//2
+        n_features2 = embedding_size - embedding_size//2
 
+        self.embedding_layer1 = ContinuousFeatureEmbeddingLayer(num_features1, n_features1, 'none')
+        self.embedding_layer2 = ContinuousFeatureEmbeddingLayer(num_features2, n_features2, 'none')
+        
+        self.final_layer = get_activation_function(act_fn, embedding_size)
+        
     def forward(self, feature1, feature2):
-        # Ensure that features are expanded for broadcasting
-        feature1_expanded = feature1.unsqueeze(-1)  # Shape: [B, S, F1, 1]
-        feature2_expanded = feature2.unsqueeze(-2)  # Shape: [B, S, 1, F2]
-
-        # Cross-multiply expanded features to create interaction terms
-        feature1_transformed = torch.matmul(feature1_expanded, feature2_expanded)  # Shape: [B, S, F1, F2]
-        # Transpose to swap F2 and F1 for feature2 transformations
-        feature2_transformed = feature1_transformed.transpose(-2, -1)  # Shape: [B, S, F2, F1]
-
-        # Sum across the feature dimensions and add biases
-        feature1_transformed = feature1_transformed.sum(dim=-1) + self.bias1  # Shape: [B, S, F1]
-        feature2_transformed = feature2_transformed.sum(dim=-1) + self.bias2  # Shape: [B, S, F2]
-
+        feature1_expanded = self.embedding_layer1(feature1)
+        feature2_expanded = self.embedding_layer2(feature2)
+        
         # Concatenate the transformed features for further processing
-        features_combined = torch.cat([feature1_transformed, feature2_transformed], dim=-1)  # Shape: [B, S, F1+F2]
+        features_combined = torch.cat([feature1_expanded, feature2_expanded], dim=-1)  # Shape: [B, S, F1+F2]
+        
         # Process through an embedding layer
-        sequence_embeddings = self.embedding_layer(features_combined)  # Shape: [B, S, embedding_size]
+        sequence_embeddings = self.final_layer(features_combined)  # Shape: [B, S, embedding_size]
+        
         return sequence_embeddings
