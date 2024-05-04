@@ -4,6 +4,7 @@ import torchvision.utils as vutils
 from PIL import Image as PILImage
 from IPython.display import display, Image, clear_output
 import io
+from PIL import Image as PILImage, ImageDraw, ImageFont
 
 class ImageDebugger:
     def __init__(self, model, dataset, data_config, device):
@@ -54,9 +55,26 @@ class ImageDebugger:
             m_img_canvas[self.n_img_h*(i+1):self.n_img_h*(i+2), self.n_img_w*1:] = (img_section * 255).astype(np.uint8)
 
     def display_image(self):
+        """Display the image using IPython's display module with text annotations."""
+        # Clear the previous output, including images, text, etc.
         clear_output(wait=True)
-        """Display the image using IPython's display module."""
+
+        # Convert numpy array to PIL Image
         img = PILImage.fromarray(self.canvas_image)
+        
+        # Prepare to draw on the image
+        draw = ImageDraw.Draw(img)
+        font = ImageFont.load_default()  # Load default font
+        
+        # Define labels and their positions
+        labels = ["Female, No-smile", "Male, No-smile", "Female, Smile", "Male, Smile"]
+        positions = [(30, 60 + 128 * (i + 1)) for i in range(len(labels))]  # Adjust positions as needed
+        
+        # Draw text on the image
+        for label, position in zip(labels, positions):
+            draw.text(position, label, font=font, fill=(0, 0, 0))  # White color for text
+
+        # Save the image to a byte buffer to then display it
         with io.BytesIO() as output:
             img.save(output, format="PNG")
             display(Image(data=output.getvalue(), format="png"))
