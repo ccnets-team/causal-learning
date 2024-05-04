@@ -8,7 +8,7 @@
 import torch
 import torch.nn as nn
 from nn.utils.init import init_weights, create_layer
-from nn.utils.init import ContinuousFeatureEmbeddingLayer
+from nn.utils.init import ContinuousFeatureJointLayer
 
 class Reasoner(nn.Module):
     """
@@ -47,9 +47,9 @@ class Reasoner(nn.Module):
             self.net = net(network_params)
         else:
             # Concatenate the observation and explanation sizes for non-image data embedding
-            z_size = input_shape[-1] + explain_size
+            input_size = input_shape[-1]
             # Embedding layer for continuous features of combined size
-            self.input_embedding_layer = ContinuousFeatureEmbeddingLayer(z_size, d_model)
+            self.input_embedding_layer = ContinuousFeatureJointLayer(input_size, explain_size, d_model)
             # Initialize the neural network for non-image data
             self.net = net(network_params)
         # Additional layers for non-linearity and final output transformation
@@ -74,10 +74,7 @@ class Reasoner(nn.Module):
         if self.use_image:
             y = self.net(obs, e)
         else:
-            # Concatenate observation and explanation data for non-image inputs
-            x = torch.cat([obs, e], dim=-1)
-            # Embed, pass through the network
-            x = self.input_embedding_layer(x)
+            x = self.input_embedding_layer(obs, e)
             y = self.net(x) if padding_mask is None else self.net(x, padding_mask)
             
         y = self.relu(y)

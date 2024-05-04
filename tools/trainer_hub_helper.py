@@ -5,12 +5,11 @@ from tools.wandb_logger import wandb_init
 from tools.loader import save_model
 from tools.logger import log_train_data, log_test_results
 from tools.print import print_iter, print_lr, print_trainer
-from nn.utils.init import setup_directories
 from tools.wandb_logger import wandb_log_train_data
 from tools.display import ImageDebugger
 from tools.logger import get_log_name
+import os
 import logging
-import torch
 from tools.tensor import adjust_tensor_dim, generate_padding_mask, encode_inputs
 from tools.metrics_tracker import MetricsTracker
 
@@ -43,7 +42,7 @@ class TrainerHubHelper:
         self.num_checkpoints = DEFAULT_PRINT_INTERVAL
         self.save_interval = DEFAULT_SAVE_INTERVAL
         
-        self.model_path, self.temp_path, self.log_path = setup_directories()
+        self.model_path, self.temp_path, self.log_path = self.setup_directories()
         
         self.logger = logging.getLogger(__name__)
         self.pivot_time = None
@@ -90,6 +89,16 @@ class TrainerHubHelper:
         # Iterate over each encoder component set and save
         for model_name, network, optimizer, scheduler in zip(encoder_network_names, encoder_networks, encoder_optimizers, encoder_schedulers):
             save_model(model_path, model_name, network, optimizer, scheduler)
+
+    def setup_directories(self, base_path = './'):
+        set_model_path = os.path.join(base_path, "models")
+        set_temp_path = os.path.join(base_path, "models/temp")
+        set_log_path = os.path.join(base_path, "logs")
+
+        for path in [set_model_path, set_temp_path, set_log_path]:
+            os.makedirs(path, exist_ok=True)
+
+        return set_model_path, set_temp_path, set_log_path
             
     def determine_save_path(self):
         """Determine the file path for saving models based on the current count."""
