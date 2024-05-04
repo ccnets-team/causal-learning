@@ -24,8 +24,7 @@
 
 import torch
 import torch.nn as nn
-import torch
-import torch.nn as nn
+import torch.nn.functional as F
 
 class MappingNetwork(nn.Module):
     """ Maps the latent vector to style codes with several fully connected layers. """
@@ -37,6 +36,19 @@ class MappingNetwork(nn.Module):
     def forward(self, z):
         return self.mapping_layers(z)
 
+class StyleMod(nn.Module):
+    """Applies a learned affine transformation based on style vectors."""
+    def __init__(self, style_dim, channels):
+        super().__init__()
+        self.channels = channels
+        self.lin = nn.Linear(style_dim, channels * 2)
+
+    def forward(self, x, style):
+        style_transform = self.lin(style)
+        scale = style_transform[:, :self.channels].unsqueeze(2).unsqueeze(3)
+        shift = style_transform[:, self.channels:].unsqueeze(2).unsqueeze(3)
+        return x * scale + shift
+    
 class ConditionStyleMod(nn.Module):
     """ Applies a learned affine transformation based on style and condition vectors. """
     def __init__(self, style_dim, condition_dim, channels):
@@ -51,18 +63,58 @@ class ConditionStyleMod(nn.Module):
         shift = style[:, self.channels:].unsqueeze(2).unsqueeze(3)
         return x * scale + shift
 
-class ConditionConvBlock(nn.Module):
+class ConvBlock(nn.Module):
+    """Convolutional block applying noise modulation."""
+    def __init__(self, in_channels, out_channels, use_noise=True):
+        super().__init__()
+        self.conv = nn.Conv2d(in_channels, out_channels, 3, padding=1)
+        self.use_noise = use_noise
+        if use_noise:
+            self.noise = nn.Parameter(torch.randn(1, out_channels, 1, 1))
+        self.act = nn.LeakyReLU(0.2)
+
+    def forward(self, x):
+        x = self.conv(x)
+        if self.use_noise:
+            x = x + self.noise * torch.randn_like(x)
+        x = self.act(x)
+        return x
+        
+class StyleConvBlock(nn.Module):
+    """Convolutional block applying style and noise modulation."""
+    def __init__(self, in_channels, out_channels, style_dim, use_noise=True):
+        super().__init__()
+        self.conv = nn.Conv2d(in_channels, out_channels, 3, padding=1)
+        self.style_mod = StyleMod(style_dim, out_channels)
+        self.use_noise = use_noise
+        if use_noise:
+            self.noise = nn.Parameter(torch.randn(1, out_channels, 1, 1))
+        self.act = nn.LeakyReLU(0.2)
+
+    def forward(self, x, style = None):
+        x = self.conv(x)
+        if self.use_noise:
+            x = x + self.noise * torch.randn_like(x)
+        x = self.act(x)
+        if style is not None:
+            x = self.style_mod(x, style)
+        return x
+    
+class ConditionStyleConvBlock(nn.Module):
     """ Convolutional block applying style and noise modulation. """
-    def __init__(self, in_channels, out_channels, style_dim, condition_dim):
+    def __init__(self, in_channels, out_channels, style_dim, condition_dim, use_noise=True):
         super().__init__()
         self.conv = nn.Conv2d(in_channels, out_channels, 3, padding=1)
         self.style_mod = ConditionStyleMod(style_dim, condition_dim, out_channels)
-        self.noise = nn.Parameter(torch.randn(1, out_channels, 1, 1))
+        if use_noise:
+            self.noise = nn.Parameter(torch.randn(1, out_channels, 1, 1))
         self.act = nn.LeakyReLU(0.2)
+        self.use_noise = use_noise
     
     def forward(self, x, style, condition):
         x = self.conv(x)
-        x = x + self.noise * torch.randn_like(x)
+        if self.use_noise:
+            x = x + self.noise * torch.randn_like(x)
         x = self.act(x)
         x = self.style_mod(x, style, condition)
         return x
@@ -85,7 +137,7 @@ class ConditionalGenerator(nn.Module):
         current_d_model = d_model
         for i in range(num_layers):
             next_d_model = max(1, current_d_model // 2)  # Reduce channel count
-            self.blocks.append(ConditionConvBlock(current_d_model, next_d_model, self.style_dim, condition_dim))
+            self.blocks.append(ConditionStyleConvBlock(current_d_model, next_d_model, self.style_dim, condition_dim, use_noise=True))
             current_d_model = next_d_model
         
         self.to_rgb = nn.Sequential(nn.Conv2d(current_d_model, 3, 1), nn.Tanh())
@@ -104,70 +156,58 @@ class ConditionalGenerator(nn.Module):
 class Discriminator(nn.Module):
     def __init__(self, network_params):
         super().__init__()
-        d_model = network_params.d_model
+        self.z_dim = network_params.z_dim
+        self.d_model = network_params.d_model
         num_layers = network_params.num_layers
-        
-        layers = []
-        in_channels = 3
-        for i in range(num_layers):
-            out_channels = d_model // (2 ** (num_layers - i - 1))
-            stride = 1 if i == 0 else 2  # First layer does not reduce spatial dimensions.
-            layers.append(nn.Conv2d(in_channels, out_channels, 3, stride=stride, padding=1))
-            layers.append(nn.LeakyReLU(0.2, inplace=True))
-            in_channels = out_channels
-        
-        layers.append(nn.AdaptiveAvgPool2d(1))
-        layers.append(nn.Flatten())
-        layers.append(nn.Linear(in_channels, d_model))
 
-        self.main = nn.Sequential(*layers)
+        self.blocks = nn.ModuleList()
+        in_channels = 3  # Starting with RGB channels
+        
+        for i in range(num_layers):
+            out_channels = self.d_model // (2 ** (num_layers - i - 1))
+            self.blocks.append(ConvBlock(in_channels, out_channels, use_noise=False))
+            in_channels = out_channels
+
+        final = [nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(in_channels, self.d_model)]
+        self.final = nn.Sequential(*final)
 
     def forward(self, img):
-        return self.main(img)
-
+        x = img
+        for block in self.blocks:
+            x = block(x)
+            # Apply down-sampling after processing with the block
+            if x.size(2) > 1 and x.size(3) > 1:  # Avoid reducing too small dimensions
+                x = F.interpolate(x, scale_factor=0.5, mode='bilinear', align_corners=False)
+        return self.final(x)
+    
 class ConditionalDiscriminator(nn.Module):
     def __init__(self, network_params):
         super().__init__()
-        obs_shape = network_params.obs_shape
         self.z_dim = network_params.z_dim
-        d_model = network_params.d_model
+        self.d_model = network_params.d_model
+        self.style_dim = self.z_dim  # Ensure style_dim is defined correctly
         num_layers = network_params.num_layers
+        self.mapping_network = MappingNetwork(self.z_dim, self.style_dim, num_layers)
 
-        self.image_width = obs_shape[1]
-        self.image_height = obs_shape[2]    
-        self.image_elements = torch.prod(torch.tensor(obs_shape[1:], dtype=torch.int)).item()
-        self.obs_shape = obs_shape
+        self.blocks = nn.ModuleList()
+        in_channels = 3  # Starting with RGB channels
         
-        # Initialize layers for dynamic construction
-        layers = []
-        in_channels = 4  # Starting from 3 + 1 for RGB channels and the additional condition channel
         for i in range(num_layers):
-            out_channels = d_model // (2 ** (num_layers - i - 1))
-            stride = 2 if i > 0 else 1  # The first layer has a stride of 1 to maintain more spatial information
-            layers.append(nn.Conv2d(in_channels, out_channels, 3, stride=stride, padding=1))
-            layers.append(nn.LeakyReLU(0.2, inplace=True))
+            out_channels = self.d_model // (2 ** (num_layers - i - 1))
+            self.blocks.append(StyleConvBlock(in_channels, out_channels, self.style_dim, use_noise=False))
             in_channels = out_channels
 
-        layers.append(nn.AdaptiveAvgPool2d(1))
-        layers.append(nn.Flatten())
-        layers.append(nn.Linear(in_channels, d_model))
+        final = [nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(in_channels, self.d_model)]
+        self.final = nn.Sequential(*final)
 
-        self.main = nn.Sequential(*layers)
-
-    def _convert_explanation_to_image_shape(self, e):
-        """ Convert the explanation vector to match the target image shape with the first dimension set to 1. """
-        explain_shape = [1] + list(self.obs_shape[1:])  # Set first dim to 1, rest match target shape
-        e1 = e.repeat(1, self.image_elements // self.z_dim)
-        e2 = torch.zeros_like(e[:, :self.image_elements % self.z_dim])
-        expanded_e = torch.cat([e1, e2], dim=-1)  # Repeat to match the volume of target shape
-        expanded_e = expanded_e.view(-1, *explain_shape)  # Reshape explanation vector to the new explain_shape
-        return expanded_e
-
-    def forward(self, img, y):
-        # Convert the explanation vector to match the target image shape
-        condition = self._convert_explanation_to_image_shape(y)
+    def forward(self, img, e):
+        x = img
+        # Generate style codes from the condition vector
+        style = self.mapping_network(e)
         
-        # Concatenate the image and condition along the channel dimension
-        x = torch.cat([img, condition], dim=1)
-        
-        return self.main(x)
+        for block in self.blocks:
+            x = block(x, style)
+            # Apply down-sampling after processing with the block
+            if x.size(2) > 1 and x.size(3) > 1:  # Avoid reducing too small dimensions
+                x = F.interpolate(x, scale_factor=0.5, mode='bilinear', align_corners=False)
+        return self.final(x)
