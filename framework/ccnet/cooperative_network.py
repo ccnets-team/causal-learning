@@ -8,7 +8,7 @@ import torch
 from .roles.explainer import Explainer
 from .roles.reasoner import Reasoner
 from .roles.producer import Producer
-from tools.tensor import adjust_tensor_dim
+from tools.tensor import adjust_tensor_dim, determine_activation_by_task_type
                     
 class CooperativeNetwork:
     def __init__(self, model_params, task_type, state_size, label_size, explain_size, device, 
@@ -34,12 +34,7 @@ class CooperativeNetwork:
         producer_network = model_params.core_networks[2]
 
         self.encoder = encoder
-        if task_type == "classification":
-            reasoner_act_fn = 'softmax'
-        elif task_type == "regression" or task_type == "binary":
-            reasoner_act_fn = 'sigmoid'
-        else:
-            raise ValueError(f"Invalid task type: {task_type}")
+        reasoner_act_fn = determine_activation_by_task_type(task_type)
             
         # Add model_name prefix to the network names
         network_names = ["explainer", "reasoner", "producer"]

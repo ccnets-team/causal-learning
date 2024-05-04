@@ -16,7 +16,8 @@ from framework.train.trainer_base import TrainerBase
 class CausalTrainer(TrainerBase):
     def __init__(self, ccnet: CooperativeNetwork, training_params, optimization_params):
         TrainerBase.__init__(self, ccnet.networks, training_params, optimization_params)
-        self.explainer, self.reasoner, self.producer = self.networks        
+        self.explainer, self.reasoner, self.producer = self.networks  
+        self.network_names = ccnet.network_names
     
     def train_models(self, state, label, padding_mask=None):
         # Set the models to training mode and perform the forward pass.

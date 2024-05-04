@@ -29,6 +29,7 @@ class CausalEncodingTrainer(TrainerBase):
         """        
         TrainerBase.__init__(self, encoder.networks, training_params, optimization_params)
         self.explainer, self.reasoner, self.producer = self.networks        
+        self.network_names = encoder.network_names
 
     def train_models(self, input_observation, **kwargs):
         """

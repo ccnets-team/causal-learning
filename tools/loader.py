@@ -34,3 +34,17 @@ def get_test_loader(testset, batch_size, shuffle = False, num_workers = 0, colla
 def get_eval_loader(evalset, batch_size, num_workers = 0):
     return torch.utils.data.DataLoader(evalset, batch_size=batch_size, shuffle = False, num_workers = num_workers, drop_last=True)
 
+def save_trainer(model_path, trainer):
+    # Lists of components to be saved for GPT
+    network_names = trainer.network_names
+    networks = trainer.networks
+    optimizers = trainer.optimizers
+    schedulers = trainer.schedulers
+    
+    # Ensure all lists are synchronized in length
+    assert len(network_names) == len(networks) == len(optimizers) == len(schedulers), "model component lists must be of the same length"
+    
+    # Iterate over each model component set and save
+    for model_name, network, optimizer, scheduler in zip(network_names, networks, optimizers, schedulers):
+        save_model(model_path, model_name, network, optimizer, scheduler)
+    

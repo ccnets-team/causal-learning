@@ -38,7 +38,7 @@ def print_lr(*_optimizers):
             for optimizer in optimizers_group:
                 print(f'Opt-{type(optimizer).__name__} LR: {optimizer.param_groups[0]["lr"]}')
 
-def print_metrics(metrics):
+def print_test_results(metrics):
     """
         Create and print string of test metrics.
         
@@ -85,9 +85,3 @@ def print_ml_params(cl_params):
             else:
                 print(f"{attr_name}: {attr_value}")
         print()
-        
-        
-def print_vae_metrics(vae_metrics):
-    print('-------------------- VAE Metrics -------------------------')
-    for key, value in vae_metrics.items():
-        print(f"{key}: {value:.4f}")

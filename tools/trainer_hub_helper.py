@@ -2,9 +2,9 @@ import time
 import wandb
 import numpy as np
 from tools.wandb_logger import wandb_init 
-from tools.loader import save_model
+from tools.loader import save_trainer
 from tools.logger import log_train_data, log_test_results
-from tools.print import print_iter, print_lr, print_trainer
+from tools.print import print_iter, print_lr, print_trainer, print_test_results
 from tools.wandb_logger import wandb_log_train_data
 from tools.display import ImageDebugger
 from tools.logger import get_log_name
@@ -50,11 +50,14 @@ class TrainerHubHelper:
         self.gpt_metrics = MetricsTracker()
         self.encoder_metrics = MetricsTracker()
         
+        if self.use_image:
+            self.image_debugger = ImageDebugger(self.gpt_ccnet, self.data_config, self.device)
+        
     def initialize_train(self, dataset):
         # self.sum_losses, self.sum_errors = None, None
         self.iters, self.cnt_checkpoints, self.cnt_print = 0, 0, 0
         if self.use_image:
-            self.image_debugger = ImageDebugger(self.gpt_ccnet, dataset, self.data_config, self.device)
+            self.image_debugger.initialize_(dataset)
     
     def should_checkpoint(self):
         return self.cnt_checkpoints % self.num_checkpoints == 0 and self.cnt_checkpoints != 0
@@ -62,33 +65,7 @@ class TrainerHubHelper:
     def init_time_step(self):
         if self.pivot_time is None:
             self.pivot_time = time.time()
-        
-    def save_models(self):
-        model_path = self.determine_save_path()
-        
-        # Lists of components to be saved for GPT
-        gpt_network_names = self.gpt_ccnet.network_names
-        gpt_networks = self.gpt_ccnet.networks
-        gpt_optimizers = self.gpt_trainer.optimizers
-        gpt_schedulers = self.gpt_trainer.schedulers
-        
-        # Lists of components to be saved for encoder
-        encoder_network_names = self.encoder_ccnet.network_names
-        encoder_networks = self.encoder_ccnet.networks
-        encoder_optimizers = self.encoder_trainer.optimizers
-        encoder_schedulers = self.encoder_trainer.schedulers
-        
-        # Ensure all lists are synchronized in length
-        assert len(gpt_network_names) == len(gpt_networks) == len(gpt_optimizers) == len(gpt_schedulers), "GPT component lists must be of the same length"
-        assert len(encoder_network_names) == len(encoder_networks) == len(encoder_optimizers) == len(encoder_schedulers), "Encoder component lists must be of the same length"
-        
-        # Iterate over each GPT component set and save
-        for model_name, network, optimizer, scheduler in zip(gpt_network_names, gpt_networks, gpt_optimizers, gpt_schedulers):
-            save_model(model_path, model_name, network, optimizer, scheduler)
-        
-        # Iterate over each encoder component set and save
-        for model_name, network, optimizer, scheduler in zip(encoder_network_names, encoder_networks, encoder_optimizers, encoder_schedulers):
-            save_model(model_path, model_name, network, optimizer, scheduler)
+
 
     def setup_directories(self, base_path = './'):
         set_model_path = os.path.join(base_path, "models")
@@ -145,11 +122,14 @@ class TrainerHubHelper:
                 wb_image = wandb.Image(image_display)
 
         self.log_checkpoint_details(time_cost, epoch_idx, iter_idx, len_dataloader, wb_image)
-        self.save_models()
+        save_path = self.determine_save_path()
+        save_trainer(save_path, self.gpt_trainer)
+        save_trainer(save_path, self.encoder_trainer)
         self.reset_metrics()
 
         """Handles operations to be performed at each checkpoint."""
         test_results = self.parent.evaluate(eval_dataset)
+        print_test_results(test_results)
         log_test_results(self.tensorboard, self.iters, test_results)
 
     def log_checkpoint_details(self, time_cost, epoch_idx, iter_idx, len_dataloader, wb_image):

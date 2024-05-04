@@ -39,7 +39,6 @@ def init_weights(module):
     # Apply recursively to child submodules regardless of the parent's type
     for child in module.children():
         init_weights(child)
-
         
 ACTIVATION_FUNCTIONS = {
     "softmax": nn.Softmax(dim=-1),
@@ -50,25 +49,23 @@ ACTIVATION_FUNCTIONS = {
 
 def get_activation_function(activation_function, output_size=None):
     """Returns the appropriate activation function layer."""
-    if activation_function.lower() == "none":
+    activation_function = activation_function.lower()
+    if activation_function in ["none", "linear"]:  # Treating 'linear' as no activation
         return nn.Identity()
-    
     if activation_function == 'layer_norm' and output_size is not None:
-        return nn.LayerNorm(output_size, elementwise_affine=False)
+        return nn.LayerNorm(output_size, elementwise_affine=True)  # Usually, we want affine transformation in LayerNorm
     elif activation_function in ACTIVATION_FUNCTIONS:
         return ACTIVATION_FUNCTIONS[activation_function]
     else:
         raise ValueError(f"Unsupported activation function: {activation_function}")
-    
-def create_layer(input_size=None, output_size=None, act_fn="none"):
-    """Creates a PyTorch layer with optional input and output sizes, and optional activation functions."""
-    layers = []
-    if input_size is not None and output_size is not None:
-        layers.append(nn.Linear(input_size, output_size))
+
+def create_layer(input_size, output_size, act_fn="none"):
+    """Creates a PyTorch layer with specified input and output sizes, including an optional activation function."""
+    layers = [nn.Linear(input_size, output_size)]  # Always include the linear transformation
     activation_layer = get_activation_function(act_fn, output_size)
-    if isinstance(activation_layer, nn.Module):  # Ensure that a valid layer is returned
+    if not isinstance(activation_layer, nn.Identity):  # Add activation layer if it's not Identity
         layers.append(activation_layer)
-    return nn.Sequential(*layers) if layers else nn.Identity()
+    return nn.Sequential(*layers)
 
 class ContinuousFeatureEmbeddingLayer(nn.Module):
     def __init__(self, num_features, embedding_size, act_fn='layer_norm'):
