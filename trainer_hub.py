@@ -61,12 +61,14 @@ class TrainerHub:
             self.encoder_trainer = CausalEncodingTrainer(self.encoder_ccnet, training_params, optimization_params)
             self.state_size = stoch_size + det_size
         else:
+            self.encoder_ccnet = None
+            self.encoder_trainer = None
             self.state_size = self.data_config.obs_shape[-1]
 
-    def setup_gpt_network(self, model_params, training_params, optimization_params):
+    def setup_gpt_network(self, model_params, training_params, optimization_params):    
         self.task_type = self.data_config.task_type
         self.label_size = self.data_config.label_size
-        explain_size = model_params.core_params.d_model
+        explain_size = max(model_params.core_params.d_model//2, 1)
         self.gpt_ccnet = CooperativeNetwork(model_params, self.task_type, self.state_size, self.label_size, explain_size, self.device, encoder=self.encoder_ccnet)
         self.gpt_trainer = CausalTrainer(self.gpt_ccnet, training_params, optimization_params)
 
@@ -133,10 +135,10 @@ class TrainerHub:
         
         source_batch, target_batch = convert_to_device(source_batch, target_batch, device=self.device)
         
-        encoder_metric = self.encoder_trainer.train_models(source_batch)
+        encoder_metric = self.encoder_trainer.train_models(source_batch) if self.use_encoder else None
         
         state_trajectory, target_trajectory, padding_mask = self.helper.setup_training_step(source_batch, target_batch)
         
         gpt_metric = self.gpt_trainer.train_models(state_trajectory, target_trajectory, padding_mask)
         
-        self.helper.finalize_training_step(epoch, iters, dataloader_length, encoder_metric, gpt_metric, testset)
+        self.helper.finalize_training_step(testset, epoch, iters, dataloader_length, gpt_metric, encoder_metric)

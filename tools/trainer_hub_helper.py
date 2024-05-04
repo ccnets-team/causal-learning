@@ -97,15 +97,15 @@ class TrainerHubHelper:
         
         return state_trajectory, target_trajectory, padding_mask
 
-    def finalize_training_step(self, epoch_idx, iter_idx, len_dataloader, encoder_metric, gpt_metric, eval_dataset) -> None:
-        self.update_metrics(encoder_metric, gpt_metric)
+    def finalize_training_step(self, eval_dataset, epoch_idx, iter_idx, len_dataloader, gpt_metric, encoder_metric = None) -> None:
+        self.update_metrics(gpt_metric, encoder_metric)
 
         if self.should_checkpoint():
             self.handle_checkpoint(epoch_idx, iter_idx, len_dataloader, eval_dataset)
 
         self.increment_counters()
 
-    def update_metrics(self, encoder_metric, gpt_metric):
+    def update_metrics(self, gpt_metric, encoder_metric):
         """Updates metrics and records time spent since the last checkpoint."""
         self.gpt_metrics += gpt_metric
         self.encoder_metrics += encoder_metric
@@ -134,11 +134,11 @@ class TrainerHubHelper:
 
     def log_checkpoint_details(self, time_cost, epoch_idx, iter_idx, len_dataloader, wb_image):
         """Calculates average metrics over the checkpoints."""
-        avg_encoder_metric = self.encoder_metrics / float(self.num_checkpoints)
         avg_gpt_metric = self.gpt_metrics / float(self.num_checkpoints)
+        avg_encoder_metric = self.encoder_metrics / float(self.num_checkpoints)
         
         if self.use_print:
-            self.print_checkpoint_info(time_cost, epoch_idx, iter_idx, len_dataloader, avg_encoder_metric, avg_gpt_metric)
+            self.print_checkpoint_info(time_cost, epoch_idx, iter_idx, len_dataloader, avg_gpt_metric, avg_encoder_metric)
 
         log_train_data(self.tensorboard, self.iters, avg_gpt_metric)
         """Logs training data to Weights & Biases if enabled."""
@@ -146,7 +146,7 @@ class TrainerHubHelper:
             lr = self.gpt_trainer.get_lr() 
             wandb_log_train_data(avg_encoder_metric, avg_gpt_metric, time_cost=time_cost, lr=lr, images=wb_image)
 
-    def print_checkpoint_info(self, time_cost, epoch_idx, iter_idx, len_dataloader, avg_encoder_metric, avg_gpt_metric):
+    def print_checkpoint_info(self, time_cost, epoch_idx, iter_idx, len_dataloader, avg_gpt_metric, avg_encoder_metric):
         """Prints formatted information about the current checkpoint."""
         print_iter(epoch_idx, self.parent.max_epoch, iter_idx, len_dataloader, time_cost)
         print_lr(self.encoder_trainer.optimizers, self.gpt_trainer.optimizers)

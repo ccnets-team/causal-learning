@@ -1,8 +1,8 @@
 from nn.gpt import GPT
 from nn.custom_style_gan import Discriminator, ConditionalDiscriminator, ConditionalGenerator
 
-class GPTParams:
-    def __init__(self, num_layers=6, d_model=256, dropout=0.02):
+class GPTModelParams:
+    def __init__(self, num_layers=5, d_model=256, dropout=0.02):
         """
         Initialize parameters for a GPT model configuration.
         
@@ -15,8 +15,8 @@ class GPTParams:
         self.d_model = d_model
         self.dropout = dropout
 
-class EncodingParams:
-    def __init__(self, num_layers=6, d_model=256, obs_shape=[], z_dim=None, condition_dim=None):
+class ImageModelParams:
+    def __init__(self, num_layers=5, d_model=256, obs_shape=[], z_dim=None, condition_dim=None):
         """
         Parameters for encoding networks, possibly for use in models like VAEs or conditional GANs.
         
@@ -34,7 +34,7 @@ class EncodingParams:
         self.condition_dim = condition_dim
 
 class ModelParameters:
-    def __init__(self, num_layers=6, d_model=256, dropout=0.02, 
+    def __init__(self, num_layers=5, d_model=256, dropout=0.02, 
                  encoding_networks=[Discriminator, ConditionalDiscriminator, ConditionalGenerator]):
         """
         Comprehensive model parameters, combining core and encoding networks.
@@ -46,9 +46,9 @@ class ModelParameters:
         - encoding_networks (list): List of classes representing different encoding network types.
         """
         self.core_networks = [GPT, GPT, GPT]
-        self.core_params = GPTParams(num_layers=num_layers, d_model=d_model, dropout=dropout)
+        self.core_params = GPTModelParams(num_layers=num_layers, d_model=d_model, dropout=dropout)
         self.encoding_networks = encoding_networks
-        self.encoding_params = EncodingParams(num_layers=num_layers, d_model= d_model)
+        self.encoding_params = ImageModelParams(num_layers=num_layers, d_model= d_model)
     
 class OptimizationParameters:
     def __init__(self, learning_rate=2e-4, decay_rate_100k=0.05, scheduler_type='exponential', clip_grad_range=None, max_grad_norm=1.0):

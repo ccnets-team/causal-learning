@@ -67,56 +67,88 @@ class ConvBlock(nn.Module):
     """Convolutional block applying noise modulation."""
     def __init__(self, in_channels, out_channels, use_noise=True):
         super().__init__()
-        self.conv = nn.Conv2d(in_channels, out_channels, 3, padding=1)
+        self.conv1 = nn.Conv2d(in_channels, out_channels, 3, padding=1)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, 3, padding=1)
         self.use_noise = use_noise
         if use_noise:
-            self.noise = nn.Parameter(torch.randn(1, out_channels, 1, 1))
+            self.noise1 = nn.Parameter(torch.randn(1, out_channels, 1, 1))
+            self.noise2 = nn.Parameter(torch.randn(1, out_channels, 1, 1))
         self.act = nn.LeakyReLU(0.2)
 
     def forward(self, x):
-        x = self.conv(x)
+        x = self.conv1(x)
         if self.use_noise:
-            x = x + self.noise * torch.randn_like(x)
+            x = x + self.noise1 * torch.randn_like(x)
         x = self.act(x)
+
+        x = self.conv2(x)
+        if self.use_noise:
+            x = x + self.noise2 * torch.randn_like(x)
+        x = self.act(x)
+
         return x
         
 class StyleConvBlock(nn.Module):
     """Convolutional block applying style and noise modulation."""
     def __init__(self, in_channels, out_channels, style_dim, use_noise=True):
         super().__init__()
-        self.conv = nn.Conv2d(in_channels, out_channels, 3, padding=1)
-        self.style_mod = StyleMod(style_dim, out_channels)
+        self.conv1 = nn.Conv2d(in_channels, out_channels, 3, padding=1)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, 3, padding=1)
+        self.style_mod1 = StyleMod(style_dim, out_channels)
+        self.style_mod2 = StyleMod(style_dim, out_channels)
         self.use_noise = use_noise
         if use_noise:
-            self.noise = nn.Parameter(torch.randn(1, out_channels, 1, 1))
+            self.noise1 = nn.Parameter(torch.randn(1, out_channels, 1, 1))
+            self.noise2 = nn.Parameter(torch.randn(1, out_channels, 1, 1))
         self.act = nn.LeakyReLU(0.2)
 
     def forward(self, x, style = None):
-        x = self.conv(x)
+        x = self.conv1(x)
         if self.use_noise:
-            x = x + self.noise * torch.randn_like(x)
+            x = x + self.noise1 * torch.randn_like(x)
         x = self.act(x)
         if style is not None:
-            x = self.style_mod(x, style)
+            x = self.style_mod1(x, style)
+
+        x = self.conv2(x)
+        if self.use_noise:
+            x = x + self.noise2 * torch.randn_like(x)
+        x = self.act(x)
+        if style is not None:
+            x = self.style_mod2(x, style)
+
         return x
     
 class ConditionStyleConvBlock(nn.Module):
     """ Convolutional block applying style and noise modulation. """
     def __init__(self, in_channels, out_channels, style_dim, condition_dim, use_noise=True):
         super().__init__()
-        self.conv = nn.Conv2d(in_channels, out_channels, 3, padding=1)
-        self.style_mod = ConditionStyleMod(style_dim, condition_dim, out_channels)
+        self.conv1 = nn.Conv2d(in_channels, out_channels, 3, padding=1)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, 3, padding=1)
+
+        self.style_mod1 = ConditionStyleMod(style_dim, condition_dim, out_channels)
+        self.style_mod2 = ConditionStyleMod(style_dim, condition_dim, out_channels)
+
         if use_noise:
-            self.noise = nn.Parameter(torch.randn(1, out_channels, 1, 1))
+            self.noise1 = nn.Parameter(torch.randn(1, out_channels, 1, 1))
+            self.noise2 = nn.Parameter(torch.randn(1, out_channels, 1, 1))
+
         self.act = nn.LeakyReLU(0.2)
         self.use_noise = use_noise
     
     def forward(self, x, style, condition):
-        x = self.conv(x)
+        x = self.conv1(x)
         if self.use_noise:
-            x = x + self.noise * torch.randn_like(x)
+            x = x + self.noise1 * torch.randn_like(x)
         x = self.act(x)
-        x = self.style_mod(x, style, condition)
+        x = self.style_mod1(x, style, condition)
+
+        x = self.conv2(x)
+        if self.use_noise:
+            x = x + self.noise2 * torch.randn_like(x)
+        x = self.act(x)
+        x = self.style_mod2(x, style, condition)
+
         return x
 
 class ConditionalGenerator(nn.Module):
@@ -129,7 +161,7 @@ class ConditionalGenerator(nn.Module):
         num_layers = network_params.num_layers
         
         self.style_dim = z_dim  
-        self.initial = nn.Parameter(torch.randn(1, d_model, 2, 2))
+        self.initial = nn.Parameter(torch.randn(1, d_model, 4, 4))
         self.mapping_network = MappingNetwork(z_dim, self.style_dim, num_layers)
         self.style1 = ConditionStyleMod(self.style_dim, condition_dim, d_model)
         
