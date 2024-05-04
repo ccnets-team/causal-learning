@@ -2,7 +2,7 @@ from nn.gpt import GPT
 from nn.custom_style_gan import Discriminator, ConditionalDiscriminator, ConditionalGenerator
 
 class GPTParams:
-    def __init__(self, num_layers=5, d_model=256, dropout=0.05):
+    def __init__(self, num_layers=6, d_model=256, dropout=0.02):
         """
         Initialize parameters for a GPT model configuration.
         
@@ -16,7 +16,7 @@ class GPTParams:
         self.dropout = dropout
 
 class EncodingParams:
-    def __init__(self, num_layers=5, d_model=256, obs_shape=[], z_dim=None, condition_dim=None):
+    def __init__(self, num_layers=6, d_model=256, obs_shape=[], z_dim=None, condition_dim=None):
         """
         Parameters for encoding networks, possibly for use in models like VAEs or conditional GANs.
         
@@ -34,7 +34,7 @@ class EncodingParams:
         self.condition_dim = condition_dim
 
 class ModelParameters:
-    def __init__(self, num_layers=5, d_model=256, dropout=0.02, 
+    def __init__(self, num_layers=6, d_model=256, dropout=0.02, 
                  encoding_networks=[Discriminator, ConditionalDiscriminator, ConditionalGenerator]):
         """
         Comprehensive model parameters, combining core and encoding networks.
