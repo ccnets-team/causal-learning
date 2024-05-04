@@ -26,7 +26,7 @@ def init_weights(module):
     Args:
         module (nn.Module): The module to initialize.
     """
-    if not isinstance(module, ContinuousFeatureEmbeddingLayer):
+    if not isinstance(module, ContinuousFeatureEmbeddingLayer) or not isinstance(module, ContinuousFeatureJointLayer):
         if isinstance(module, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
             nn.init.xavier_uniform_(module.weight)
             if module.bias is not None:
@@ -73,34 +73,49 @@ def create_layer(input_size=None, output_size=None, act_fn="none"):
 class ContinuousFeatureEmbeddingLayer(nn.Module):
     def __init__(self, num_features, embedding_size, act_fn='layer_norm'):
         super(ContinuousFeatureEmbeddingLayer, self).__init__()
+        # Initialize parameters for feature transformation
         self.feature_embeddings = nn.Parameter(torch.randn(num_features, embedding_size))
-        self.bias = nn.Parameter(torch.zeros(1, embedding_size))
+        self.bias = nn.Parameter(torch.zeros(embedding_size))
+        # Activation function to normalize or apply non-linearity
         self.final_layer = get_activation_function(act_fn, embedding_size)
                     
     def forward(self, features):
-        features_expanded = features.unsqueeze(-1)
-        feature_emb_mul = features_expanded * self.feature_embeddings   
-        feature_emb_bias = feature_emb_mul.sum(dim=-2) + self.bias
-        sequence_embeddings = self.final_layer(feature_emb_bias)
+        # Features are expected to be of shape [B, S, F]
+        # Expand the features tensor to prepare for element-wise multiplication
+        features_expanded = features.unsqueeze(-1)  # Shape: [B, S, F, 1]
+        # Multiply expanded features by embeddings
+        feature_emb_mul = features_expanded * self.feature_embeddings   # Shape: [B, S, F, E]
+        # Sum across the feature dimension to reduce to [B, S, E]
+        feature_emb_bias = feature_emb_mul.sum(dim=-2) + self.bias  # Shape: [B, S, E]
+        # Apply final layer (e.g., LayerNorm)
+        sequence_embeddings = self.final_layer(feature_emb_bias)  # Shape: [B, S, E]
         return sequence_embeddings
     
 class ContinuousFeatureJointLayer(nn.Module):
-    def __init__(self, num_features1, num_features2, embedding_size, act_fn='relu'):
+    def __init__(self, num_features1, num_features2, embedding_size, act_fn='layer_norm'):
         super(ContinuousFeatureJointLayer, self).__init__()
-        max_features = max(num_features1, num_features2)
-        self.expansion_layer1 = create_layer(num_features1, max_features, act_fn)
-        self.expansion_layer2 = create_layer(num_features2, max_features, act_fn)
-        
-        self.embedding_layer = ContinuousFeatureEmbeddingLayer(2*max_features, embedding_size)
+        # Initialize biases for each set of features
+        self.bias1 = nn.Parameter(torch.zeros(num_features1))  # Should be [1, 1, F1]
+        self.bias2 = nn.Parameter(torch.zeros(num_features2))  # Should be [1, 1, F2]
+        # Layer to process combined features
+        self.embedding_layer = create_layer(num_features1 + num_features2, embedding_size, act_fn)
 
     def forward(self, feature1, feature2):
-        expanded_feature1 = self.expansion_layer1(feature1)
-        expanded_feature2 = self.expansion_layer2(feature2)
+        # Ensure that features are expanded for broadcasting
+        feature1_expanded = feature1.unsqueeze(-1)  # Shape: [B, S, F1, 1]
+        feature2_expanded = feature2.unsqueeze(-2)  # Shape: [B, S, 1, F2]
 
-        # Concatenate the features
-        features_combined = torch.cat([expanded_feature1, expanded_feature2], dim=-1)
+        # Cross-multiply expanded features to create interaction terms
+        feature1_transformed = torch.matmul(feature1_expanded, feature2_expanded)  # Shape: [B, S, F1, F2]
+        # Transpose to swap F2 and F1 for feature2 transformations
+        feature2_transformed = feature1_transformed.transpose(-2, -1)  # Shape: [B, S, F2, F1]
 
-        # Pass the concatenated features through the embedding layer
-        sequence_embeddings = self.embedding_layer(features_combined)
+        # Sum across the feature dimensions and add biases
+        feature1_transformed = feature1_transformed.sum(dim=-1) + self.bias1  # Shape: [B, S, F1]
+        feature2_transformed = feature2_transformed.sum(dim=-1) + self.bias2  # Shape: [B, S, F2]
 
+        # Concatenate the transformed features for further processing
+        features_combined = torch.cat([feature1_transformed, feature2_transformed], dim=-1)  # Shape: [B, S, F1+F2]
+        # Process through an embedding layer
+        sequence_embeddings = self.embedding_layer(features_combined)  # Shape: [B, S, embedding_size]
         return sequence_embeddings
