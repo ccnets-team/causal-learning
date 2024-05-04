@@ -92,11 +92,8 @@ class ContinuousFeatureJointLayer(nn.Module):
     def __init__(self, num_features1, num_features2, embedding_size, act_fn='layer_norm'):
         super(ContinuousFeatureJointLayer, self).__init__()
         
-        n_features1 = embedding_size//2
-        n_features2 = embedding_size - embedding_size//2
-
-        self.embedding_layer1 = ContinuousFeatureEmbeddingLayer(num_features1, n_features1, 'none')
-        self.embedding_layer2 = ContinuousFeatureEmbeddingLayer(num_features2, n_features2, 'none')
+        self.embedding_layer1 = ContinuousFeatureEmbeddingLayer(num_features1, embedding_size, 'none')
+        self.embedding_layer2 = ContinuousFeatureEmbeddingLayer(num_features2, embedding_size, 'none')
         
         self.final_layer = get_activation_function(act_fn, embedding_size)
         
@@ -105,7 +102,7 @@ class ContinuousFeatureJointLayer(nn.Module):
         feature2_expanded = self.embedding_layer2(feature2)
         
         # Concatenate the transformed features for further processing
-        features_combined = torch.cat([feature1_expanded, feature2_expanded], dim=-1)  # Shape: [B, S, F1+F2]
+        features_combined = feature1_expanded * feature2_expanded
         
         # Process through an embedding layer
         sequence_embeddings = self.final_layer(features_combined)  # Shape: [B, S, embedding_size]

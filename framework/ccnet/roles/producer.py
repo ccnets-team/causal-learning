@@ -66,7 +66,7 @@ class Producer(nn.Module):
         """
         if self.use_image:
             # Directly process image data through the network
-            return self.net(labels, explains)
+            return self.net(condition = labels, z = explains)
         else:
             z = self.input_embedding_layer(labels, explains)
             # Reverse the tensor sequence for processing
