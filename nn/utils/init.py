@@ -1,12 +1,9 @@
 '''
 COPYRIGHT (c) 2022. CCNets. All Rights reserved.
 '''
-import os
 import torch
 import random
 import numpy as np
-import torch.nn.functional as F
-from collections.abc import Iterable
 from torch import nn
 
 def set_random_seed(seed_val):
@@ -26,16 +23,18 @@ def init_weights(module):
     Args:
         module (nn.Module): The module to initialize.
     """
-    if not isinstance(module, ContinuousFeatureEmbeddingLayer) or not isinstance(module, ContinuousFeatureJointLayer):
-        if isinstance(module, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
-            nn.init.xavier_uniform_(module.weight)
-            if module.bias is not None:
-                nn.init.zeros_(module.bias)
-        elif isinstance(module, nn.MultiheadAttention):
-            nn.init.xavier_uniform_(module.in_proj_weight)
-            if module.in_proj_bias is not None:
-                nn.init.zeros_(module.in_proj_bias)
-                
+    if isinstance(module, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
+        nn.init.xavier_uniform_(module.weight)
+        if module.bias is not None:
+            nn.init.zeros_(module.bias)
+    elif isinstance(module, nn.MultiheadAttention):
+        nn.init.xavier_uniform_(module.in_proj_weight)
+        if module.in_proj_bias is not None:
+            nn.init.zeros_(module.in_proj_bias)
+    elif isinstance(module, ContinuousFeatureEmbeddingLayer):
+        nn.init.xavier_uniform_(module.weight)
+        nn.init.zeros_(module.bias)
+            
     # Apply recursively to child submodules regardless of the parent's type
     for child in module.children():
         init_weights(child)
@@ -71,7 +70,7 @@ class ContinuousFeatureEmbeddingLayer(nn.Module):
     def __init__(self, num_features, embedding_size, act_fn='layer_norm'):
         super(ContinuousFeatureEmbeddingLayer, self).__init__()
         # Initialize parameters for feature transformation
-        self.feature_embeddings = nn.Parameter(torch.randn(num_features, embedding_size))
+        self.weight = nn.Parameter(torch.randn(num_features, embedding_size))
         self.bias = nn.Parameter(torch.zeros(embedding_size))
         # Activation function to normalize or apply non-linearity
         self.final_layer = get_activation_function(act_fn, embedding_size)
@@ -81,7 +80,7 @@ class ContinuousFeatureEmbeddingLayer(nn.Module):
         # Expand the features tensor to prepare for element-wise multiplication
         features_expanded = features.unsqueeze(-1)  # Shape: [B, S, F, 1]
         # Multiply expanded features by embeddings
-        feature_emb_mul = features_expanded * self.feature_embeddings   # Shape: [B, S, F, E]
+        feature_emb_mul = features_expanded * self.weight   # Shape: [B, S, F, E]
         # Sum across the feature dimension to reduce to [B, S, E]
         feature_emb_bias = feature_emb_mul.sum(dim=-2) + self.bias  # Shape: [B, S, E]
         # Apply final layer (e.g., LayerNorm)
@@ -102,9 +101,6 @@ class ContinuousFeatureJointLayer(nn.Module):
         feature2_expanded = self.embedding_layer2(feature2)
         
         # Concatenate the transformed features for further processing
-        features_combined = feature1_expanded * feature2_expanded
+        feature_embeddings = feature1_expanded * feature2_expanded
         
-        # Process through an embedding layer
-        sequence_embeddings = self.final_layer(features_combined)  # Shape: [B, S, embedding_size]
-        
-        return sequence_embeddings
+        return self.final_layer(feature_embeddings)  # Shape: [B, S, embedding_size]
