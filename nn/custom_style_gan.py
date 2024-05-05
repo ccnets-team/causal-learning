@@ -80,7 +80,7 @@ class ConvBlock(nn.Module):
         self.conv2 = nn.Conv2d(out_channels, out_channels, 3, padding=1)
         self.act2 = nn.LeakyReLU(0.2)
 
-    def forward(self, x):
+    def forward(self, x, style = None, condition = None):
         x = self.conv1(x)
         if self.use_noise:
             x = x + self.noise1 * torch.randn_like(x)
@@ -161,7 +161,10 @@ class Generator(nn.Module):
         current_d_model = d_model
         for i in range(num_layers):
             next_d_model = max(1, current_d_model // 2)  # Reduce channel count
-            self.blocks.append(StyleConvBlock(current_d_model, next_d_model, self.style_dim, use_noise=True))
+            if i <= num_layers//2:
+                self.blocks.append(StyleConvBlock(current_d_model, next_d_model, self.style_dim, use_noise=True))
+            else:
+                self.blocks.append(ConvBlock(current_d_model, next_d_model, use_noise=True))
             current_d_model = next_d_model
         
         self.to_rgb = nn.Sequential(nn.Conv2d(current_d_model, 3, 1), nn.Tanh())
@@ -195,7 +198,10 @@ class ConditionalGenerator(nn.Module):
         current_d_model = d_model
         for i in range(num_layers):
             next_d_model = max(1, current_d_model // 2)  # Reduce channel count
-            self.blocks.append(ConditionStyleConvBlock(current_d_model, next_d_model, self.style_dim, condition_dim, use_noise=True))
+            if i <= num_layers//2:
+                self.blocks.append(ConditionStyleConvBlock(current_d_model, next_d_model, self.style_dim, condition_dim, use_noise=True))
+            else:
+                self.blocks.append(ConvBlock(current_d_model, next_d_model, use_noise=True))
             current_d_model = next_d_model
         
         self.to_rgb = nn.Sequential(nn.Conv2d(current_d_model, 3, 1), nn.Tanh())
@@ -252,7 +258,10 @@ class ConditionalDiscriminator(nn.Module):
         
         for i in range(num_layers):
             out_channels = self.d_model // (2 ** (num_layers - i - 1))
-            self.blocks.append(StyleConvBlock(in_channels, out_channels, self.style_dim, use_noise=False))
+            if i <= num_layers//2:
+                self.blocks.append(StyleConvBlock(in_channels, out_channels, self.style_dim, use_noise=False))
+            else:
+                self.blocks.append(ConvBlock(in_channels, out_channels, use_noise=False))
             in_channels = out_channels
 
         final = [nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(out_channels, self.d_model)]
