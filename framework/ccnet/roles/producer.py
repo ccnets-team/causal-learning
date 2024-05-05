@@ -39,12 +39,13 @@ class Producer(nn.Module):
         d_model = network_params.d_model
         self.use_image = len(output_shape) != 1
 
+        # Embedding layer for combined condition and explanation inputs
+        self.input_embedding_layer = ContinuousFeatureEmbeddingLayer(condition_size + explain_size, d_model)
+
         # Initialize the main network module
         self.net = net(network_params)
         if not self.use_image:
             output_size = output_shape[-1]
-            # Embedding layer for combined condition and explanation inputs
-            self.input_embedding_layer = ContinuousFeatureEmbeddingLayer(condition_size + explain_size, d_model)
             # Activation layer and final layer to adjust to the required output size
             self.relu = nn.ReLU()
             self.final_layer = create_layer(d_model, output_size, act_fn=act_fn)
@@ -64,12 +65,12 @@ class Producer(nn.Module):
         Returns:
             Tensor: The output tensor after processing through the network.
         """
+        z = torch.cat([labels, explains], dim=-1)
+        z = self.input_embedding_layer(z)
         if self.use_image:
             # Directly process image data through the network
-            return self.net(condition = labels, z = explains)
+            return self.net(z)
         else:
-            z = torch.cat([labels, explains], dim=-1)
-            z = self.input_embedding_layer(z)
             # Reverse the tensor sequence for processing
             reversed_z, reversed_padding_mask = self.flip_tensor(z, padding_mask)
             reversed_x = self.net(reversed_z) if reversed_padding_mask is None else self.net(reversed_z, reversed_padding_mask)

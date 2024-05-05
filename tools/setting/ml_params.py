@@ -1,5 +1,5 @@
 from nn.gpt import GPT
-from nn.custom_style_gan import Discriminator, ConditionalDiscriminator, ConditionalGenerator
+from nn.custom_style_gan import Discriminator, ConditionalDiscriminator, Generator
 
 class GPTModelParams:
     def __init__(self, num_layers=6, d_model=256, dropout=0.02):
@@ -35,7 +35,7 @@ class ImageModelParams:
 
 class ModelParameters:
     def __init__(self, core_model_name = 'gpt', encoder_model_name = 'stylegan', 
-                 encoding_networks=[Discriminator, ConditionalDiscriminator, ConditionalGenerator]):
+                 encoding_networks=[Discriminator, ConditionalDiscriminator, Generator]):
         """
         Comprehensive model parameters, combining core and encoding networks.
         
