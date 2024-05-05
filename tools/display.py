@@ -66,13 +66,14 @@ class ImageDebugger:
         draw = ImageDraw.Draw(img)
         font = ImageFont.load_default()  # Load default font
         
-        # Define labels and their positions
-        labels = ["Female, No-smile", "Male, No-smile", "Female, Smile", "Male, Smile"]
-        positions = [(30, 60 + 128 * (i + 1)) for i in range(len(labels))]  # Adjust positions as needed
-        
-        # Draw text on the image
-        for label, position in zip(labels, positions):
-            draw.text(position, label, font=font, fill=(0, 0, 0))  # White color for text
+        if self.use_core:
+            # Define labels and their positions
+            labels = ["Female, No-smile", "Male, No-smile", "Female, Smile", "Male, Smile"]
+            positions = [(30, 60 + 128 * (i + 1)) for i in range(len(labels))]  # Adjust positions as needed
+            
+            # Draw text on the image
+            for label, position in zip(labels, positions):
+                draw.text(position, label, font=font, fill=(0, 0, 0))  # White color for text
 
         # Save the image to a byte buffer to then display it
         with io.BytesIO() as output:
