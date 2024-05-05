@@ -8,10 +8,11 @@ import torch
 from .roles.explainer import Explainer
 from .roles.reasoner import Reasoner
 from .roles.producer import Producer
+from tools.setting.ml_params import GPTModelParams, ImageModelParams 
 from tools.tensor import adjust_tensor_dim, determine_activation_by_task_type
                     
 class CooperativeNetwork:
-    def __init__(self, model_name, model_params, task_type, obs_size, label_size, explain_size, device, 
+    def __init__(self, model_name, model_params, task_type, obs_shape, label_size, explain_size, device, 
                  encoder = None):
         """
         Initializes the Cooperative Network with specified model parameters and computational device.
@@ -25,9 +26,15 @@ class CooperativeNetwork:
             encoder (optional): Encoder object for input data preprocessing.
         """
         # Initialize model names and configurations.        
-        explainer_params = model_params.core_params
-        reasoner_params = model_params.core_params
-        producer_params = model_params.core_params
+        core_params = model_params.core_params
+        
+        if isinstance(core_params, GPTModelParams):
+            self.use_gpt = True 
+        elif isinstance(core_params, ImageModelParams):
+            self.use_gpt = False 
+            core_params.obs_shape = obs_shape
+            core_params.z_dim = explain_size
+            core_params.condition_dim = label_size
         
         explainer_network = model_params.core_networks[0]
         reasoner_network = model_params.core_networks[1]
@@ -40,9 +47,9 @@ class CooperativeNetwork:
         network_names = ["explainer", "reasoner", "producer"]
         self.model_name = model_name
         self.network_names = [f"{model_name}_{name}" for name in network_names]
-        self.explainer =  Explainer(explainer_network, explainer_params, obs_size, explain_size, act_fn="layer_norm").to(device)
-        self.reasoner =  Reasoner(reasoner_network, reasoner_params, obs_size, explain_size, label_size, act_fn=task_act_fn).to(device)
-        self.producer =  Producer(producer_network, producer_params, label_size, explain_size, obs_size, act_fn="none").to(device)
+        self.explainer =  Explainer(explainer_network, core_params, obs_shape, explain_size, act_fn="layer_norm").to(device)
+        self.reasoner =  Reasoner(reasoner_network, core_params, obs_shape, explain_size, label_size, act_fn=task_act_fn).to(device)
+        self.producer =  Producer(producer_network, core_params, label_size, explain_size, obs_shape, act_fn="none").to(device)
         self.networks = [self.explainer, self.reasoner, self.producer]
         
         self.explain_size = explain_size
@@ -89,7 +96,8 @@ class CooperativeNetwork:
         """
         with torch.no_grad():
             encoded_input = self.encode(input_data)
-            encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
+            if self.use_gpt:
+                encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
             explanation = self.explainer(encoded_input)
         return explanation
 
@@ -105,11 +113,13 @@ class CooperativeNetwork:
         """
         with torch.no_grad():
             encoded_input = self.encode(input_data)
-            original_dim = len(encoded_input.shape)
-            encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
+            if self.use_gpt:
+                original_dim = len(encoded_input.shape)
+                encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
             explanation = self.explainer(encoded_input)
             reasoned_output = self.reasoner(encoded_input, explanation)
-            reasoned_output = adjust_tensor_dim(reasoned_output, target_dim=original_dim)
+            if self.use_gpt:
+                reasoned_output = adjust_tensor_dim(reasoned_output, target_dim=original_dim)
         return reasoned_output
     
     def reason(self, input_data, explanation):
@@ -125,10 +135,12 @@ class CooperativeNetwork:
         """
         with torch.no_grad():
             encoded_input = self.encode(input_data)
-            original_dim = len(encoded_input.shape)
-            encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
+            if self.use_gpt:
+                original_dim = len(encoded_input.shape)
+                encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
             reasoned_output = self.reasoner(encoded_input, explanation)
-            reasoned_output = adjust_tensor_dim(reasoned_output, target_dim=original_dim)
+            if self.use_gpt:
+                reasoned_output = adjust_tensor_dim(reasoned_output, target_dim=original_dim)
         return reasoned_output
 
     def generate(self, condition_data):
@@ -142,11 +154,13 @@ class CooperativeNetwork:
             Tensor: Generated output data tensor.
         """
         with torch.no_grad():
-            original_dim = len(condition_data.shape)
-            condition_data = adjust_tensor_dim(condition_data, target_dim=3)
+            if self.use_gpt:
+                original_dim = len(condition_data.shape)
+                condition_data = adjust_tensor_dim(condition_data, target_dim=3)
             random_explanation = torch.randn(condition_data.size(0), self.explanation_size).to(self.device)   
             generated_output = self.producer(condition_data, random_explanation)
-            generated_output = adjust_tensor_dim(generated_output, target_dim=original_dim)
+            if self.use_gpt:
+                generated_output = adjust_tensor_dim(generated_output, target_dim=original_dim)
             generated_data = self.decode(generated_output)
         return generated_data
 
@@ -162,11 +176,13 @@ class CooperativeNetwork:
             Tensor: Produced output data tensor.
         """
         with torch.no_grad():
-            original_dim = len(condition_data.shape)
-            condition_data = adjust_tensor_dim(condition_data, target_dim=3)
-            explanation = adjust_tensor_dim(explanation, target_dim=3)
+            if self.use_gpt:
+                original_dim = len(condition_data.shape)
+                condition_data = adjust_tensor_dim(condition_data, target_dim=3)
+                explanation = adjust_tensor_dim(explanation, target_dim=3)
             produced_output = self.producer(condition_data, explanation)
-            produced_output = adjust_tensor_dim(produced_output, target_dim=original_dim)
+            if self.use_gpt:
+                produced_output = adjust_tensor_dim(produced_output, target_dim=original_dim)
             produced_data = self.decode(produced_output)
         return produced_data
     
@@ -183,11 +199,13 @@ class CooperativeNetwork:
         """
         with torch.no_grad():
             encoded_input = self.encode(input_data)
-            original_dim = len(encoded_input.shape)
-            encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
+            if self.use_gpt:
+                original_dim = len(encoded_input.shape)
+                encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
             explanation = self.explainer(encoded_input)
             inferred_output = self.reasoner(encoded_input, explanation)
             reconstructed_output = self.producer(inferred_output, explanation)
-            reconstructed_output = adjust_tensor_dim(reconstructed_output, target_dim=original_dim)
+            if self.use_gpt:
+                reconstructed_output = adjust_tensor_dim(reconstructed_output, target_dim=original_dim)
             reconstructed_data = self.decode(reconstructed_output)
         return reconstructed_data

@@ -47,6 +47,7 @@ class TrainerHubHelper:
         self.logger = logging.getLogger(__name__)
         self.pivot_time = None
         
+        self.use_gpt = self.parent.use_gpt
         self.use_core = self.parent.use_core
         self.use_encoder = self.parent.use_encoder
         self.core_metrics = MetricsTracker()
@@ -88,12 +89,17 @@ class TrainerHubHelper:
         # Encode inputs to prepare them for causal training
         source_code, target_code = encode_inputs(self.encoder_ccnet, source_batch, target_batch)
         
-        # Adjust tensor dimensions for causal processing
-        state_trajectory = adjust_tensor_dim(source_code, target_dim=3)  # off when it's img data set
-        target_trajectory = adjust_tensor_dim(target_code, target_dim=3)  # off when it's img data set
-        
-        # Generate padding mask based on state trajectory
-        padding_mask = generate_padding_mask(state_trajectory)
+        if self.use_gpt:
+            # Adjust tensor dimensions for causal processing
+            state_trajectory = adjust_tensor_dim(source_code, target_dim=3)  # off when it's img data set
+            target_trajectory = adjust_tensor_dim(target_code, target_dim=3)  # off when it's img data set
+            
+            # Generate padding mask based on state trajectory
+            padding_mask = generate_padding_mask(state_trajectory)
+        else:
+            state_trajectory = source_code
+            target_trajectory = target_code
+            padding_mask = None
         
         return state_trajectory, target_trajectory, padding_mask
 

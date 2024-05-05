@@ -6,6 +6,7 @@ import torch
 from .roles.explainer import Explainer
 from .roles.reasoner import Reasoner
 from .roles.producer import Producer
+from tools.setting.ml_params import GPTModelParams, ImageModelParams 
 
 class CooperativeEncodingNetwork:
     def __init__(self, model_name, model_params, obs_shape, stoch_size, det_size, device):
@@ -16,9 +17,10 @@ class CooperativeEncodingNetwork:
         producer_network = model_params.encoding_networks[2]
 
         encoding_params = model_params.encoding_params
-        encoding_params.obs_shape = obs_shape
-        encoding_params.z_dim = det_size
-        encoding_params.condition_dim = stoch_size
+        if isinstance(encoding_params, ImageModelParams):
+            encoding_params.obs_shape = obs_shape
+            encoding_params.z_dim = det_size
+            encoding_params.condition_dim = stoch_size
             
         self.explainer = Explainer(explainer_network, encoding_params, obs_shape, det_size, act_fn="layer_norm").to(device)
         self.reasoner = Reasoner(reasoner_network, encoding_params, obs_shape, det_size, stoch_size, act_fn="layer_norm").to(device)

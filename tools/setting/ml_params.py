@@ -1,6 +1,9 @@
 from nn.gpt import GPT
 from nn.custom_style_gan import Discriminator, ConditionalDiscriminator, Generator
 
+STYLEGAN_COOPERATIVE_NETWORKS = [Discriminator, ConditionalDiscriminator, Generator]
+GPT_COOPERATIVE_NETWORKS = [GPT, GPT, GPT]
+
 class GPTModelParams:
     def __init__(self, num_layers=6, d_model=256, dropout=0.02):
         """
@@ -35,7 +38,8 @@ class ImageModelParams:
 
 class ModelParameters:
     def __init__(self, core_model_name = 'gpt', encoder_model_name = 'stylegan', 
-                 encoding_networks=[Discriminator, ConditionalDiscriminator, Generator]):
+                 core_networks=GPT_COOPERATIVE_NETWORKS, core_params=GPTModelParams(),
+                 encoding_networks=STYLEGAN_COOPERATIVE_NETWORKS, encoding_params=ImageModelParams()):
         """
         Comprehensive model parameters, combining core and encoding networks.
         
@@ -47,10 +51,10 @@ class ModelParameters:
         """
         self.core_model_name = core_model_name
         self.encoder_model_name = encoder_model_name
-        self.core_networks = [GPT, GPT, GPT]
-        self.core_params = GPTModelParams()
+        self.core_networks = core_networks
+        self.core_params = core_params
         self.encoding_networks = encoding_networks
-        self.encoding_params = ImageModelParams()
+        self.encoding_params = encoding_params
     
 class OptimizationParameters:
     def __init__(self, learning_rate=2e-4, decay_rate_100k=0.05, scheduler_type='exponential', clip_grad_range=None, max_grad_norm=1.0):

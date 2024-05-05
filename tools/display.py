@@ -46,8 +46,7 @@ class ImageDebugger:
                     selected_features = self.debug_labels[i:i + 1, :].expand_as(inferred_labels)
                     generated_images = self.image_ccnet.produce(selected_features, explains).cpu()
                 else:
-                    selected_features = self.debug_labels[i:i + 1, :].expand_as(inferred_labels) if self.use_core else \
-                                        recognized_features[i:i + 1, :].expand_as(recognized_features)
+                    selected_features = recognized_features[i:i + 1, :].expand_as(recognized_features)
                     generated_code = torch.cat([selected_features, explains], dim=-1)
                     generated_images = self.image_ccnet.decode(generated_code).cpu()
 

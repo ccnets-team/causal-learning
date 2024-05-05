@@ -33,8 +33,8 @@ class TrainerHub:
     def __init__(self, ml_params: MLParameters, data_config: DataConfig, device, use_print=False, use_wandb=False):
         self.data_config = data_config
         self.device = device
-        self.use_gpt = ml_params.core_model_name == 'gpt'
         self.use_core = ml_params.core_model_name != 'none'
+        self.use_gpt = ml_params.core_model_name == 'gpt'
         self.use_encoder = ml_params.encoder_model_name != 'none'
         self.use_print = use_print
         self.use_wandb = use_wandb
@@ -58,7 +58,7 @@ class TrainerHub:
         if self.use_encoder:
             obs_shape = self.data_config.obs_shape
             encoding_d_model = model_params.encoding_params.d_model
-            stoch_size, det_size = encoding_d_model//2, encoding_d_model//2
+            stoch_size, det_size = encoding_d_model, encoding_d_model
             self.encoder_ccnet = CooperativeEncodingNetwork(model_params.encoder_model_name, model_params, obs_shape, stoch_size, det_size, self.device)
             self.encoder_trainer = CausalEncodingTrainer(self.encoder_ccnet, training_params, optimization_params)
             self.state_size = stoch_size + det_size
@@ -147,10 +147,11 @@ class TrainerHub:
         
         source_batch, target_batch = convert_to_device(source_batch, target_batch, device=self.device)
         
-        encoder_metric = self.encoder_trainer.train_models(source_batch) if self.use_encoder else None
+        if self.use_encoder:
+            encoder_metric = self.encoder_trainer.train_models(source_batch)
+
         if self.use_core:
             state_trajectory, target_trajectory, padding_mask = self.helper.setup_training_step(source_batch, target_batch)
-        
             core_metric = self.core_trainer.train_models(state_trajectory, target_trajectory, padding_mask)
         
         self.helper.finalize_training_step(testset, epoch, iters, dataloader_length, core_metric, encoder_metric)
