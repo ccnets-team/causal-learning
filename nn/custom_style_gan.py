@@ -30,7 +30,10 @@ class MappingNetwork(nn.Module):
     """ Maps the latent vector to style codes with several fully connected layers. """
     def __init__(self, latent_dim, style_dim, num_layers):
         super().__init__()
-        layers = [nn.Sequential(nn.Linear(latent_dim, style_dim), nn.LeakyReLU(0.2)) for _ in range(num_layers)]
+        # First layer handles dimensionality change if needed
+        layers = [nn.Sequential(nn.Linear(latent_dim, style_dim), nn.LeakyReLU(0.2))]
+        # Additional layers refine the transformation within the style dimension
+        layers += [nn.Sequential(nn.Linear(style_dim, style_dim), nn.LeakyReLU(0.2)) for _ in range(num_layers - 1)]
         self.mapping_layers = nn.Sequential(*layers)
     
     def forward(self, z):
@@ -68,22 +71,15 @@ class ConvBlock(nn.Module):
     def __init__(self, in_channels, out_channels, use_noise=True):
         super().__init__()
         self.conv1 = nn.Conv2d(in_channels, out_channels, 3, padding=1)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, 3, padding=1)
         self.use_noise = use_noise
         if use_noise:
             self.noise1 = nn.Parameter(torch.randn(1, out_channels, 1, 1))
-            self.noise2 = nn.Parameter(torch.randn(1, out_channels, 1, 1))
         self.act = nn.LeakyReLU(0.2)
 
     def forward(self, x):
         x = self.conv1(x)
         if self.use_noise:
             x = x + self.noise1 * torch.randn_like(x)
-        x = self.act(x)
-
-        x = self.conv2(x)
-        if self.use_noise:
-            x = x + self.noise2 * torch.randn_like(x)
         x = self.act(x)
 
         return x
@@ -93,29 +89,18 @@ class StyleConvBlock(nn.Module):
     def __init__(self, in_channels, out_channels, style_dim, use_noise=True):
         super().__init__()
         self.conv1 = nn.Conv2d(in_channels, out_channels, 3, padding=1)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, 3, padding=1)
         self.style_mod1 = StyleMod(style_dim, out_channels)
-        self.style_mod2 = StyleMod(style_dim, out_channels)
         self.use_noise = use_noise
         if use_noise:
             self.noise1 = nn.Parameter(torch.randn(1, out_channels, 1, 1))
-            self.noise2 = nn.Parameter(torch.randn(1, out_channels, 1, 1))
         self.act = nn.LeakyReLU(0.2)
 
-    def forward(self, x, style = None):
+    def forward(self, x, style):
         x = self.conv1(x)
         if self.use_noise:
             x = x + self.noise1 * torch.randn_like(x)
         x = self.act(x)
-        if style is not None:
-            x = self.style_mod1(x, style)
-
-        x = self.conv2(x)
-        if self.use_noise:
-            x = x + self.noise2 * torch.randn_like(x)
-        x = self.act(x)
-        if style is not None:
-            x = self.style_mod2(x, style)
+        x = self.style_mod1(x, style)
 
         return x
     
@@ -124,14 +109,11 @@ class ConditionStyleConvBlock(nn.Module):
     def __init__(self, in_channels, out_channels, style_dim, condition_dim, use_noise=True):
         super().__init__()
         self.conv1 = nn.Conv2d(in_channels, out_channels, 3, padding=1)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, 3, padding=1)
 
         self.style_mod1 = ConditionStyleMod(style_dim, condition_dim, out_channels)
-        self.style_mod2 = ConditionStyleMod(style_dim, condition_dim, out_channels)
 
         if use_noise:
             self.noise1 = nn.Parameter(torch.randn(1, out_channels, 1, 1))
-            self.noise2 = nn.Parameter(torch.randn(1, out_channels, 1, 1))
 
         self.act = nn.LeakyReLU(0.2)
         self.use_noise = use_noise
@@ -143,15 +125,9 @@ class ConditionStyleConvBlock(nn.Module):
         x = self.act(x)
         x = self.style_mod1(x, style, condition)
 
-        x = self.conv2(x)
-        if self.use_noise:
-            x = x + self.noise2 * torch.randn_like(x)
-        x = self.act(x)
-        x = self.style_mod2(x, style, condition)
-
         return x
-
-class ConditionalGenerator(nn.Module):
+    
+class Generator(nn.Module):
     """ Generator model incorporating a mapping network and conditionally applied styles. """
     def __init__(self, network_params):
         super().__init__()
@@ -161,7 +137,37 @@ class ConditionalGenerator(nn.Module):
         num_layers = network_params.num_layers
         
         self.style_dim = z_dim  
-        self.initial = nn.Parameter(torch.randn(1, d_model, 4, 4))
+        self.initial = nn.Parameter(torch.randn(1, d_model, 2, 2))
+        
+        self.blocks = nn.ModuleList()
+        current_d_model = d_model
+        for i in range(num_layers):
+            next_d_model = max(1, current_d_model // 2)  # Reduce channel count
+            self.blocks.append(ConvBlock(current_d_model, next_d_model, self.style_dim, condition_dim, use_noise=True))
+            current_d_model = next_d_model
+        
+        self.to_rgb = nn.Sequential(nn.Conv2d(current_d_model, 3, 1), nn.Tanh())
+
+    def forward(self, z):
+        batch_size = z.shape[0]
+        out = self.initial.expand(batch_size, -1, -1, -1)
+        for block in self.blocks:
+            out = nn.functional.interpolate(out, scale_factor=2, mode='nearest')
+            out = block(out)
+        out = self.to_rgb(out)
+        return out
+    
+class ConditionalGenerator(nn.Module):
+    """ Generator model incorporating a mapping network and conditionally applied styles. """
+    def __init__(self, network_params):
+        super().__init__()
+        condition_dim = network_params.condition_dim
+        z_dim = network_params.z_dim
+        d_model = network_params.d_model
+        num_layers = network_params.num_layers
+        
+        self.style_dim = d_model  
+        self.initial = nn.Parameter(torch.randn(1, d_model, 2, 2))
         self.mapping_network = MappingNetwork(z_dim, self.style_dim, num_layers)
         self.style1 = ConditionStyleMod(self.style_dim, condition_dim, d_model)
         
@@ -217,7 +223,7 @@ class ConditionalDiscriminator(nn.Module):
         super().__init__()
         self.z_dim = network_params.z_dim
         self.d_model = network_params.d_model
-        self.style_dim = self.z_dim  # Ensure style_dim is defined correctly
+        self.style_dim = self.d_model  # Ensure style_dim is defined correctly
         num_layers = network_params.num_layers
         self.mapping_network = MappingNetwork(self.z_dim, self.style_dim, num_layers)
 
@@ -229,7 +235,7 @@ class ConditionalDiscriminator(nn.Module):
             self.blocks.append(StyleConvBlock(in_channels, out_channels, self.style_dim, use_noise=False))
             in_channels = out_channels
 
-        final = [nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(in_channels, self.d_model)]
+        final = [nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(out_channels, self.d_model)]
         self.final = nn.Sequential(*final)
 
     def forward(self, img, e):

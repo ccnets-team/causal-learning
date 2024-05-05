@@ -2,7 +2,7 @@ from nn.gpt import GPT
 from nn.custom_style_gan import Discriminator, ConditionalDiscriminator, ConditionalGenerator
 
 class GPTModelParams:
-    def __init__(self, num_layers=5, d_model=256, dropout=0.02):
+    def __init__(self, num_layers=6, d_model=256, dropout=0.02):
         """
         Initialize parameters for a GPT model configuration.
         
@@ -16,7 +16,7 @@ class GPTModelParams:
         self.dropout = dropout
 
 class ImageModelParams:
-    def __init__(self, num_layers=5, d_model=256, obs_shape=[], z_dim=None, condition_dim=None):
+    def __init__(self, num_layers=6, d_model=512, obs_shape=[], z_dim=None, condition_dim=None):
         """
         Parameters for encoding networks, possibly for use in models like VAEs or conditional GANs.
         
@@ -34,7 +34,7 @@ class ImageModelParams:
         self.condition_dim = condition_dim
 
 class ModelParameters:
-    def __init__(self, num_layers=5, d_model=256, dropout=0.02, 
+    def __init__(self, core_model_name = 'gpt', encoder_model_name = 'stylegan', 
                  encoding_networks=[Discriminator, ConditionalDiscriminator, ConditionalGenerator]):
         """
         Comprehensive model parameters, combining core and encoding networks.
@@ -45,10 +45,12 @@ class ModelParameters:
         - dropout (float): Dropout rate for the core network.
         - encoding_networks (list): List of classes representing different encoding network types.
         """
+        self.core_model_name = core_model_name
+        self.encoder_model_name = encoder_model_name
         self.core_networks = [GPT, GPT, GPT]
-        self.core_params = GPTModelParams(num_layers=num_layers, d_model=d_model, dropout=dropout)
+        self.core_params = GPTModelParams()
         self.encoding_networks = encoding_networks
-        self.encoding_params = ImageModelParams(num_layers=num_layers, d_model= d_model)
+        self.encoding_params = ImageModelParams()
     
 class OptimizationParameters:
     def __init__(self, learning_rate=2e-4, decay_rate_100k=0.05, scheduler_type='exponential', clip_grad_range=None, max_grad_norm=1.0):

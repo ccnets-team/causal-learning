@@ -5,7 +5,6 @@
         PARK, JunHo, junho@ccnets.org
 '''
 
-import torch
 import torch.nn as nn
 from nn.utils.init import init_weights, create_layer
 from nn.utils.init import ContinuousFeatureJointLayer
@@ -53,7 +52,7 @@ class Reasoner(nn.Module):
             # Initialize the neural network for non-image data
             self.net = net(network_params)
         # Additional layers for non-linearity and final output transformation
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = nn.ReLU()
         self.final_layer = create_layer(d_model, output_size, act_fn=act_fn)
 
         # Apply initial weights

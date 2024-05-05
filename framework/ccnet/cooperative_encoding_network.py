@@ -8,7 +8,7 @@ from .roles.reasoner import Reasoner
 from .roles.producer import Producer
 
 class CooperativeEncodingNetwork:
-    def __init__(self, model_params, obs_shape, stoch_size, det_size, device, model_name='encoding'):
+    def __init__(self, model_name, model_params, obs_shape, stoch_size, det_size, device):
         # Initialize model names and configurations.
         
         explainer_network = model_params.encoding_networks[0]
@@ -26,11 +26,13 @@ class CooperativeEncodingNetwork:
 
         # Add model_name prefix to the network names
         network_names = ["explainer", "reasoner", "producer"]
-        self.network_names = [f"{model_name}_{name}" for name in network_names]
+        self.model_name = model_name
+        self.network_names = [f"{model_name}_{'encoding'}_{name}" for name in network_names]
         self.networks = [self.explainer, self.reasoner, self.producer]
         self.obs_shape = obs_shape
         self.det_size = det_size
         self.stoch_size = stoch_size
+        self.device = device
             
     def encode(self, input_data: torch.Tensor) -> torch.Tensor:
         """

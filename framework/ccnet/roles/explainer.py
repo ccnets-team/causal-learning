@@ -43,14 +43,14 @@ class Explainer(nn.Module):
             input_size = input_shape[-1]  # Size of the last dimension of the input
             # Embedding layer for continuous features
             self.input_embedding_layer = ContinuousFeatureEmbeddingLayer(input_size, d_model)
-            
+
+        # Initialize the main network module
+        self.net = net(network_params)
+                    
         # Activation layer
         self.relu = nn.ReLU(inplace=True)
         # Final layer to adjust to the required output size, with specified activation function
         self.final_layer = create_layer(d_model, output_size, act_fn=act_fn) 
-
-        # Initialize the main network module
-        self.net = net(network_params)
         
         # Apply initial weights
         self.apply(init_weights)

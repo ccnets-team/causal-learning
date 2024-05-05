@@ -31,9 +31,6 @@ def init_weights(module):
         nn.init.xavier_uniform_(module.in_proj_weight)
         if module.in_proj_bias is not None:
             nn.init.zeros_(module.in_proj_bias)
-    elif isinstance(module, ContinuousFeatureEmbeddingLayer):
-        nn.init.xavier_uniform_(module.weight)
-        nn.init.zeros_(module.bias)
             
     # Apply recursively to child submodules regardless of the parent's type
     for child in module.children():

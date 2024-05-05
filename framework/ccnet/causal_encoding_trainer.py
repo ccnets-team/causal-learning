@@ -30,6 +30,7 @@ class CausalEncodingTrainer(TrainerBase):
         TrainerBase.__init__(self, encoder.networks, training_params, optimization_params)
         self.explainer, self.reasoner, self.producer = self.networks        
         self.network_names = encoder.network_names
+        self.layer_norm = torch.nn.LayerNorm(encoder.stoch_size, elementwise_affine=False).to(encoder.device)
 
     def train_models(self, input_observation, **kwargs):
         """
@@ -46,21 +47,20 @@ class CausalEncodingTrainer(TrainerBase):
         ################################  Forward Pass  ########################################
         # Generate explanations and features.
         causal_explain = self.explainer(input_observation)
-        random_explain1 = torch.randn_like(causal_explain)
-        random_explain2 = torch.randn_like(causal_explain)
+        random_explain = torch.randn_like(causal_explain)
         
         causal_feature = self.reasoner(input_observation, causal_explain)
-        stochastic_feature = self.reasoner(input_observation, random_explain1)
+        stochastic_feature = self.reasoner(input_observation, random_explain)
         
         # Reset random seed for reproducibility before each generation.        
         self.reset_seed()
         cc_generated_observation = self.producer(causal_feature, causal_explain.detach())
         self.reset_seed()
-        cs_generated_observation = self.producer(causal_feature, random_explain2)
+        cs_generated_observation = self.producer(causal_feature, random_explain)
         self.reset_seed()
         sc_generated_observation = self.producer(stochastic_feature.detach(), causal_explain)
         self.reset_seed()
-        ss_generated_observation = self.producer(stochastic_feature, random_explain2).detach()
+        ss_generated_observation = self.producer(stochastic_feature, random_explain).detach()
 
         ################################  Path Costs  ###########################################
         cost_ds = self.cost_fn(cs_generated_observation, ss_generated_observation)
