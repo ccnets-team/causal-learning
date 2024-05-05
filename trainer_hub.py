@@ -58,7 +58,7 @@ class TrainerHub:
         if self.use_encoder:
             obs_shape = self.data_config.obs_shape
             encoding_d_model = model_params.encoding_params.d_model
-            stoch_size, det_size = encoding_d_model, encoding_d_model
+            stoch_size, det_size = max(encoding_d_model//2, 1), max(encoding_d_model//2, 1)
             self.encoder_ccnet = CooperativeEncodingNetwork(model_params.encoder_model_name, model_params, obs_shape, stoch_size, det_size, self.device)
             self.encoder_trainer = CausalEncodingTrainer(self.encoder_ccnet, training_params, optimization_params)
             self.state_size = stoch_size + det_size
