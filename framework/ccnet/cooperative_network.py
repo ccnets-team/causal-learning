@@ -39,7 +39,7 @@ class CooperativeNetwork:
         # Add model_name prefix to the network names
         network_names = ["explainer", "reasoner", "producer"]
         self.model_name = model_name
-        self.network_names = [f"{model_name}_{'core'}_{name}" for name in network_names]
+        self.network_names = [f"{model_name}_{name}" for name in network_names]
         self.explainer =  Explainer(explainer_network, explainer_params, obs_size, explain_size, act_fn="layer_norm").to(device)
         self.reasoner =  Reasoner(reasoner_network, reasoner_params, obs_size, explain_size, label_size, act_fn=task_act_fn).to(device)
         self.producer =  Producer(producer_network, producer_params, label_size, explain_size, obs_size, act_fn="none").to(device)

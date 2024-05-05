@@ -38,7 +38,7 @@ class ImageDebugger:
                 inferred_labels = self.image_ccnet.reason(self.debug_images, explains)
             else:
                 image_code = self.image_ccnet.encode(self.debug_images)
-                recognized_features = image_code[:, :self.model.stoch_size].clone().detach()
+                recognized_features = image_code[:, :self.image_ccnet.stoch_size].clone().detach()
                 explains = image_code[:, self.image_ccnet.stoch_size:].clone().detach()
 
             for i in range(self.num_images):

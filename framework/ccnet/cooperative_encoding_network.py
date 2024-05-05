@@ -27,7 +27,7 @@ class CooperativeEncodingNetwork:
         # Add model_name prefix to the network names
         network_names = ["explainer", "reasoner", "producer"]
         self.model_name = model_name
-        self.network_names = [f"{model_name}_{'encoding'}_{name}" for name in network_names]
+        self.network_names = [f"{model_name}_{name}" for name in network_names]
         self.networks = [self.explainer, self.reasoner, self.producer]
         self.obs_shape = obs_shape
         self.det_size = det_size

@@ -49,7 +49,10 @@ def log_data(logger, step, scalar_logs=None, metrics=None):
                     log_name = f"{mapped_category_name}/{new_metric_name}"
                     logger.add_scalar(log_name, metric_value, step)
 
-def log_train_data(tensorboard, iters, metrics):
+def log_train_data(tensorboard, iters, metrics = None):
+    if metrics is None:
+        return
+    
     losses, errors = metrics.losses, metrics.errors
     
     if losses is not None:

@@ -49,10 +49,10 @@ class TrainerHub:
 
     def setup_models(self, ml_params):
         training_params, model_params, optimization_params = ml_params
-
+        
         self.setup_encoder(model_params, training_params, optimization_params)
-
-        self.setup_gpt_network(model_params, training_params, optimization_params)
+        
+        self.setup_core_network(model_params, training_params, optimization_params)
 
     def setup_encoder(self, model_params, training_params, optimization_params):
         if self.use_encoder:
@@ -67,15 +67,19 @@ class TrainerHub:
             self.encoder_trainer = None
             self.state_size = self.data_config.obs_shape[-1]
 
-    def setup_gpt_network(self, model_params, training_params, optimization_params):    
-        self.task_type = self.data_config.task_type
-        self.label_size = self.data_config.label_size
-        core_d_model = model_params.core_params.d_model
-        explain_size = max(core_d_model//2, 1)
-        core_obs_shape = [self.state_size] if self.use_gpt else self.data_config.obs_shape
-        
-        self.core_ccnet = CooperativeNetwork(model_params.core_model_name, model_params, self.task_type, core_obs_shape, self.label_size, explain_size, self.device, encoder=self.encoder_ccnet)
-        self.core_trainer = CausalTrainer(self.core_ccnet, training_params, optimization_params)
+    def setup_core_network(self, model_params, training_params, optimization_params):    
+        if self.use_core:
+            self.task_type = self.data_config.task_type
+            self.label_size = self.data_config.label_size
+            core_d_model = model_params.core_params.d_model
+            explain_size = max(core_d_model//2, 1)
+            core_obs_shape = [self.state_size] if self.use_gpt else self.data_config.obs_shape
+            
+            self.core_ccnet = CooperativeNetwork(model_params.core_model_name, model_params, self.task_type, core_obs_shape, self.label_size, explain_size, self.device, encoder=self.encoder_ccnet)
+            self.core_trainer = CausalTrainer(self.core_ccnet, training_params, optimization_params)
+        else:
+            self.core_ccnet = None
+            self.core_trainer = None
 
     def __exit__(self):
         if self.use_wandb:
@@ -136,13 +140,17 @@ class TrainerHub:
         
     def train_iteration(self, iters, source_batch, target_batch, epoch, dataloader_length, testset):
         set_random_seed(iters)
+        self.helper.init_time_step()
+        
+        core_metric = None
+        encoder_metric = None
         
         source_batch, target_batch = convert_to_device(source_batch, target_batch, device=self.device)
         
         encoder_metric = self.encoder_trainer.train_models(source_batch) if self.use_encoder else None
+        if self.use_core:
+            state_trajectory, target_trajectory, padding_mask = self.helper.setup_training_step(source_batch, target_batch)
         
-        state_trajectory, target_trajectory, padding_mask = self.helper.setup_training_step(source_batch, target_batch)
+            core_metric = self.core_trainer.train_models(state_trajectory, target_trajectory, padding_mask)
         
-        gpt_metric = self.core_trainer.train_models(state_trajectory, target_trajectory, padding_mask)
-        
-        self.helper.finalize_training_step(testset, epoch, iters, dataloader_length, gpt_metric, encoder_metric)
+        self.helper.finalize_training_step(testset, epoch, iters, dataloader_length, core_metric, encoder_metric)

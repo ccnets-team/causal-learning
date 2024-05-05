@@ -17,7 +17,7 @@ class DataConfig:
     """
     def __init__(self, dataset_name: str, task_type: str, obs_shape: list, label_size: int, show_image_indices: list = None):
         valid_task_types = ['binary_classification', 'multi_class_classification', 
-                            'multi_label_classification', 'regression']
+                            'multi_label_classification', 'regression', 'encoding']
         if task_type not in valid_task_types:
             raise ValueError(f"Invalid task_type '{task_type}'. Valid options are {valid_task_types}")
 

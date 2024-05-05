@@ -47,13 +47,14 @@ class TrainerHubHelper:
         self.logger = logging.getLogger(__name__)
         self.pivot_time = None
         
+        self.use_core = self.parent.use_core
+        self.use_encoder = self.parent.use_encoder
         self.core_metrics = MetricsTracker()
-        self.encoder_metrics = MetricsTracker()
+        self.encoder_metrics = MetricsTracker() 
         
         if self.use_image:
-            use_core = self.parent.use_core
-            image_ccnet = self.core_ccnet if use_core else self.encoder_ccnet 
-            self.image_debugger = ImageDebugger(image_ccnet, self.data_config, self.device, use_core = use_core)
+            image_ccnet = self.core_ccnet if self.use_core else self.encoder_ccnet 
+            self.image_debugger = ImageDebugger(image_ccnet, self.data_config, self.device, use_core = self.use_core)
         
     def initialize_train(self, dataset):
         # self.sum_losses, self.sum_errors = None, None
@@ -67,7 +68,6 @@ class TrainerHubHelper:
     def init_time_step(self):
         if self.pivot_time is None:
             self.pivot_time = time.time()
-
 
     def setup_directories(self, base_path = './'):
         set_model_path = os.path.join(base_path, "models")
@@ -85,8 +85,6 @@ class TrainerHubHelper:
             
     def setup_training_step(self, source_batch, target_batch):
 
-        self.init_time_step()
-
         # Encode inputs to prepare them for causal training
         source_code, target_code = encode_inputs(self.encoder_ccnet, source_batch, target_batch)
         
@@ -99,7 +97,7 @@ class TrainerHubHelper:
         
         return state_trajectory, target_trajectory, padding_mask
 
-    def finalize_training_step(self, eval_dataset, epoch_idx, iter_idx, len_dataloader, core_metric, encoder_metric = None) -> None:
+    def finalize_training_step(self, eval_dataset, epoch_idx, iter_idx, len_dataloader, core_metric = None, encoder_metric = None) -> None:
         self.update_metrics(core_metric, encoder_metric)
 
         if self.should_checkpoint():
@@ -107,10 +105,12 @@ class TrainerHubHelper:
 
         self.increment_counters()
 
-    def update_metrics(self, core_metric, encoder_metric):
+    def update_metrics(self, core_metric = None, encoder_metric = None):
         """Updates metrics and records time spent since the last checkpoint."""
-        self.core_metrics += core_metric
-        self.encoder_metrics += encoder_metric
+        if core_metric is not None:
+            self.core_metrics += core_metric
+        if encoder_metric is not None:
+            self.encoder_metrics += encoder_metric
 
     def handle_checkpoint(self, epoch_idx, iter_idx, len_dataloader, eval_dataset):
         time_cost = time.time() - self.pivot_time
@@ -125,38 +125,48 @@ class TrainerHubHelper:
 
         self.log_checkpoint_details(time_cost, epoch_idx, iter_idx, len_dataloader, wb_image)
         save_path = self.determine_save_path()
-        save_trainer(save_path, self.core_trainer)
-        save_trainer(save_path, self.encoder_trainer)
+        if self.use_core:
+            save_trainer(save_path, self.core_trainer)
+        if self.use_encoder:
+            save_trainer(save_path, self.encoder_trainer)
         self.reset_metrics()
 
         """Handles operations to be performed at each checkpoint."""
-        test_results = self.parent.evaluate(eval_dataset)
-        print_test_results(test_results)
-        log_test_results(self.tensorboard, self.iters, test_results)
+        if self.use_core:
+            test_results = self.parent.evaluate(eval_dataset)
+            print_test_results(test_results)
+            log_test_results(self.tensorboard, self.iters, test_results)
 
     def log_checkpoint_details(self, time_cost, epoch_idx, iter_idx, len_dataloader, wb_image):
         """Calculates average metrics over the checkpoints."""
-        avg_gpt_metric = self.core_metrics / float(self.num_checkpoints)
-        avg_encoder_metric = self.encoder_metrics / float(self.num_checkpoints)
+        avg_core_metric = self.core_metrics / float(self.num_checkpoints) if self.use_core else None
+        avg_encoder_metric = self.encoder_metrics / float(self.num_checkpoints) if self.use_encoder else None
         
         if self.use_print:
-            self.print_checkpoint_info(time_cost, epoch_idx, iter_idx, len_dataloader, avg_gpt_metric, avg_encoder_metric)
+            self.print_checkpoint_info(time_cost, epoch_idx, iter_idx, len_dataloader, avg_core_metric, avg_encoder_metric)
 
-        log_train_data(self.tensorboard, self.iters, avg_gpt_metric)
+        log_train_data(self.tensorboard, self.iters, avg_core_metric)
         """Logs training data to Weights & Biases if enabled."""
         if self.use_wandb:
             lr = self.core_trainer.get_lr() 
-            wandb_log_train_data(avg_encoder_metric, avg_gpt_metric, time_cost=time_cost, lr=lr, images=wb_image)
+            wandb_log_train_data(time_cost, lr=lr, core_metric=avg_core_metric, encoder_metric=avg_encoder_metric, images=wb_image)
 
-    def print_checkpoint_info(self, time_cost, epoch_idx, iter_idx, len_dataloader, avg_gpt_metric, avg_encoder_metric):
+    def print_checkpoint_info(self, time_cost, epoch_idx, iter_idx, len_dataloader, avg_core_metric = None, avg_encoder_metric = None):
         """Prints formatted information about the current checkpoint."""
         print_iter(epoch_idx, self.parent.max_epoch, iter_idx, len_dataloader, time_cost)
-        print_lr(self.encoder_trainer.optimizers, self.core_trainer.optimizers)
+        if avg_core_metric is not None and avg_encoder_metric is not None:
+            print_lr(self.encoder_trainer.optimizers, self.core_trainer.optimizers)
+        elif avg_core_metric is not None:
+            print_lr(self.core_trainer.optimizers)
+        elif avg_encoder_metric is not None:
+            print_lr(self.encoder_trainer.optimizers)
         print('--------------------Training Metrics--------------------')
-        encoder_ccnet_name = self.parent.encoder_ccnet.network_names
-        print_trainer(encoder_ccnet_name, avg_encoder_metric)
-        core_ccnet_name = self.parent.core_ccnet.network_names
-        print_trainer(core_ccnet_name, avg_gpt_metric)
+        if self.use_encoder and avg_encoder_metric is not None:
+            encoder_ccnet_name = self.parent.encoder_ccnet.model_name
+            print_trainer(encoder_ccnet_name, avg_encoder_metric)
+        if self.use_core and avg_core_metric is not None:
+            core_ccnet_name = self.parent.core_ccnet.model_name
+            print_trainer(core_ccnet_name, avg_core_metric)
 
     def reset_metrics(self):
         """resets metrics trackers."""
