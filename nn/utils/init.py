@@ -69,12 +69,16 @@ class ContinuousFeatureEmbeddingLayer(nn.Module):
         # Initialize parameters for feature transformation
         self.num_features = num_features
         self.embedding_size = embedding_size
-        self.weight = nn.Parameter(torch.randn(sum(num_features), embedding_size))
-        self.bias = nn.Parameter(torch.zeros(embedding_size))
 
         # Calculate multipliers for each feature type based on maximum number of features
         max_num_features = max(num_features)
         self.multipliers = [max_num_features // nf for nf in num_features]
+
+        # Calculate the total number of features after applying the multipliers
+        total_num_features = sum(nf * mult for nf, mult in zip(num_features, self.multipliers))
+        
+        self.weight = nn.Parameter(torch.randn(total_num_features, embedding_size))
+        self.bias = nn.Parameter(torch.zeros(embedding_size))
 
         # Activation function to normalize or apply non-linearity
         self.final_layer = get_activation_function(act_fn, embedding_size)
