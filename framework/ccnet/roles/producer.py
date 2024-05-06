@@ -7,7 +7,7 @@
 import torch
 import torch.nn as nn
 from nn.utils.init import init_weights, create_layer
-from nn.utils.init import ContinuousFeatureEmbeddingLayer
+from nn.utils.init import ContinuousFeatureJointLayer
 
 class Producer(nn.Module):
     """
@@ -40,7 +40,7 @@ class Producer(nn.Module):
         self.use_image = len(output_shape) != 1
 
         # Embedding layer for combined condition and explanation inputs
-        self.input_embedding_layer = ContinuousFeatureEmbeddingLayer(condition_size + explain_size, d_model)
+        self.input_embedding_layer = ContinuousFeatureJointLayer(condition_size, explain_size, d_model)
 
         # Initialize the main network module
         self.net = net(network_params)
@@ -65,8 +65,8 @@ class Producer(nn.Module):
         Returns:
             Tensor: The output tensor after processing through the network.
         """
-        z = torch.cat([labels, explains], dim=-1)
-        z = self.input_embedding_layer(z)
+        
+        z = self.input_embedding_layer(labels, explains)
         if self.use_image:
             # Directly process image data through the network
             return self.net(z)
