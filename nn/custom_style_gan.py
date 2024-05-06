@@ -26,125 +26,87 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+def get_activation(act_name):
+    if act_name == 'leaky_relu':
+        return nn.LeakyReLU(0.2)
+    elif act_name == 'relu':
+        return nn.ReLU()
+    elif act_name == 'tanh':
+        return nn.Tanh()
+    else:
+        raise ValueError(f"Unsupported activation function: {act_name}")
+    
 class MappingNetwork(nn.Module):
-    """ Maps the latent vector to style codes with several fully connected layers. """
-    def __init__(self, latent_dim, style_dim, num_layers):
+    """Maps the latent vector to style codes with several fully connected layers."""
+    def __init__(self, latent_dim, style_dim, num_layers, act='leaky_relu'):
         super().__init__()
+        # Determine the activation function based on the string identifier
+        activation = get_activation(act)
+
         # First layer handles dimensionality change if needed
-        layers = [nn.Sequential(nn.Linear(latent_dim, style_dim), nn.LeakyReLU(0.2))]
-        # Additional layers refine the transformation within the style dimension
-        layers += [nn.Sequential(nn.Linear(style_dim, style_dim), nn.LeakyReLU(0.2)) for _ in range(num_layers - 1)]
+        layers = [nn.Sequential(nn.Linear(latent_dim, style_dim), activation)]
+
         self.mapping_layers = nn.Sequential(*layers)
     
     def forward(self, z):
         return self.mapping_layers(z)
 
 class StyleMod(nn.Module):
-    """Applies a learned affine transformation based on style vectors."""
-    def __init__(self, style_dim, channels):
+    """
+    Applies a learned affine transformation based on style vectors.
+    Optionally includes a condition vector for combined transformations.
+    If no dimensions are provided, acts as a pass-through.
+    """
+    def __init__(self, channels, style_dim=None, condition_dim=None):
         super().__init__()
         self.channels = channels
-        self.lin = nn.Linear(style_dim, channels * 2)
+        input_dim = (style_dim if style_dim is not None else 0) + (condition_dim if condition_dim is not None else 0)
+        
+        if input_dim > 0:
+            self.lin = nn.Linear(input_dim, channels * 2)
+        else:
+            self.lin = None
 
-    def forward(self, x, style):
-        style_transform = self.lin(style)
-        scale = style_transform[:, :self.channels].unsqueeze(2).unsqueeze(3)
-        shift = style_transform[:, self.channels:].unsqueeze(2).unsqueeze(3)
-        return x * scale + shift
-    
-class ConditionStyleMod(nn.Module):
-    """ Applies a learned affine transformation based on style and condition vectors. """
-    def __init__(self, style_dim, condition_dim, channels):
-        super().__init__()
-        self.channels = channels
-        self.lin = nn.Linear(style_dim + condition_dim, channels * 2)
-    
-    def forward(self, x, style, condition):
-        combined_input = torch.cat([style, condition], dim=1)
-        style = self.lin(combined_input)
-        scale = style[:, :self.channels].unsqueeze(2).unsqueeze(3)
-        shift = style[:, self.channels:].unsqueeze(2).unsqueeze(3)
-        return x * scale + shift
+    def forward(self, x, style=None, condition=None):
+        if self.lin is not None:
+            if condition is not None:
+                style = torch.cat([style, condition], dim=1) if style is not None else condition
+            style_transform = self.lin(style)
+            scale = style_transform[:, :self.channels].unsqueeze(2).unsqueeze(3)
+            shift = style_transform[:, self.channels:].unsqueeze(2).unsqueeze(3)
+            x = x * scale + shift
+        return x
 
-class ConvBlock(nn.Module):
-    """Convolutional block applying noise modulation."""
-    def __init__(self, in_channels, out_channels, use_noise=True):
+class ConvolutionalBlock(nn.Module):
+    """Unified convolutional block for noise, style, and conditional style modulation."""
+    def __init__(self, in_channels, out_channels, use_noise=True, style_dim=None, condition_dim=None, act='leaky_relu'):
         super().__init__()
         self.use_noise = use_noise
+        activation = get_activation(act)
         
+        # Initialize the first convolution layer
         self.conv1 = nn.Conv2d(in_channels, out_channels, 3, padding=1)
-        if use_noise:
-            self.noise1 = nn.Parameter(torch.randn(1, out_channels, 1, 1))
-        self.act1 = nn.LeakyReLU(0.2)
+        self.noise = nn.Parameter(torch.randn(1, out_channels, 1, 1)) if use_noise else None
+        self.act = activation
 
+        # Optionally apply style modulation
+        self.style_mod = StyleMod(out_channels, style_dim, condition_dim)
+
+        # Initialize the second convolution layer
         self.conv2 = nn.Conv2d(out_channels, out_channels, 3, padding=1)
-        self.act2 = nn.LeakyReLU(0.2)
 
-    def forward(self, x, style = None, condition = None):
+    def forward(self, x, style=None, condition=None):
         x = self.conv1(x)
-        if self.use_noise:
-            x = x + self.noise1 * torch.randn_like(x)
-        x = self.act1(x)
+        if self.noise is not None:
+            x += self.noise * torch.randn_like(x)
+        x = self.act(x)
+        x = self.style_mod(x, style, condition)
 
         x = self.conv2(x)
-        x = self.act2(x)
-
-        return x
+        x = self.act(x)
         
-class StyleConvBlock(nn.Module):
-    """Convolutional block applying style and noise modulation."""
-    def __init__(self, in_channels, out_channels, style_dim, use_noise=True):
-        super().__init__()
-        self.use_noise = use_noise
-        
-        self.conv1 = nn.Conv2d(in_channels, out_channels, 3, padding=1)
-        self.style_mod1 = StyleMod(style_dim, out_channels)
-        if use_noise:
-            self.noise1 = nn.Parameter(torch.randn(1, out_channels, 1, 1))
-        self.act1 = nn.LeakyReLU(0.2)
-
-        self.conv2 = nn.Conv2d(out_channels, out_channels, 3, padding=1)
-        self.act2 = nn.LeakyReLU(0.2)
-
-    def forward(self, x, style):
-        x = self.conv1(x)
-        if self.use_noise:
-            x = x + self.noise1 * torch.randn_like(x)
-        x = self.act1(x)
-        x = self.style_mod1(x, style)
-
-        x = self.conv2(x)
-        x = self.act2(x)
-
         return x
-    
-class ConditionStyleConvBlock(nn.Module):
-    """ Convolutional block applying style and noise modulation. """
-    def __init__(self, in_channels, out_channels, style_dim, condition_dim, use_noise=True):
-        super().__init__()
-        self.use_noise = use_noise
 
-        self.conv1 = nn.Conv2d(in_channels, out_channels, 3, padding=1)
-        self.style_mod1 = ConditionStyleMod(style_dim, condition_dim, out_channels)
-        if use_noise:
-            self.noise1 = nn.Parameter(torch.randn(1, out_channels, 1, 1))
-        self.act1 = nn.LeakyReLU(0.2)
-
-        self.conv2 = nn.Conv2d(out_channels, out_channels, 3, padding=1)
-        self.act2 = nn.LeakyReLU(0.2)
-    
-    def forward(self, x, style, condition):
-        x = self.conv1(x)
-        if self.use_noise:
-            x = x + self.noise1 * torch.randn_like(x)
-        x = self.act1(x)
-        x = self.style_mod1(x, style, condition)
-
-        x = self.conv2(x)
-        x = self.act2(x)
-
-        return x
-    
 class Generator(nn.Module):
     """ Generator model incorporating a mapping network and conditionally applied styles. """
     def __init__(self, network_params):
@@ -154,17 +116,14 @@ class Generator(nn.Module):
         self.d_model = d_model
         
         self.style_dim = d_model  
-        self.mapping_network = MappingNetwork(d_model, self.style_dim, num_layers)
-        self.style1 = StyleMod(self.style_dim, d_model)
+        self.mapping_network = MappingNetwork(self.style_dim, d_model, num_layers = num_layers, act = 'relu')
+        self.style1 = StyleMod(channels=d_model, style_dim = self.style_dim)
         
         self.blocks = nn.ModuleList()
         current_d_model = d_model
         for i in range(num_layers):
             next_d_model = max(1, current_d_model // 2)  # Reduce channel count
-            if i <= num_layers//2:
-                self.blocks.append(StyleConvBlock(current_d_model, next_d_model, self.style_dim, use_noise=True))
-            else:
-                self.blocks.append(ConvBlock(current_d_model, next_d_model, use_noise=True))
+            self.blocks.append(ConvolutionalBlock(current_d_model, next_d_model, use_noise=True, style_dim = self.style_dim, act = 'relu'))
             current_d_model = next_d_model
         
         self.to_rgb = nn.Sequential(nn.Conv2d(current_d_model, 3, 1), nn.Tanh())
@@ -179,7 +138,7 @@ class Generator(nn.Module):
             out = block(out, style)
         out = self.to_rgb(out)
         return out
-    
+
 class ConditionalGenerator(nn.Module):
     """ Generator model incorporating a mapping network and conditionally applied styles. """
     def __init__(self, network_params):
@@ -188,32 +147,33 @@ class ConditionalGenerator(nn.Module):
         z_dim = network_params.z_dim
         d_model = network_params.d_model
         num_layers = network_params.num_layers
-        
         self.style_dim = d_model  
+        
+        self.mapping_network_style = MappingNetwork(z_dim, d_model, num_layers = num_layers, act = 'relu')
+        self.mapping_network_condition = MappingNetwork(condition_dim, d_model, num_layers = num_layers, act = 'relu')
+        
         self.initial = nn.Parameter(torch.randn(1, d_model, 2, 2))
-        self.mapping_network = MappingNetwork(z_dim, self.style_dim, num_layers)
-        self.style1 = ConditionStyleMod(self.style_dim, condition_dim, d_model)
+        self.style1 = StyleMod(channels=d_model, style_dim = self.style_dim)
         
         self.blocks = nn.ModuleList()
+        self.d_model = d_model
         current_d_model = d_model
         for i in range(num_layers):
             next_d_model = max(1, current_d_model // 2)  # Reduce channel count
-            if i <= num_layers//2:
-                self.blocks.append(ConditionStyleConvBlock(current_d_model, next_d_model, self.style_dim, condition_dim, use_noise=True))
-            else:
-                self.blocks.append(ConvBlock(current_d_model, next_d_model, use_noise=True))
+            self.blocks.append(ConvolutionalBlock(current_d_model, next_d_model, use_noise=True, style_dim = self.style_dim, act = 'relu'))
             current_d_model = next_d_model
         
         self.to_rgb = nn.Sequential(nn.Conv2d(current_d_model, 3, 1), nn.Tanh())
 
-    def forward(self, z, condition):
-        style = self.mapping_network(z)
-        batch_size = z.shape[0]
-        out = self.initial.expand(batch_size, -1, -1, -1)
-        out = self.style1(out, style, condition)
+    def forward(self, y, e):
+        batch_size = e.shape[0]
+        style = self.mapping_network_style(e)
+        condition = self.mapping_network_condition(y)
+        out = condition.view(batch_size, self.d_model, 1, 1).repeat(1, 1, 2, 2)
+        out = self.style1(out, style)
         for block in self.blocks:
             out = nn.functional.interpolate(out, scale_factor=2, mode='nearest')
-            out = block(out, style, condition)
+            out = block(out, style)
         out = self.to_rgb(out)
         return out
 
@@ -229,7 +189,7 @@ class Discriminator(nn.Module):
         
         for i in range(num_layers):
             out_channels = self.d_model // (2 ** (num_layers - i - 1))
-            self.blocks.append(ConvBlock(in_channels, out_channels, use_noise=False))
+            self.blocks.append(ConvolutionalBlock(in_channels, out_channels, use_noise=False, act = 'relu'))
             in_channels = out_channels
 
         final = [nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(in_channels, self.d_model)]
@@ -251,17 +211,14 @@ class ConditionalDiscriminator(nn.Module):
         self.d_model = network_params.d_model
         self.style_dim = self.d_model  # Ensure style_dim is defined correctly
         num_layers = network_params.num_layers
-        self.mapping_network = MappingNetwork(self.z_dim, self.style_dim, num_layers)
+        self.mapping_network = MappingNetwork(self.z_dim, self.style_dim, num_layers, act = 'relu')
 
         self.blocks = nn.ModuleList()
         in_channels = 3  # Starting with RGB channels
         
         for i in range(num_layers):
             out_channels = self.d_model // (2 ** (num_layers - i - 1))
-            if i <= num_layers//2:
-                self.blocks.append(StyleConvBlock(in_channels, out_channels, self.style_dim, use_noise=False))
-            else:
-                self.blocks.append(ConvBlock(in_channels, out_channels, use_noise=False))
+            self.blocks.append(ConvolutionalBlock(in_channels, out_channels, use_noise=False, style_dim = self.style_dim, act = 'relu'))
             in_channels = out_channels
 
         final = [nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(out_channels, self.d_model)]
