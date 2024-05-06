@@ -42,7 +42,7 @@ class Explainer(nn.Module):
         if not self.use_image:
             input_size = input_shape[-1]  # Size of the last dimension of the input
             # Embedding layer for continuous features
-            self.input_embedding_layer = ContinuousFeatureEmbeddingLayer(input_size, d_model)
+            self.input_embedding_layer = ContinuousFeatureEmbeddingLayer(d_model, input_size)
 
         # Initialize the main network module
         self.net = net(network_params)

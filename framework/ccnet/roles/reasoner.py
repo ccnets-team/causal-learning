@@ -48,7 +48,7 @@ class Reasoner(nn.Module):
             # Concatenate the observation and explanation sizes for non-image data embedding
             input_size = input_shape[-1]
             # Embedding layer for continuous features of combined size
-            self.input_embedding_layer = ContinuousFeatureJointLayer(input_size, explain_size, d_model)
+            self.input_embedding_layer = ContinuousFeatureJointLayer(d_model, input_size, explain_size)
             # Initialize the neural network for non-image data
             self.net = net(network_params)
         # Additional layers for non-linearity and final output transformation
