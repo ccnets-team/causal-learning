@@ -67,19 +67,24 @@ class ContinuousFeatureEmbeddingLayer(nn.Module):
     def __init__(self, embedding_size, *num_features, act_fn='layer_norm'):
         super(ContinuousFeatureEmbeddingLayer, self).__init__()
         # Initialize parameters for feature transformation
-        sum_num_features = sum(num_features)
-        self.weight = nn.Parameter(torch.randn(sum_num_features, embedding_size))
+        self.num_features = num_features
+        self.embedding_size = embedding_size
+        self.weight = nn.Parameter(torch.randn(sum(num_features), embedding_size))
         self.bias = nn.Parameter(torch.zeros(embedding_size))
 
         # Calculate multipliers for each feature type based on maximum number of features
-        self.multipliers = [max(1, max(num_features) // nf) for nf in num_features]
+        max_num_features = max(num_features)
+        self.multipliers = [max_num_features // nf for nf in num_features]
 
         # Activation function to normalize or apply non-linearity
         self.final_layer = get_activation_function(act_fn, embedding_size)
 
     def forward(self, *features):
-        # Apply multipliers to align the feature dimensions
-        aligned_features = torch.cat([f * m for f, m in zip(features, self.multipliers)], dim=-1)
+        # Repeat features according to their multipliers to align their dimensions
+        repeated_features = [feature.repeat(1, multiplier) for feature, multiplier in zip(features, self.multipliers)]
+
+        # Concatenate all features along the last dimension after repetition
+        aligned_features = torch.cat(repeated_features, dim=-1)
 
         # Apply weights and add bias
         feature_emb_mul = torch.matmul(aligned_features, self.weight)
@@ -88,7 +93,7 @@ class ContinuousFeatureEmbeddingLayer(nn.Module):
         # Apply final layer (e.g., LayerNorm)
         sequence_embeddings = self.final_layer(feature_emb_bias)
         return sequence_embeddings
-    
+
 class ContinuousFeatureJointLayer(nn.Module):
     def __init__(self, embedding_size, *num_features, act_fn='layer_norm', combine_mode='prod'):
         super(ContinuousFeatureJointLayer, self).__init__()
