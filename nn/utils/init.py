@@ -85,7 +85,7 @@ class ContinuousFeatureEmbeddingLayer(nn.Module):
 
     def forward(self, *features):
         # Repeat features according to their multipliers to align their dimensions
-        repeated_features = [feature.repeat(1, multiplier) for feature, multiplier in zip(features, self.multipliers)]
+        repeated_features = [feature.repeat_interleave(multiplier, dim=-1) for feature, multiplier in zip(features, self.multipliers)]        
 
         # Concatenate all features along the last dimension after repetition
         aligned_features = torch.cat(repeated_features, dim=-1)
