@@ -258,7 +258,10 @@ class ConditionalDiscriminator(nn.Module):
         
         for i in range(num_layers):
             out_channels = self.d_model // (2 ** (num_layers - i - 1))
-            self.blocks.append(StyleConvBlock(in_channels, out_channels, self.style_dim, use_noise=False))
+            if i <= num_layers//2:
+                self.blocks.append(StyleConvBlock(in_channels, out_channels, self.style_dim, use_noise=False))
+            else:
+                self.blocks.append(ConvBlock(in_channels, out_channels, use_noise=False))
             in_channels = out_channels
 
         final = [nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(out_channels, self.d_model)]
