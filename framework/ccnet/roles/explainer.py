@@ -6,7 +6,7 @@
 
 import torch.nn as nn
 from nn.utils.init import init_weights, create_layer
-from nn.utils.init import ContinuousFeatureEmbeddingLayer
+from nn.utils.init import ContinuousFeatureJointLayer
 
 class Explainer(nn.Module):
     """
@@ -42,7 +42,7 @@ class Explainer(nn.Module):
         if not self.use_image:
             input_size = input_shape[-1]  # Size of the last dimension of the input
             # Embedding layer for continuous features
-            self.input_embedding_layer = ContinuousFeatureEmbeddingLayer(d_model, input_size)
+            self.input_embedding_layer = ContinuousFeatureJointLayer(d_model, input_size)
 
         # Initialize the main network module
         self.net = net(network_params)

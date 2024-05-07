@@ -49,7 +49,7 @@ def get_activation_function(activation_function, output_size=None):
     if activation_function in ["none", "linear"]:  # Treating 'linear' as no activation
         return nn.Identity()
     if activation_function == 'layer_norm' and output_size is not None:
-        return nn.LayerNorm(output_size, elementwise_affine=True)  # Usually, we want affine transformation in LayerNorm
+        return nn.LayerNorm(output_size, elementwise_affine=False)  # Usually, we want affine transformation in LayerNorm
     elif activation_function in ACTIVATION_FUNCTIONS:
         return ACTIVATION_FUNCTIONS[activation_function]
     else:
@@ -63,72 +63,67 @@ def create_layer(input_size, output_size, act_fn="none"):
         layers.append(activation_layer)
     return nn.Sequential(*layers)
 
-class ContinuousFeatureEmbeddingLayer(nn.Module):
-    def __init__(self, embedding_size, *num_features, act_fn='layer_norm'):
-        super(ContinuousFeatureEmbeddingLayer, self).__init__()
-        # Initialize parameters for feature transformation
-        self.num_features = num_features
-        self.embedding_size = embedding_size
+class MatMulLayer(nn.Module):
+    """ Layer that applies a linear transformation to the input features """
+    def __init__(self, input_features, output_features):
+        super(MatMulLayer, self).__init__()
+        self.weight = nn.Parameter(torch.randn(input_features, output_features))
+        self.bias = nn.Parameter(torch.zeros(output_features))
 
-        # Calculate multipliers for each feature type based on maximum number of features
+    def forward(self, feature):
+        # Apply weights and add bias
+        feature_emb_mul = torch.matmul(feature, self.weight)
+        feature_emb_bias = feature_emb_mul + self.bias
+        return feature_emb_bias
+
+class ConCatLayer(nn.Module):
+    """ Layer that concatenates features with optional repeating to align their dimensions """
+    def __init__(self, embedding_size, *num_features, use_repeat=False):
+        super(ConCatLayer, self).__init__()
+        self.num_features = num_features
+
+        # Calculate multipliers for each feature type based on the maximum number of features
         max_num_features = max(num_features)
-        self.multipliers = [max_num_features // nf for nf in num_features]
+        self.multipliers = [max_num_features // nf for nf in num_features] if use_repeat else [1 for _ in num_features]
 
         # Calculate the total number of features after applying the multipliers
-        total_num_features = sum(nf * mult for nf, mult in zip(num_features, self.multipliers))
+        num_tranformed_features = sum(nf * mult for nf, mult in zip(num_features, self.multipliers))
         
-        self.weight = nn.Parameter(torch.randn(total_num_features, embedding_size))
-        self.bias = nn.Parameter(torch.zeros(embedding_size))
-
-        # Activation function to normalize or apply non-linearity
-        self.final_layer = get_activation_function(act_fn, embedding_size)
+        self.mat_mul_layer = MatMulLayer(num_tranformed_features, embedding_size)
 
     def forward(self, *features):
-        # Repeat features according to their multipliers to align their dimensions
-        repeated_features = [feature.repeat_interleave(multiplier, dim=-1) for feature, multiplier in zip(features, self.multipliers)]        
-
+        # Optionally repeat features according to their multipliers to align their dimensions
+        repeated_features = [feature.repeat_interleave(multiplier, dim=-1) if multiplier > 1 else feature 
+                             for feature, multiplier in zip(features, self.multipliers)]
         # Concatenate all features along the last dimension after repetition
         aligned_features = torch.cat(repeated_features, dim=-1)
-
-        # Apply weights and add bias
-        feature_emb_mul = torch.matmul(aligned_features, self.weight)
-        feature_emb_bias = feature_emb_mul + self.bias
-
-        # Apply final layer (e.g., LayerNorm)
-        sequence_embeddings = self.final_layer(feature_emb_bias)
-        return sequence_embeddings
-
+        
+        aligned_features = self.mat_mul_layer(aligned_features)
+        
+        return aligned_features
+    
 class ContinuousFeatureJointLayer(nn.Module):
-    def __init__(self, embedding_size, *num_features, act_fn='layer_norm', combine_mode='prod'):
+    def __init__(self, embedding_size, *num_features, act_fn='layer_norm', combine_mode='cat'):
         super(ContinuousFeatureJointLayer, self).__init__()
-        
-        # Initialize embedding layers for each feature set
-        self.embedding_layers = nn.ModuleList([
-            ContinuousFeatureEmbeddingLayer(embedding_size, num_feature, act_fn='none')
-            for num_feature in num_features
-        ])
-        
-        self.final_layer = get_activation_function(act_fn, embedding_size)
         self.combine_mode = combine_mode
-        
-    def forward(self, *features):
-        if len(features) != len(self.embedding_layers):
-            raise ValueError("Number of feature inputs must match number of embedding layers")
-        
-        # Apply embedding layers to corresponding feature inputs
-        expanded_features = [embedding_layer(feature) for embedding_layer, feature in zip(self.embedding_layers, features)]
-        
-        # Combine the transformed features according to the specified mode
-        if self.combine_mode == 'sum':
-            feature_embeddings = torch.sum(torch.stack(expanded_features), dim=0)
-        elif self.combine_mode == 'mean':
-            feature_embeddings = torch.mean(torch.stack(expanded_features), dim=0)
-        elif self.combine_mode == 'concat':
-            feature_embeddings = torch.cat(expanded_features, dim=-1)
-        elif self.combine_mode == 'prod':
-            feature_embeddings = torch.prod(torch.stack(expanded_features), dim=0)
+        if self.combine_mode == 'cat':
+            self.concat_layer = ConCatLayer(embedding_size, *num_features, use_repeat=False)
         else:
-            raise ValueError("Unsupported combine mode")
+            self.mat_mul_layers = nn.ModuleList([MatMulLayer(nf, embedding_size) for nf in num_features])
+        self.final_layer = get_activation_function(act_fn, embedding_size)
 
-        # Apply the final layer (e.g., LayerNorm) to the combined features
-        return self.final_layer(feature_embeddings)  # Shape: [B, S, embedding_size]
+    def forward(self, *features):
+        if self.combine_mode == 'cat':
+            processed_features = self.concat_layer(*features)
+        else:
+            processed_features_list = [mat_mul_layer(feature) for mat_mul_layer, feature in zip(self.mat_mul_layers, features)]
+            if self.combine_mode == 'sum':
+                processed_features = torch.sum(torch.stack(processed_features_list), dim=0)
+            elif self.combine_mode == 'mean':
+                processed_features = torch.mean(torch.stack(processed_features_list), dim=0)
+            elif self.combine_mode == 'prod':
+                processed_features = torch.prod(torch.stack(processed_features_list), dim=0)
+            else:
+                raise ValueError("Unsupported combine mode")
+
+        return self.final_layer(processed_features)

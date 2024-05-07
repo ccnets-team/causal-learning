@@ -4,10 +4,9 @@
         PARK, JunHo
 '''
 
-import torch
 import torch.nn as nn
 from nn.utils.init import init_weights, create_layer
-from nn.utils.init import ContinuousFeatureEmbeddingLayer
+from nn.utils.init import ContinuousFeatureJointLayer
 
 class Producer(nn.Module):
     """
@@ -40,7 +39,7 @@ class Producer(nn.Module):
         self.use_image = len(output_shape) != 1
 
         # Embedding layer for combined condition and explanation inputs
-        self.input_embedding_layer = ContinuousFeatureEmbeddingLayer(d_model, condition_size, explain_size)
+        self.input_embedding_layer = ContinuousFeatureJointLayer(d_model, condition_size, explain_size)
 
         # Initialize the main network module
         self.net = net(network_params)
