@@ -27,10 +27,9 @@ import torch
 
 from framework.ccnet.cooperative_network import CooperativeNetwork
 from framework.ccnet.cooperative_encoding_network import CooperativeEncodingNetwork
-import random
     
 class TrainerHub:
-    def __init__(self, ml_params: MLParameters, data_config: DataConfig, device, use_print=False, use_wandb=False):
+    def __init__(self, ml_params: MLParameters, data_config: DataConfig, device, use_print=False, use_wandb=False, use_test = False):
         self.data_config = data_config
         self.device = device
         self.use_core = ml_params.core_model_name != 'none'
@@ -38,6 +37,7 @@ class TrainerHub:
         self.use_encoder = ml_params.encoder_model_name != 'none'
         self.use_print = use_print
         self.use_wandb = use_wandb
+        self.use_test = use_test
         training_params = ml_params.training
         self.batch_size = training_params.batch_size
         self.max_epoch = training_params.max_epoch
@@ -98,7 +98,13 @@ class TrainerHub:
                 break
 
             for iters, (source_batch, target_batch) in enumerate(tqdm_notebook(dataloader, desc='Iterations', leave=False)):
-                self.train_iteration(iters, source_batch, target_batch, epoch, len(dataloader), testset)
+                core_metric, encoder_metric = self.train_iteration(iters, source_batch, target_batch)
+
+                test_results = None
+                if self.helper.should_checkpoint():
+                    test_results = self.test(testset) if self.use_test else self.evaluate(testset)
+                self.helper.finalize_training_step(epoch, iters, len(dataloader), core_metric, encoder_metric, test_results)
+                
 
     def evaluate(self, eval_dataset):
         source_batch, target_batch = get_random_batch(eval_dataset, self.batch_size)
@@ -118,7 +124,6 @@ class TrainerHub:
         source_batch, target_batch = test_dataset[:]
         
         source_batch, target_batch = convert_to_device(source_batch, target_batch, self.device)
-        
         with torch.no_grad():
             inferred_y = self.core_ccnet.infer(source_batch)
         
@@ -137,7 +142,7 @@ class TrainerHub:
         self.helper.initialize_train(trainset)
 
         
-    def train_iteration(self, iters, source_batch, target_batch, epoch, dataloader_length, testset):
+    def train_iteration(self, iters, source_batch, target_batch):
         set_random_seed(iters)
         
         self.helper.init_time_step()
@@ -154,4 +159,4 @@ class TrainerHub:
             state_trajectory, target_trajectory, padding_mask = self.helper.setup_training_step(source_batch, target_batch)
             core_metric = self.core_trainer.train_models(state_trajectory, target_trajectory, padding_mask)
         
-        self.helper.finalize_training_step(testset, epoch, iters, dataloader_length, core_metric, encoder_metric)
+        return core_metric, encoder_metric
