@@ -41,7 +41,7 @@ class Reasoner(nn.Module):
         """
         super(Reasoner, self).__init__()
         d_model = network_params.d_model
-        self.obs_shape = network_params.obs_shape
+        self.obs_shape = input_shape
         self.use_image = len(input_shape) != 1
         self.explain_size = explain_size
 
