@@ -11,12 +11,13 @@ from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_sc
 import torch
 import numpy as np
 
-def calculate_test_results(inferred_y, target_y, task_type, num_classes=None, average='macro'):
+def calculate_test_results(inferred_y, target_y, padding_mask = None, task_type = None , num_classes=None, average='macro'):
     """
     Calculates performance metrics for tasks using PyTorch tensors that might have batch and sequence dimensions.
     Parameters:
     - inferred_y: Predictions from the model (as PyTorch tensors).
     - target_y: Ground truth labels or values (as PyTorch tensors).
+    - padding_mask: Mask indicating valid data points (1 for valid and 0 for padding).
     - task_type: Type of task (e.g., 'binary_classification', 'multi_class_classification', 'multi_label_classification', 'regression').
     - num_classes: Number of classes for classification tasks. Not used for binary.
     - average: Averaging method for precision, recall, and F1 score.
@@ -24,14 +25,24 @@ def calculate_test_results(inferred_y, target_y, task_type, num_classes=None, av
     - metrics: A dictionary containing relevant performance metrics.
     """
     metrics = {}
-    inferred_y = inferred_y.cpu()
-    target_y = target_y.cpu()
+
+    # Apply the padding mask if provided
+    if padding_mask is not None:
+        # Flatten the mask and use it to filter out padded values
+        valid_indices = padding_mask.bool().expand_as(inferred_y)
+        label_size = inferred_y.size(-1)
+        inferred_y = inferred_y[valid_indices].view(-1, label_size)
+        target_y = target_y[valid_indices].view(-1, label_size)
 
     # Flatten the tensors if they have a sequence dimension, assuming the last dimension could be class probabilities
     if inferred_y.dim() > 2:
         inferred_y = inferred_y.view(-1, inferred_y.size(-1))
     if target_y.dim() > 2:
         target_y = target_y.view(-1, target_y.size(-1))
+
+    # Move tensors to CPU for compatibility with sklearn metrics
+    inferred_y = inferred_y.cpu()
+    target_y = target_y.cpu()
 
     if task_type in ['binary_classification', 'multi_class_classification']:
         if task_type == 'binary_classification':

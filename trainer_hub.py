@@ -80,7 +80,7 @@ class TrainerHub:
             self.task_type = self.data_config.task_type
             self.label_size = self.data_config.label_size
             core_d_model = network_params.d_model
-            explain_size = max(core_d_model//2, 1)
+            explain_size = max(core_d_model//2, 1) if self.data_config.explain_size is None else self.data_config.explain_size
             
             self.core_ccnet = CooperativeNetwork(model_params.core_model_name, networks, network_params, self.task_type, core_obs_shape, self.label_size, explain_size, self.device, encoder=self.encoder_ccnet)
             self.core_trainer = CausalTrainer(self.core_ccnet, training_params, optimization_params)
@@ -117,10 +117,12 @@ class TrainerHub:
         source_batch, target_batch = get_random_batch(eval_dataset, self.batch_size)
         # Assuming convert_to_device is a function that handles device placement
         source_batch, target_batch = convert_to_device(source_batch, target_batch, self.device)
+
+        state_trajectory, target_trajectory, padding_mask = self.helper.setup_training_data(source_batch, target_batch)
         
-        inferred_y = self.core_ccnet.infer(source_batch)
+        inferred_trajectory = self.core_ccnet.infer(state_trajectory, use_encode=False)
         
-        test_results = calculate_test_results(inferred_y, target_batch, self.task_type, num_classes=self.label_size)
+        test_results = calculate_test_results(inferred_trajectory, target_trajectory, padding_mask, self.task_type, num_classes=self.label_size)
         
         if self.use_wandb:
             log_to_wandb({'Test': test_results})
@@ -131,10 +133,12 @@ class TrainerHub:
         source_batch, target_batch = test_dataset[:]
         
         source_batch, target_batch = convert_to_device(source_batch, target_batch, self.device)
-        with torch.no_grad():
-            inferred_y = self.core_ccnet.infer(source_batch)
+
+        state_trajectory, target_trajectory, padding_mask = self.helper.setup_training_data(source_batch, target_batch)
+
+        inferred_trajectory = self.core_ccnet.infer(state_trajectory, use_encode=False)
         
-        test_results = calculate_test_results(inferred_y, target_batch, self.task_type, num_classes=self.label_size)
+        test_results = calculate_test_results(inferred_trajectory, target_trajectory, padding_mask, self.task_type, num_classes=self.label_size)
         
         if self.use_wandb:
             log_to_wandb({'Test': test_results})
@@ -163,7 +167,7 @@ class TrainerHub:
             encoder_metric = self.encoder_trainer.train_models(source_batch)
 
         if self.use_core:
-            state_trajectory, target_trajectory, padding_mask = self.helper.setup_training_step(source_batch, target_batch)
+            state_trajectory, target_trajectory, padding_mask = self.helper.setup_training_data(source_batch, target_batch)
             core_metric = self.core_trainer.train_models(state_trajectory, target_trajectory, padding_mask)
         
         return core_metric, encoder_metric

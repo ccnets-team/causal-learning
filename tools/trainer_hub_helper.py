@@ -84,7 +84,7 @@ class TrainerHubHelper:
         """Determine the file path for saving models based on the current count."""
         return self.model_path if self.cnt_print % 2 == 0 else self.temp_path
             
-    def setup_training_step(self, source_batch, target_batch):
+    def setup_training_data(self, source_batch, target_batch):
 
         # Encode inputs to prepare them for causal training
         source_code, target_code = encode_inputs(self.encoder_ccnet, source_batch, target_batch)

@@ -36,15 +36,15 @@ class CausalTrainer(TrainerBase):
 
         ################################  Prediction Losses  ###########################################
         # Calculate prediction losses for inference, generation, and reconstruction.
-        inference_loss = self.loss_fn(reconstructed_state, generated_state)
-        generation_loss = self.loss_fn(generated_state , state)
-        reconstruction_loss = self.loss_fn(reconstructed_state, state)
+        inference_loss = self.loss_fn(reconstructed_state, generated_state, padding_mask)
+        generation_loss = self.loss_fn(generated_state, state, padding_mask)
+        reconstruction_loss = self.loss_fn(reconstructed_state, state, padding_mask)
 
         ################################  Model Losses  ################################################
         # Calculate model errors based on the losses.
-        explainer_error = self.error_fn(inference_loss + generation_loss, reconstruction_loss)
-        reasoner_error = self.error_fn(reconstruction_loss + inference_loss, generation_loss)
-        producer_error = self.error_fn(generation_loss + reconstruction_loss, inference_loss)
+        explainer_error = self.error_fn(inference_loss + generation_loss, reconstruction_loss, padding_mask)
+        reasoner_error = self.error_fn(reconstruction_loss + inference_loss, generation_loss, padding_mask)
+        producer_error = self.error_fn(generation_loss + reconstruction_loss, inference_loss, padding_mask)
 
         ################################  Backward Pass  ###############################################
         # Perform the backward pass and update the models.
@@ -68,14 +68,32 @@ class CausalTrainer(TrainerBase):
         )
         return metrics
 
-    def loss_fn(self, predict, target):
+    def loss_fn(self, predict, target, padding_mask=None):
         discrepancy = (predict - target.detach()).abs()
-        prediction_loss = discrepancy.mean(dim=-1, keepdim = True)
+        
+        if padding_mask is not None:
+            # Use the padding mask to zero out the discrepancies where the padding is
+            discrepancy *= padding_mask
+            expanded_padding_mask = padding_mask.expand_as(discrepancy)
+        
+        # Calculate the mean only on non-padded data
+        if padding_mask is not None:
+            prediction_loss = discrepancy.sum(dim=-1, keepdim = True) / expanded_padding_mask.sum(dim=-1, keepdim = True).clamp_min(1)
+        else:
+            prediction_loss = discrepancy.mean(dim=-1, keepdim = True)
+        
         return prediction_loss
-    
-    def error_fn(self, predict, target):
+        
+    def error_fn(self, predict, target, padding_mask=None):
         discrepancy = (predict - target.detach()).abs()
-        cooperative_error = discrepancy.mean(dim = 0) 
+        
+        # Compute the mean error, considering only the non-padded data
+        if padding_mask is not None:
+            expanded_padding_mask = padding_mask.expand_as(discrepancy)
+            cooperative_error = discrepancy.sum(dim = 0, keepdim = True) / expanded_padding_mask.sum(dim = 0, keepdim = True).clamp_min(1)
+        else:
+            cooperative_error = discrepancy.mean(dim = 0, keepdim = True)
+        
         return cooperative_error
     
     def update_step(self):
