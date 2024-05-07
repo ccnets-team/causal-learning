@@ -47,7 +47,10 @@ def calculate_test_results(inferred_y, target_y, task_type, num_classes=None, av
         correct = (inferred_y == target_y).float().sum()
         accuracy = correct / target_y.numel()
         metrics['accuracy'] = accuracy.item()
-
+        metrics['precision'] = precision_score(target_y, inferred_y, average=average, labels=range(num_classes))
+        metrics['recall'] = recall_score(target_y, inferred_y, average=average, labels=range(num_classes))
+        metrics['f1_score'] = f1_score(target_y, inferred_y, average=average, labels=range(num_classes))
+        
         inferred_y_np = inferred_y.numpy()
         target_y_np = target_y.numpy()
 

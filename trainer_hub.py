@@ -114,6 +114,21 @@ class TrainerHub:
         
         return test_results
 
+    def test(self, test_dataset):
+        source_batch, target_batch = test_dataset[:]
+        
+        source_batch, target_batch = convert_to_device(source_batch, target_batch, self.device)
+        
+        with torch.no_grad():
+            inferred_y = self.core_ccnet.infer(source_batch)
+        
+        test_results = calculate_test_results(inferred_y, target_batch, self.task_type, num_classes=self.label_size)
+        
+        if self.use_wandb:
+            log_to_wandb({'Test': test_results})
+            
+        return test_results
+    
     def should_end_training(self, epoch):
         return self.helper.iters > self.max_iters or epoch > self.max_epoch
 
