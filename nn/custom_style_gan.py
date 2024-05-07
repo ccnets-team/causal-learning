@@ -25,6 +25,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import math
 
 def get_activation(act_name):
     if act_name == 'leaky_relu':
@@ -112,15 +113,16 @@ class Generator(nn.Module):
     def __init__(self, network_params):
         super().__init__()
         d_model = network_params.d_model
-        num_layers = network_params.num_layers
         num_channels, height, width = network_params.obs_shape
-        print(f"num_channels: {num_channels}, height: {height}, width: {width}")
+        num_layers = min(math.floor(math.log2(min(height, width))), network_params.num_layers)
         self.style_dim = d_model
         self.mapping_network = MappingNetwork(self.style_dim, d_model, num_layers=num_layers, act='relu')
         self.style1 = StyleMod(channels=d_model, style_dim=self.style_dim)
 
+
         self.blocks = nn.ModuleList()
         current_d_model = d_model
+        
         for i in range(num_layers):
             next_d_model = max(num_channels, current_d_model // 2)  # Ensure not below num_channels
             self.blocks.append(ConvolutionalBlock(current_d_model, next_d_model, use_noise=True, style_dim=self.style_dim, act='relu'))
@@ -142,7 +144,8 @@ class Generator(nn.Module):
             out = block(out, style)
         
         # Ensure the output has the exact dimensions required (using adaptive average pooling to adjust final size)
-        out = F.interpolate(out, size=(self.height, self.width), mode='bilinear', align_corners=False)
+        if out.size(2) != self.height or out.size(3) != self.width:
+            out = F.interpolate(out, size=(self.height, self.width), mode='bilinear', align_corners=False)
         out = self.to_rgb(out)
         return out
 
@@ -151,8 +154,8 @@ class Discriminator(nn.Module):
         super().__init__()
         self.z_dim = network_params.z_dim
         self.d_model = network_params.d_model
-        num_layers = network_params.num_layers
-        num_channels = network_params.obs_shape[0]
+        num_channels, height, width = network_params.obs_shape
+        num_layers = min(math.floor(math.log2(min(height, width))), network_params.num_layers)
 
         self.blocks = nn.ModuleList()
         in_channels = num_channels  # Starting with RGB channels
@@ -169,9 +172,7 @@ class Discriminator(nn.Module):
         x = img
         for block in self.blocks:
             x = block(x)
-            # Apply down-sampling after processing with the block
-            if x.size(2) > 1 and x.size(3) > 1:  # Avoid reducing too small dimensions
-                x = F.interpolate(x, scale_factor=0.5, mode='bilinear', align_corners=False)
+            x = F.max_pool2d(x, kernel_size=2, stride=2)
         return self.final(x)
     
 class ConditionalDiscriminator(nn.Module):
@@ -180,9 +181,8 @@ class ConditionalDiscriminator(nn.Module):
         self.z_dim = network_params.z_dim
         self.d_model = network_params.d_model
         self.style_dim = self.d_model  # Ensure style_dim is defined correctly
-        num_layers = network_params.num_layers
-        num_channels = network_params.obs_shape[0]
-        
+        num_channels, height, width = network_params.obs_shape
+        num_layers = min(math.floor(math.log2(min(height, width))), network_params.num_layers)
         
         self.mapping_network = MappingNetwork(self.z_dim, self.style_dim, num_layers, act = 'relu')
 
@@ -204,7 +204,5 @@ class ConditionalDiscriminator(nn.Module):
         
         for block in self.blocks:
             x = block(x, style)
-            # Apply down-sampling after processing with the block
-            if x.size(2) > 1 and x.size(3) > 1:  # Avoid reducing too small dimensions
-                x = F.interpolate(x, scale_factor=0.5, mode='bilinear', align_corners=False)
+            x = F.max_pool2d(x, kernel_size=2, stride=2)
         return self.final(x)
