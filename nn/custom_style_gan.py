@@ -114,12 +114,10 @@ class Generator(nn.Module):
         super().__init__()
         d_model = network_params.d_model
         num_channels, height, width = network_params.obs_shape
-        num_layers = min(math.floor(math.log2(min(height, width))), network_params.num_layers)
+        num_layers = network_params.num_layers
         self.style_dim = d_model
         self.mapping_network = MappingNetwork(self.style_dim, d_model, num_layers=num_layers, act='relu')
         self.style1 = StyleMod(channels=d_model, style_dim=self.style_dim)
-
-
         self.blocks = nn.ModuleList()
         current_d_model = d_model
         
@@ -156,7 +154,7 @@ class Discriminator(nn.Module):
         self.z_dim = network_params.z_dim
         self.d_model = network_params.d_model
         num_channels, height, width = network_params.obs_shape
-        num_layers = min(math.floor(math.log2(min(height, width))), network_params.num_layers)
+        num_layers = network_params.num_layers
 
         self.blocks = nn.ModuleList()
         in_channels = num_channels  # Starting with RGB channels
@@ -183,7 +181,7 @@ class ConditionalDiscriminator(nn.Module):
         self.d_model = network_params.d_model
         self.style_dim = self.d_model  # Ensure style_dim is defined correctly
         num_channels, height, width = network_params.obs_shape
-        num_layers = min(math.floor(math.log2(min(height, width))), network_params.num_layers)
+        num_layers = network_params.num_layers
         
         self.mapping_network = MappingNetwork(self.z_dim, self.style_dim, num_layers, act = 'relu')
 
