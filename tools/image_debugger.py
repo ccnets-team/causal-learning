@@ -15,8 +15,12 @@ class ImageDebugger:
         self.use_core = use_core
         self.show_image_indices = data_config.show_image_indices
         self.label_size = data_config.label_size
-        self.n_img_ch, self.n_img_w, self.n_img_h = data_config.obs_shape
+        self.n_img_ch, self.n_img_h, self.n_img_w = data_config.obs_shape
+        self.dataset_name = data_config.dataset_name
         self.num_images = len(self.show_image_indices)
+
+        # Set maximum display width
+        self.max_display_size = 800
 
     def _load_images_and_labels(self, dataset, indices):
         images, labels = [], []
@@ -48,6 +52,7 @@ class ImageDebugger:
                 recognized_features = image_code[:, :self.image_ccnet.stoch_size].clone().detach()
                 explains = image_code[:, self.image_ccnet.stoch_size:].clone().detach()
 
+            # Assuming `self.n_img_h` and `self.n_img_w` are the correct dimensions for each image
             for i in range(self.num_images):
                 if self.use_core:
                     selected_features = self.debug_labels[i:i + 1, :].expand_as(inferred_labels)
@@ -56,16 +61,21 @@ class ImageDebugger:
                     selected_features = recognized_features[i:i + 1, :].expand_as(recognized_features)
                     generated_code = torch.cat([selected_features, explains], dim=-1)
                     generated_images = self.image_ccnet.decode(generated_code).cpu()
-
-                img_array = vutils.make_grid(generated_images, padding=0, normalize=True).numpy()
-                img_array = np.transpose(img_array, (1, 2, 0))
                 if self.n_img_ch == 1:
-                    img_array = np.stack([img_array[:, :, 0]] * 3, axis=-1)  # Convert grayscale to RGB
-                self.m_canvas[self.n_img_h * (i + 1):self.n_img_h * (i + 2), self.n_img_w:] = (img_array * 255).astype(np.uint8)
+                    generated_images = generated_images.repeat_interleave(3, dim=1)
+                img_array = vutils.make_grid(generated_images, nrow = self.num_images, padding=0, normalize=True).numpy()
+                img_array = np.transpose(img_array, (1, 2, 0))
+                # Correcting indices for placing images
+                target_row_start = self.n_img_h * (i + 1)
+                target_row_end = self.n_img_h * (i + 2)
+                target_col_start = self.n_img_w * (1)
+                target_col_end = self.n_img_w * (self.num_images + 1)
+
+                # Insert into canvas
+                self.m_canvas[target_row_start:target_row_end, target_col_start:target_col_end] =  (img_array * 255).astype(np.uint8)
 
     def display_image(self):
         """Display the image using IPython's display module with HTML for better control over image size and appearance."""
-        # Clear the previous output, including images, text, etc.
         clear_output(wait=True)
 
         # Convert numpy array to PIL Image
@@ -76,18 +86,18 @@ class ImageDebugger:
         font = ImageFont.load_default()  # Load default font
 
         if self.use_core:
-            # Define labels and their positions
-            labels = ["Female, No-smile", "Male, No-smile", "Female, Smile", "Male, Smile"]
-            positions = [(30, 60 + 128 * (i + 1)) for i in range(len(labels))]  # Adjust positions as needed
+            if self.dataset_name == 'celebA':
+                # Define labels and their positions
+                labels = ["Female, No-smile", "Male, No-smile", "Female, Smile", "Male, Smile"]
+                positions = [(30, 60 + 128 * (i + 1)) for i in range(len(labels))]  # Adjust positions as needed
 
-            # Draw text on the image
-            for label, position in zip(labels, positions):
-                draw.text(position, label, font=font, fill=(0, 0, 0))  # Black color for text
+                # Draw text on the image
+                for label, position in zip(labels, positions):
+                    draw.text(position, label, font=font, fill=(0, 0, 0))  # Black color for text
 
         # Save the image to a byte buffer to then display it using HTML
         with io.BytesIO() as output:
             img.save(output, format="PNG")
-            # Encode the image as a base64 string and create an HTML image tag with this string as the src
             data_uri = base64.b64encode(output.getvalue()).decode('utf-8')
-            img_tag = f'<img src="data:image/png;base64,{data_uri}" width="800" />'  # Adjust width as necessary
+            img_tag = f'<img src="data:image/png;base64,{data_uri}" style="width: {self.max_display_size}px; height: {self.max_display_size}px;" />'  # Adjust width as necessary
             display(HTML(img_tag))
