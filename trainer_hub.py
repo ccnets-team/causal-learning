@@ -27,14 +27,17 @@ import torch
 
 from framework.ccnet.cooperative_network import CooperativeNetwork
 from framework.ccnet.cooperative_encoding_network import CooperativeEncodingNetwork
+from tools.setting.ml_config import configure_image_model
     
 class TrainerHub:
     def __init__(self, ml_params: MLParameters, data_config: DataConfig, device, use_print=False, use_wandb=False, use_test = False):
+        
         self.data_config = data_config
         self.device = device
         self.use_core = ml_params.core_model_name != 'none'
         self.use_gpt = ml_params.core_model_name == 'gpt'
         self.use_encoder = ml_params.encoder_model_name != 'none'
+
         self.use_print = use_print
         self.use_wandb = use_wandb
         self.use_test = use_test
@@ -57,9 +60,11 @@ class TrainerHub:
     def setup_encoder(self, model_params, training_params, optimization_params):
         if self.use_encoder:
             obs_shape = self.data_config.obs_shape
-            encoding_d_model = model_params.encoding_params.d_model
+            network_params = configure_image_model(model_params.encoding_params, obs_shape)
+            networks = model_params.encoding_networks
+            encoding_d_model = network_params.d_model
             stoch_size, det_size = max(encoding_d_model//2, 1), max(encoding_d_model//2, 1)
-            self.encoder_ccnet = CooperativeEncodingNetwork(model_params.encoder_model_name, model_params, obs_shape, stoch_size, det_size, self.device)
+            self.encoder_ccnet = CooperativeEncodingNetwork(model_params.encoder_model_name, networks, network_params, obs_shape, stoch_size, det_size, self.device)
             self.encoder_trainer = CausalEncodingTrainer(self.encoder_ccnet, training_params, optimization_params)
             self.state_size = stoch_size + det_size
         else:
@@ -69,13 +74,15 @@ class TrainerHub:
 
     def setup_core_network(self, model_params, training_params, optimization_params):    
         if self.use_core:
+            core_obs_shape = [self.state_size] if self.use_gpt else self.data_config.obs_shape
+            network_params = configure_image_model(model_params.core_params, core_obs_shape)
+            networks = model_params.core_networks
             self.task_type = self.data_config.task_type
             self.label_size = self.data_config.label_size
-            core_d_model = model_params.core_params.d_model
+            core_d_model = network_params.d_model
             explain_size = max(core_d_model//2, 1)
-            core_obs_shape = [self.state_size] if self.use_gpt else self.data_config.obs_shape
             
-            self.core_ccnet = CooperativeNetwork(model_params.core_model_name, model_params, self.task_type, core_obs_shape, self.label_size, explain_size, self.device, encoder=self.encoder_ccnet)
+            self.core_ccnet = CooperativeNetwork(model_params.core_model_name, networks, network_params, self.task_type, core_obs_shape, self.label_size, explain_size, self.device, encoder=self.encoder_ccnet)
             self.core_trainer = CausalTrainer(self.core_ccnet, training_params, optimization_params)
         else:
             self.core_ccnet = None

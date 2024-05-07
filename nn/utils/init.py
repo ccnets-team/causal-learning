@@ -103,7 +103,7 @@ class ConCatLayer(nn.Module):
         return aligned_features
     
 class ContinuousFeatureJointLayer(nn.Module):
-    def __init__(self, embedding_size, *num_features, act_fn='layer_norm', combine_mode='cat'):
+    def __init__(self, embedding_size, *num_features, act_fn='layer_norm', combine_mode='prod'):
         super(ContinuousFeatureJointLayer, self).__init__()
         self.combine_mode = combine_mode
         if self.combine_mode == 'cat':

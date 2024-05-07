@@ -9,22 +9,21 @@ from .roles.producer import Producer
 from tools.setting.ml_params import GPTModelParams, ImageModelParams 
 
 class CooperativeEncodingNetwork:
-    def __init__(self, model_name, model_params, obs_shape, stoch_size, det_size, device):
+    def __init__(self, model_name, networks, network_params, obs_shape, stoch_size, det_size, device):
         # Initialize model names and configurations.
         
-        explainer_network = model_params.encoding_networks[0]
-        reasoner_network = model_params.encoding_networks[1]
-        producer_network = model_params.encoding_networks[2]
+        explainer_network = networks[0]
+        reasoner_network = networks[1]
+        producer_network = networks[2]
 
-        encoding_params = model_params.encoding_params
-        if isinstance(encoding_params, ImageModelParams):
-            encoding_params.obs_shape = obs_shape
-            encoding_params.z_dim = det_size
-            encoding_params.condition_dim = stoch_size
+        if isinstance(network_params, ImageModelParams):
+            network_params.obs_shape = obs_shape
+            network_params.z_dim = det_size
+            network_params.condition_dim = stoch_size
             
-        self.explainer = Explainer(explainer_network, encoding_params, obs_shape, det_size, act_fn="layer_norm").to(device)
-        self.reasoner = Reasoner(reasoner_network, encoding_params, obs_shape, det_size, stoch_size, act_fn="layer_norm").to(device)
-        self.producer = Producer(producer_network, encoding_params, stoch_size, det_size, obs_shape, act_fn="none").to(device)
+        self.explainer = Explainer(explainer_network, network_params, obs_shape, det_size, act_fn="layer_norm").to(device)
+        self.reasoner = Reasoner(reasoner_network, network_params, obs_shape, det_size, stoch_size, act_fn="layer_norm").to(device)
+        self.producer = Producer(producer_network, network_params, stoch_size, det_size, obs_shape, act_fn="none").to(device)
 
         # Add model_name prefix to the network names
         network_names = ["explainer", "reasoner", "producer"]

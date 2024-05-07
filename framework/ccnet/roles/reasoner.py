@@ -5,9 +5,11 @@
         PARK, JunHo, junho@ccnets.org
 '''
 
+import torch
 import torch.nn as nn
 from nn.utils.init import init_weights, create_layer
 from nn.utils.init import ContinuousFeatureJointLayer
+from copy import deepcopy
 
 class Reasoner(nn.Module):
     """
@@ -39,11 +41,21 @@ class Reasoner(nn.Module):
         """
         super(Reasoner, self).__init__()
         d_model = network_params.d_model
+        self.obs_shape = network_params.obs_shape
         self.use_image = len(input_shape) != 1
+        self.explain_size = explain_size
 
         if self.use_image:
+            # Create a deep copy of network_params to prevent modifications from affecting the original
+            _network_params = deepcopy(network_params)
+            
+            # Increase the number of channels by 1. Ensure this is done correctly:
+            _network_params.obs_shape = list(_network_params.obs_shape)  # Convert to list if it's a tuple
+            _network_params.obs_shape[0] += 1  # Increment the channel count
+            
             # Initialize the neural network for image data
-            self.net = net(network_params)
+            self.net = net(_network_params)
+            self.image_elements = torch.prod(torch.tensor(self.obs_shape[1:], dtype=torch.int)).item()
         else:
             # Concatenate the observation and explanation sizes for non-image data embedding
             input_size = input_shape[-1]
@@ -71,11 +83,22 @@ class Reasoner(nn.Module):
             Tensor: The output tensor after processing through the network.
         """
         if self.use_image:
-            y = self.net(obs, e)
+            image_e = self._convert_explanation_to_image_shape(e)
+            z = torch.cat([obs, image_e], dim = 1)
+            y = self.net(z)
         else:
-            x = self.input_embedding_layer(obs, e)
-            y = self.net(x) if padding_mask is None else self.net(x, padding_mask)
+            z = self.input_embedding_layer(obs, e)
+            y = self.net(z) if padding_mask is None else self.net(z, padding_mask)
             
         y = self.relu(y)
         y = self.final_layer(y)
         return y
+
+    def _convert_explanation_to_image_shape(self, e):
+        """ Convert the explanation vector to match the target image shape with the first dimension set to 1. """
+        explain_shape = [1] + list(self.obs_shape[1:])  # Set first dim to 1, rest match target shape
+        e1 = e.repeat(1, self.image_elements // self.explain_size)
+        e2 = torch.zeros_like(e[:, :self.image_elements % self.explain_size])
+        expanded_e = torch.cat([e1, e2], dim=-1)  # Repeat to match the volume of target shape
+        expanded_e = expanded_e.view(-1, *explain_shape)  # Reshape explanation vector to the new explain_shape
+        return expanded_e

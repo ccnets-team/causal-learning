@@ -1,7 +1,9 @@
 from nn.gpt import GPT
 from nn.custom_style_gan import Discriminator, ConditionalDiscriminator, Generator
+from nn.custom_resnet import cnn_ResNet, transpose_cnn_ResNet
 
-STYLEGAN_COOPERATIVE_NETWORKS = [Discriminator, ConditionalDiscriminator, Generator]
+STYLEGAN_COOPERATIVE_NETWORKS = [Discriminator, Discriminator, Generator]
+RESNET_COOPERATIVE_NETWORKS = [cnn_ResNet, cnn_ResNet, transpose_cnn_ResNet]
 GPT_COOPERATIVE_NETWORKS = [GPT, GPT, GPT]
 
 class GPTModelParams:
