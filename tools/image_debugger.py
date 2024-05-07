@@ -2,9 +2,12 @@ import numpy as np
 import torch
 import torchvision.utils as vutils
 import io
-from IPython.display import display, Image, clear_output
+import base64
+from IPython.display import display, clear_output, Image, HTML
 from PIL import Image as PILImage, ImageDraw, ImageFont
 
+
+# self.n_img_ch
 class ImageDebugger:
     def __init__(self, image_ccnet, data_config, device, use_core=False):
         self.device = device
@@ -12,7 +15,7 @@ class ImageDebugger:
         self.use_core = use_core
         self.show_image_indices = data_config.show_image_indices
         self.label_size = data_config.label_size
-        self.n_img_w, self.n_img_h = data_config.obs_shape[1:]
+        self.n_img_ch, self.n_img_w, self.n_img_h = data_config.obs_shape
         self.num_images = len(self.show_image_indices)
 
     def _load_images_and_labels(self, dataset, indices):
@@ -28,7 +31,11 @@ class ImageDebugger:
         self.m_canvas = np.ones((self.n_img_h * (self.num_images + 1), self.n_img_w * (self.num_images + 1), 3), dtype=np.uint8) * 255
 
         for i, image in enumerate(self.debug_images):
-            img = np.transpose(vutils.make_grid(image.unsqueeze(0).cpu(), padding=0, normalize=True).numpy(), (1, 2, 0))
+            img = image.unsqueeze(0).cpu()
+            img = vutils.make_grid(img, padding=0, normalize=True)
+            img = np.transpose(img.numpy(), (1, 2, 0))
+            if self.n_img_ch == 1:
+                img = np.stack([img[:, :, 0]] * 3, axis=-1)  # Convert grayscale to RGB by repeating the channel
             self.m_canvas[:self.n_img_h, self.n_img_w * (i + 1):self.n_img_w * (i + 2)] = (img * 255).astype(np.uint8)
 
     def update_images(self):
@@ -50,31 +57,37 @@ class ImageDebugger:
                     generated_code = torch.cat([selected_features, explains], dim=-1)
                     generated_images = self.image_ccnet.decode(generated_code).cpu()
 
-                img_array = np.transpose(vutils.make_grid(generated_images, padding=0, normalize=True).numpy(), (1, 2, 0))
+                img_array = vutils.make_grid(generated_images, padding=0, normalize=True).numpy()
+                img_array = np.transpose(img_array, (1, 2, 0))
+                if self.n_img_ch == 1:
+                    img_array = np.stack([img_array[:, :, 0]] * 3, axis=-1)  # Convert grayscale to RGB
                 self.m_canvas[self.n_img_h * (i + 1):self.n_img_h * (i + 2), self.n_img_w:] = (img_array * 255).astype(np.uint8)
 
     def display_image(self):
-        """Display the image using IPython's display module with text annotations."""
+        """Display the image using IPython's display module with HTML for better control over image size and appearance."""
         # Clear the previous output, including images, text, etc.
         clear_output(wait=True)
 
         # Convert numpy array to PIL Image
         img = PILImage.fromarray(self.m_canvas)
-        
+
         # Prepare to draw on the image
         draw = ImageDraw.Draw(img)
         font = ImageFont.load_default()  # Load default font
-        
+
         if self.use_core:
             # Define labels and their positions
             labels = ["Female, No-smile", "Male, No-smile", "Female, Smile", "Male, Smile"]
             positions = [(30, 60 + 128 * (i + 1)) for i in range(len(labels))]  # Adjust positions as needed
-            
+
             # Draw text on the image
             for label, position in zip(labels, positions):
-                draw.text(position, label, font=font, fill=(0, 0, 0))  # White color for text
+                draw.text(position, label, font=font, fill=(0, 0, 0))  # Black color for text
 
-        # Save the image to a byte buffer to then display it
+        # Save the image to a byte buffer to then display it using HTML
         with io.BytesIO() as output:
             img.save(output, format="PNG")
-            display(Image(data=output.getvalue(), format="png"))
+            # Encode the image as a base64 string and create an HTML image tag with this string as the src
+            data_uri = base64.b64encode(output.getvalue()).decode('utf-8')
+            img_tag = f'<img src="data:image/png;base64,{data_uri}" width="800" />'  # Adjust width as necessary
+            display(HTML(img_tag))

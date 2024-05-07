@@ -113,67 +113,37 @@ class Generator(nn.Module):
         super().__init__()
         d_model = network_params.d_model
         num_layers = network_params.num_layers
-        self.d_model = d_model
-        
-        self.style_dim = d_model  
-        self.mapping_network = MappingNetwork(self.style_dim, d_model, num_layers = num_layers, act = 'relu')
-        self.style1 = StyleMod(channels=d_model, style_dim = self.style_dim)
-        
+        num_channels, height, width = network_params.obs_shape
+        print(f"num_channels: {num_channels}, height: {height}, width: {width}")
+        self.style_dim = d_model
+        self.mapping_network = MappingNetwork(self.style_dim, d_model, num_layers=num_layers, act='relu')
+        self.style1 = StyleMod(channels=d_model, style_dim=self.style_dim)
+
         self.blocks = nn.ModuleList()
         current_d_model = d_model
         for i in range(num_layers):
-            next_d_model = max(1, current_d_model // 2)  # Reduce channel count
-            self.blocks.append(ConvolutionalBlock(current_d_model, next_d_model, use_noise=True, style_dim = self.style_dim, act = 'relu'))
+            next_d_model = max(num_channels, current_d_model // 2)  # Ensure not below num_channels
+            self.blocks.append(ConvolutionalBlock(current_d_model, next_d_model, use_noise=True, style_dim=self.style_dim, act='relu'))
             current_d_model = next_d_model
         
-        self.to_rgb = nn.Sequential(nn.Conv2d(current_d_model, 3, 1), nn.Tanh())
+        self.to_rgb = nn.Sequential(nn.Conv2d(current_d_model, num_channels, 1), nn.Tanh())
+        self.height = height
+        self.width = width
 
     def forward(self, z):
         style = self.mapping_network(z)
         batch_size = z.shape[0]
-        out = z.view(batch_size, self.d_model, 1, 1).repeat(1, 1, 2, 2)
+        # Start with a small spatial dimension that will be scaled up to the desired size
+        out = z.view(batch_size, -1, 1, 1).repeat(1, 1, 2, 2)
         out = self.style1(out, style)
+        
         for block in self.blocks:
-            out = nn.functional.interpolate(out, scale_factor=2, mode='nearest')
+            if out.size(2) < self.height and out.size(3) < self.width: 
+                out = F.interpolate(out, scale_factor=2, mode='nearest')
             out = block(out, style)
-        out = self.to_rgb(out)
-        return out
-
-class ConditionalGenerator(nn.Module):
-    """ Generator model incorporating a mapping network and conditionally applied styles. """
-    def __init__(self, network_params):
-        super().__init__()
-        condition_dim = network_params.condition_dim
-        z_dim = network_params.z_dim
-        d_model = network_params.d_model
-        num_layers = network_params.num_layers
-        self.style_dim = d_model  
         
-        self.mapping_network_style = MappingNetwork(z_dim, d_model, num_layers = num_layers, act = 'relu')
-        self.mapping_network_condition = MappingNetwork(condition_dim, d_model, num_layers = num_layers, act = 'relu')
-        
-        self.initial = nn.Parameter(torch.randn(1, d_model, 2, 2))
-        self.style1 = StyleMod(channels=d_model, style_dim = self.style_dim)
-        
-        self.blocks = nn.ModuleList()
-        self.d_model = d_model
-        current_d_model = d_model
-        for i in range(num_layers):
-            next_d_model = max(1, current_d_model // 2)  # Reduce channel count
-            self.blocks.append(ConvolutionalBlock(current_d_model, next_d_model, use_noise=True, style_dim = self.style_dim, act = 'relu'))
-            current_d_model = next_d_model
-        
-        self.to_rgb = nn.Sequential(nn.Conv2d(current_d_model, 3, 1), nn.Tanh())
-
-    def forward(self, y, e):
-        batch_size = e.shape[0]
-        style = self.mapping_network_style(e)
-        condition = self.mapping_network_condition(y)
-        out = condition.view(batch_size, self.d_model, 1, 1).repeat(1, 1, 2, 2)
-        out = self.style1(out, style)
-        for block in self.blocks:
-            out = nn.functional.interpolate(out, scale_factor=2, mode='nearest')
-            out = block(out, style)
+        # Ensure the output has the exact dimensions required (using adaptive average pooling to adjust final size)
+        out = F.interpolate(out, size=(self.height, self.width), mode='bilinear', align_corners=False)
         out = self.to_rgb(out)
         return out
 
@@ -183,12 +153,13 @@ class Discriminator(nn.Module):
         self.z_dim = network_params.z_dim
         self.d_model = network_params.d_model
         num_layers = network_params.num_layers
+        num_channels = network_params.obs_shape[0]
 
         self.blocks = nn.ModuleList()
-        in_channels = 3  # Starting with RGB channels
+        in_channels = num_channels  # Starting with RGB channels
         
         for i in range(num_layers):
-            out_channels = self.d_model // (2 ** (num_layers - i - 1))
+            out_channels = min(self.d_model, self.d_model // (2 ** (num_layers - i - 1)))
             self.blocks.append(ConvolutionalBlock(in_channels, out_channels, use_noise=False, act = 'relu'))
             in_channels = out_channels
 
@@ -211,13 +182,16 @@ class ConditionalDiscriminator(nn.Module):
         self.d_model = network_params.d_model
         self.style_dim = self.d_model  # Ensure style_dim is defined correctly
         num_layers = network_params.num_layers
+        num_channels = network_params.obs_shape[0]
+        
+        
         self.mapping_network = MappingNetwork(self.z_dim, self.style_dim, num_layers, act = 'relu')
 
         self.blocks = nn.ModuleList()
-        in_channels = 3  # Starting with RGB channels
+        in_channels = num_channels  # Starting with RGB channels
         
         for i in range(num_layers):
-            out_channels = self.d_model // (2 ** (num_layers - i - 1))
+            out_channels = min(self.d_model, self.d_model // (2 ** (num_layers - i - 1)))
             self.blocks.append(ConvolutionalBlock(in_channels, out_channels, use_noise=False, style_dim = self.style_dim, act = 'relu'))
             in_channels = out_channels
 

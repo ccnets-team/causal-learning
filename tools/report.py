@@ -37,29 +37,19 @@ def calculate_test_results(inferred_y, target_y, task_type, num_classes=None, av
         if task_type == 'binary_classification':
             inferred_y = (inferred_y > 0.5).float()
         elif task_type == 'multi_class_classification':
-            if num_classes is None:
-                num_classes = inferred_y.size(1)  # Assuming the second dimension are the class scores
             inferred_y = torch.argmax(inferred_y, dim=-1)
-
-        if target_y.dim() > 1 and target_y.size(-1) > 1:
             target_y = torch.argmax(target_y, dim=-1)  # Assuming one-hot encoding of target
 
         correct = (inferred_y == target_y).float().sum()
         accuracy = correct / target_y.numel()
-        metrics['accuracy'] = accuracy.item()
-        metrics['precision'] = precision_score(target_y, inferred_y, average=average, labels=range(num_classes))
-        metrics['recall'] = recall_score(target_y, inferred_y, average=average, labels=range(num_classes))
-        metrics['f1_score'] = f1_score(target_y, inferred_y, average=average, labels=range(num_classes))
-        
         inferred_y_np = inferred_y.numpy()
         target_y_np = target_y.numpy()
-
-        # Check if num_classes is set for multi-class classification
-        if num_classes and task_type == 'multi_class_classification':
-            metrics['precision'] = precision_score(target_y_np, inferred_y_np, average=average, labels=range(num_classes))
-            metrics['recall'] = recall_score(target_y_np, inferred_y_np, average=average, labels=range(num_classes))
-            metrics['f1_score'] = f1_score(target_y_np, inferred_y_np, average=average, labels=range(num_classes))
-
+        
+        metrics['accuracy'] = accuracy.item()
+        metrics['precision'] = precision_score(target_y_np, inferred_y_np, average=average, labels=range(num_classes), zero_division=0)
+        metrics['recall'] = recall_score(target_y_np, inferred_y_np, average=average, labels=range(num_classes), zero_division=0)
+        metrics['f1_score'] = f1_score(target_y_np, inferred_y_np, average=average, labels=range(num_classes), zero_division=0)
+        
     elif task_type == 'multi_label_classification':
         inferred_y = (inferred_y > 0.5).float()
         accuracy = accuracy_score(target_y.numpy().reshape(-1), inferred_y.numpy().reshape(-1), normalize=True)
