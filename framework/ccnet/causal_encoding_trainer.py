@@ -11,7 +11,7 @@
 import torch
 from framework.ccnet.cooperative_encoding_network import CooperativeEncodingNetwork as Encoder
 from framework.train.trainer_base import TrainerBase
-from tools.metrics_tracker import create_causal_training_metrics
+from tools.metric_tracker import create_causal_training_metrics
 
 class CausalEncodingTrainer(TrainerBase):
     """
@@ -109,8 +109,8 @@ class CausalEncodingTrainer(TrainerBase):
         Returns:
         - cost: Absolute difference.
         """        
-        cost = (predict - target.detach()).abs()
-        return cost
+        path_cost = (predict - target.detach()).abs()
+        return path_cost
 
     def loss_fn(self, predict, target):
         """
@@ -121,10 +121,10 @@ class CausalEncodingTrainer(TrainerBase):
         - target: Target values.
         
         Returns:
-        - prediction_loss: Mean absolute difference.
+        - causal_loss: Mean absolute difference.
         """        
-        prediction_loss = (predict - target.detach()).abs().mean()
-        return prediction_loss
+        causal_loss = (predict - target.detach()).abs().mean()
+        return causal_loss
     
     def error_fn(self, predict, target):
         """

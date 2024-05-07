@@ -51,13 +51,6 @@ class MetricsBase:
     def __iter__(self):
         yield from self.data.values()
 
-class CoopErrorMetrics(MetricsBase):
-    def __init__(self, **kwargs):
-        super().__init__(kwargs, ['explainer_error', 'reasoner_error', 'producer_error'])
-        
-    def __getitem__(self, key):
-        return self.data[key]
-        
 class PredictionLossMetrics(MetricsBase):
     def __init__(self, **kwargs):
         super().__init__(kwargs, ['inference_loss', 'generation_loss', 'reconstruction_loss'])
@@ -65,6 +58,13 @@ class PredictionLossMetrics(MetricsBase):
     def __getitem__(self, key):
         return self.data[key]
     
+class CoopErrorMetrics(MetricsBase):
+    def __init__(self, **kwargs):
+        super().__init__(kwargs, ['explainer_error', 'reasoner_error', 'producer_error'])
+        
+    def __getitem__(self, key):
+        return self.data[key]
+        
 class MetricsTracker:
     def __init__(self, 
                  losses: PredictionLossMetrics=None,
@@ -111,16 +111,16 @@ def create_causal_training_metrics(**kwargs):
 
     padding_mask = kwargs.get('padding_mask')
     
-    errors = CoopErrorMetrics(
-        explainer_error= compute_masked_mean(kwargs.get('explainer_error'), padding_mask),
-        reasoner_error= compute_masked_mean(kwargs.get('reasoner_error'), padding_mask),
-        producer_error= compute_masked_mean(kwargs.get('producer_error'), padding_mask)
-    )
-    
     losses = PredictionLossMetrics(
         inference_loss= compute_masked_mean(kwargs.get('inference_loss'), padding_mask),
         generation_loss= compute_masked_mean(kwargs.get('generation_loss'), padding_mask),
         reconstruction_loss= compute_masked_mean(kwargs.get('reconstruction_loss'), padding_mask)
+    )
+
+    errors = CoopErrorMetrics(
+        explainer_error= compute_masked_mean(kwargs.get('explainer_error'), padding_mask),
+        reasoner_error= compute_masked_mean(kwargs.get('reasoner_error'), padding_mask),
+        producer_error= compute_masked_mean(kwargs.get('producer_error'), padding_mask)
     )
 
     return MetricsTracker(

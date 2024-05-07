@@ -7,20 +7,19 @@ Author:
         
     COPYRIGHT (c) 2024. CCNets. All Rights reserved.
 '''
+from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 import torch
 import numpy as np
-from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 
-def calculate_test_results(inferred_y, target_y, task_type, label_size):
+def calculate_test_results(inferred_y, target_y, task_type, num_classes=None, average='macro'):
     """
-    Calculates performance metrics for binary classification, multiclass classification, 
-    multi-label classification, and regression tasks using PyTorch.
+    Calculates performance metrics for tasks using PyTorch tensors that might have batch and sequence dimensions.
     Parameters:
     - inferred_y: Predictions from the model (as PyTorch tensors).
     - target_y: Ground truth labels or values (as PyTorch tensors).
-    - task_type: Type of task ('binary_classification', 'multi_class_classification', 
-                 'multi_label_classification', 'regression').
-    - label_size: Number of classes for classification tasks. Not used for binary.
+    - task_type: Type of task (e.g., 'binary_classification', 'multi_class_classification', 'multi_label_classification', 'regression').
+    - num_classes: Number of classes for classification tasks. Not used for binary.
+    - average: Averaging method for precision, recall, and F1 score.
     Returns:
     - metrics: A dictionary containing relevant performance metrics.
     """
@@ -28,31 +27,40 @@ def calculate_test_results(inferred_y, target_y, task_type, label_size):
     inferred_y = inferred_y.cpu()
     target_y = target_y.cpu()
 
+    # Flatten the tensors if they have a sequence dimension, assuming the last dimension could be class probabilities
+    if inferred_y.dim() > 2:
+        inferred_y = inferred_y.view(-1, inferred_y.size(-1))
+    if target_y.dim() > 2:
+        target_y = target_y.view(-1, target_y.size(-1))
+
     if task_type in ['binary_classification', 'multi_class_classification']:
         if task_type == 'binary_classification':
             inferred_y = (inferred_y > 0.5).float()
         elif task_type == 'multi_class_classification':
+            if num_classes is None:
+                num_classes = inferred_y.size(1)  # Assuming the second dimension are the class scores
             inferred_y = torch.argmax(inferred_y, dim=-1)
 
+        if target_y.dim() > 1 and target_y.size(-1) > 1:
+            target_y = torch.argmax(target_y, dim=-1)  # Assuming one-hot encoding of target
+
         correct = (inferred_y == target_y).float().sum()
-        accuracy = correct / target_y.shape[0]
+        accuracy = correct / target_y.numel()
         metrics['accuracy'] = accuracy.item()
 
         inferred_y_np = inferred_y.numpy()
         target_y_np = target_y.numpy()
 
-        metrics['precision'] = precision_score(target_y_np, inferred_y_np, average='macro')
-        metrics['recall'] = recall_score(target_y_np, inferred_y_np, average='macro')
-        metrics['f1_score'] = f1_score(target_y_np, inferred_y_np, average='macro')
+        # Check if num_classes is set for multi-class classification
+        if num_classes and task_type == 'multi_class_classification':
+            metrics['precision'] = precision_score(target_y_np, inferred_y_np, average=average, labels=range(num_classes))
+            metrics['recall'] = recall_score(target_y_np, inferred_y_np, average=average, labels=range(num_classes))
+            metrics['f1_score'] = f1_score(target_y_np, inferred_y_np, average=average, labels=range(num_classes))
 
     elif task_type == 'multi_label_classification':
-        # Assuming threshold of 0.5 for binary relevance per label
         inferred_y = (inferred_y > 0.5).float()
-
-        accuracy = accuracy_score(target_y.numpy(), inferred_y.numpy(), normalize=True)
+        accuracy = accuracy_score(target_y.numpy().reshape(-1), inferred_y.numpy().reshape(-1), normalize=True)
         metrics['accuracy'] = accuracy
-
-        # Other relevant metrics like Hamming loss can be added here
 
     elif task_type == 'regression':
         mse = torch.mean((target_y - inferred_y) ** 2)

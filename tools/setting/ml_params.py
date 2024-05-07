@@ -5,7 +5,7 @@ STYLEGAN_COOPERATIVE_NETWORKS = [Discriminator, ConditionalDiscriminator, Genera
 GPT_COOPERATIVE_NETWORKS = [GPT, GPT, GPT]
 
 class GPTModelParams:
-    def __init__(self, num_layers=6, d_model=256, dropout=0.02):
+    def __init__(self, num_layers=6, d_model=256, dropout=0.05):
         """
         Initialize parameters for a GPT model configuration.
         

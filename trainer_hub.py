@@ -22,7 +22,7 @@ from nn.utils.init import set_random_seed
 from tools.wandb_logger import wandb_end
 from tools.report import calculate_test_results
 from tools.wandb_logger import log_to_wandb
-from tools.tensor import convert_to_device
+from tools.tensor import get_random_batch, convert_to_device 
 import torch
 
 from framework.ccnet.cooperative_network import CooperativeNetwork
@@ -92,7 +92,7 @@ class TrainerHub:
         self.initialize_training(trainset)
         
         for epoch in tqdm_notebook(range(self.max_epoch), desc='Epochs', leave=False):
-            dataloader = get_data_loader(trainset, self.adjusted_batch_size(len(trainset)))
+            dataloader = get_data_loader(trainset, min(len(trainset), self.batch_size))
 
             if self.should_end_training(epoch = epoch):
                 break
@@ -101,27 +101,13 @@ class TrainerHub:
                 self.train_iteration(iters, source_batch, target_batch, epoch, len(dataloader), testset)
 
     def evaluate(self, eval_dataset):
-        batch_size = self.batch_size
-        num_batches = len(eval_dataset) // batch_size
-        
-        random_index = random.randint(0, num_batches - 1) if num_batches > 0 else 0
-        start_index = random_index * batch_size
-        end_index = start_index + batch_size
-        
-        batch = [eval_dataset[i] for i in range(start_index, min(end_index, len(eval_dataset)))]
-        source_batch, target_batch = zip(*batch)
-        
-        # Convert tuples to tensors if not already tensors
-        source_batch = torch.stack(source_batch)  # Assumes source_batch elements are tensors
-        if all(isinstance(x, torch.Tensor) for x in target_batch):
-            target_batch = torch.stack(target_batch)  # Use torch.stack if target_batch elements are tensors
-        else:
-            target_batch = torch.tensor(target_batch)  # This line assumes all elements are numeric
-        
+        source_batch, target_batch = get_random_batch(eval_dataset, self.batch_size)
+        # Assuming convert_to_device is a function that handles device placement
         source_batch, target_batch = convert_to_device(source_batch, target_batch, self.device)
 
         inferred_y = self.core_ccnet.infer(source_batch)
-        test_results = calculate_test_results(inferred_y, target_batch, self.task_type, label_size=self.label_size)
+        
+        test_results = calculate_test_results(inferred_y, target_batch, self.task_type, num_classes=self.label_size)
         
         if self.use_wandb:
             log_to_wandb({'Test': test_results})
@@ -134,12 +120,11 @@ class TrainerHub:
     # Helper methods
     def initialize_training(self, trainset):
         self.helper.initialize_train(trainset)
-        
-    def adjusted_batch_size(self, dataset_length):
-        return min(dataset_length, self.batch_size)
+
         
     def train_iteration(self, iters, source_batch, target_batch, epoch, dataloader_length, testset):
         set_random_seed(iters)
+        
         self.helper.init_time_step()
         
         core_metric = None

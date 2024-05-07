@@ -69,19 +69,3 @@ def print_test_results(metrics):
             % metric)
         print(text)
     print()
-        
-        
-def print_ml_params(cl_params):
-    for config_category in ['training', 'model', 'optimization']:
-        config = getattr (cl_params, config_category)
-        print(f"--- {config_category.upper()} CONFIGURATION ---")
-
-        for attr_name in vars(config):  
-            attr_value = getattr(config, attr_name)
-            if isinstance(attr_value, torch.device):
-                print(f"{attr_name}: {attr_value.type} - {attr_value.index}")
-            elif isinstance(attr_value, torch.nn.modules.sparse.Embedding):
-                print(f"{attr_name}: Embedding({attr_value.num_embeddings}, {attr_value.embedding_dim})")
-            else:
-                print(f"{attr_name}: {attr_value}")
-        print()
