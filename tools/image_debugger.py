@@ -57,7 +57,7 @@ class ImageDebugger:
                     generated_code = torch.cat([selected_features, explains], dim=-1)
                     generated_images = self.image_ccnet.decode(generated_code).cpu()
 
-                img_array = vutils.make_grid(generated_images, padding=0, normalize=True).numpy()
+                img_array = vutils.make_grid(generated_images, padding=0, normalize=False).numpy()
                 img_array = np.transpose(img_array, (1, 2, 0))
                 if self.n_img_ch == 1:
                     img_array = np.stack([img_array[:, :, 0]] * 3, axis=-1)  # Convert grayscale to RGB
