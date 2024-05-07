@@ -107,7 +107,7 @@ class ContinuousFeatureJointLayer(nn.Module):
         super(ContinuousFeatureJointLayer, self).__init__()
         self.combine_mode = combine_mode
         if self.combine_mode == 'cat':
-            self.concat_layer = ConCatLayer(embedding_size, *num_features, use_repeat=False)
+            self.concat_layer = ConCatLayer(embedding_size, *num_features, use_repeat=True)
         else:
             self.mat_mul_layers = nn.ModuleList([MatMulLayer(nf, embedding_size) for nf in num_features])
         self.final_layer = get_activation_function(act_fn, embedding_size)
