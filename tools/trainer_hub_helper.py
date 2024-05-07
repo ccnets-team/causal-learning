@@ -106,7 +106,7 @@ class TrainerHubHelper:
     def finalize_training_step(self, epoch_idx, iter_idx, len_dataloader, core_metric = None, encoder_metric = None, test_results = None) -> None:
         self.update_metrics(core_metric, encoder_metric)
 
-        if test_results is not None:
+        if self.should_checkpoint():
             self.handle_checkpoint(epoch_idx, iter_idx, len_dataloader, test_results)
 
         self.increment_counters()
@@ -118,7 +118,7 @@ class TrainerHubHelper:
         if encoder_metric is not None:
             self.encoder_metrics += encoder_metric
 
-    def handle_checkpoint(self, epoch_idx, iter_idx, len_dataloader, test_results):
+    def handle_checkpoint(self, epoch_idx, iter_idx, len_dataloader, test_results = None):
         time_cost = time.time() - self.pivot_time
         wb_image = None
 
@@ -138,7 +138,7 @@ class TrainerHubHelper:
         self.reset_metrics()
 
         """Handles operations to be performed at each checkpoint."""
-        if self.use_core:
+        if self.use_core and test_results is not None:
             print_test_results(test_results)
             log_test_results(self.tensorboard, self.iters, test_results)
 
