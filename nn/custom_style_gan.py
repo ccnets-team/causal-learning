@@ -138,8 +138,7 @@ class Generator(nn.Module):
         out = self.style1(out, style)
         
         for block in self.blocks:
-            if out.size(2) < self.height and out.size(3) < self.width: 
-                out = F.interpolate(out, scale_factor=2, mode='nearest')
+            out = F.interpolate(out, scale_factor=2, mode='nearest')
             out = block(out, style)
         
         # Ensure the output has the exact dimensions required (using adaptive average pooling to adjust final size)
