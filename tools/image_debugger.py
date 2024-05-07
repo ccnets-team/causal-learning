@@ -83,13 +83,25 @@ class ImageDebugger:
 
         # Prepare to draw on the image
         draw = ImageDraw.Draw(img)
-        font = ImageFont.load_default()  # Load default font
 
         if self.use_core:
             if self.dataset_name == 'celebA':
+                font = ImageFont.load_default()  # Load default font
+
                 # Define labels and their positions
                 labels = ["Female, No-smile", "Male, No-smile", "Female, Smile", "Male, Smile"]
-                positions = [(30, 60 + 128 * (i + 1)) for i in range(len(labels))]  # Adjust positions as needed
+                positions = [(self.n_img_w//4, self.n_img_h//2 + self.n_img_h* (i + 1)) for i in range(len(labels))]  # Adjust positions as needed
+
+                # Draw text on the image
+                for label, position in zip(labels, positions):
+                    draw.text(position, label, font=font, fill=(0, 0, 0))  # Black color for text
+            elif self.dataset_name == 'mnist':
+                # Load a specific font with a defined size
+                font = ImageFont.truetype("arial.ttf", 12)  # Adjust the font and size as needed
+
+                # Define labels and their positions
+                labels = ["style", "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
+                positions = [(self.n_img_w//8, self.n_img_h//4 + self.n_img_h* i) for i in range(len(labels))]  # Adjust positions as needed
 
                 # Draw text on the image
                 for label, position in zip(labels, positions):
