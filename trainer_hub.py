@@ -101,7 +101,7 @@ class TrainerHub:
                 core_metric, encoder_metric = self.train_iteration(iters, source_batch, target_batch)
 
                 test_results = None
-                if self.helper.should_checkpoint():
+                if self.helper.should_checkpoint() and self.use_core:
                     test_results = self.test(testset) if self.use_test else self.evaluate(testset)
                 self.helper.finalize_training_step(epoch, iters, len(dataloader), core_metric, encoder_metric, test_results)
                 
@@ -110,7 +110,7 @@ class TrainerHub:
         source_batch, target_batch = get_random_batch(eval_dataset, self.batch_size)
         # Assuming convert_to_device is a function that handles device placement
         source_batch, target_batch = convert_to_device(source_batch, target_batch, self.device)
-
+        
         inferred_y = self.core_ccnet.infer(source_batch)
         
         test_results = calculate_test_results(inferred_y, target_batch, self.task_type, num_classes=self.label_size)
