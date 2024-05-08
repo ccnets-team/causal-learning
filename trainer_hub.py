@@ -34,6 +34,7 @@ class TrainerHub:
         
         self.data_config = data_config
         self.device = device
+        
         self.use_core = ml_params.core_model_name != 'none'
         self.use_gpt = ml_params.core_model_name == 'gpt'
         self.use_encoder = ml_params.encoder_model_name != 'none'
@@ -46,6 +47,13 @@ class TrainerHub:
         self.max_epoch = training_params.max_epoch
         self.max_iters = training_params.max_iters
 
+        self.encoder_ccnet = None
+        self.encoder_trainer = None
+        self.state_size = None
+        
+        self.core_ccnet = None
+        self.core_trainer = None        
+        
         self.setup_models(ml_params)
         
         self.helper = TrainerHubHelper(self, data_config, ml_params, device, use_print, use_wandb)
@@ -53,40 +61,32 @@ class TrainerHub:
     def setup_models(self, ml_params):
         training_params, model_params, optimization_params = ml_params
         
-        self.setup_encoder(model_params, training_params, optimization_params)
+        if self.use_encoder:
+            self.setup_encoder(model_params, training_params, optimization_params)
         
-        self.setup_core_network(model_params, training_params, optimization_params)
+        if self.use_core:
+            self.setup_core_network(model_params, training_params, optimization_params)
 
     def setup_encoder(self, model_params, training_params, optimization_params):
-        if self.use_encoder:
-            obs_shape = self.data_config.obs_shape
-            encoding_d_model = model_params.encoding_params.d_model
-            stoch_size, det_size = max(encoding_d_model//2, 1), max(encoding_d_model//2, 1)
-            
-            network_params, networks = configure_model(model_params.encoder_model_name, model_params.encoding_params, obs_shape = obs_shape, condition_dim=stoch_size, z_dim=det_size)
-            
-            self.encoder_ccnet = CooperativeEncodingNetwork(model_params.encoder_model_name, networks, network_params, self.device)
-            self.encoder_trainer = CausalEncodingTrainer(self.encoder_ccnet, training_params, optimization_params)
-            self.state_size = stoch_size + det_size
-        else:
-            self.encoder_ccnet = None
-            self.encoder_trainer = None
-            self.state_size = self.data_config.obs_shape[-1]
+        obs_shape = self.data_config.obs_shape
+        stoch_size, det_size = max(network_params.encoding_params.d_model//2, 1), max(network_params.encoding_params.d_model//2, 1)
+        
+        model_networks, network_params = configure_model(model_params.encoder_model_name, model_params.encoding_params, obs_shape = obs_shape, condition_dim=stoch_size, z_dim=det_size)
+        
+        self.encoder_ccnet = CooperativeEncodingNetwork(model_params.encoder_model_name, model_networks, network_params, self.device)
+        self.encoder_trainer = CausalEncodingTrainer(self.encoder_ccnet, training_params, optimization_params)
+        self.state_size = stoch_size + det_size
 
     def setup_core_network(self, model_params, training_params, optimization_params):    
-        if self.use_core:
-            self.task_type = self.data_config.task_type
-            self.label_size = self.data_config.label_size
-            obs_shape = [self.state_size] if self.use_gpt else self.data_config.obs_shape
-            explain_size = max(model_params.core_params.d_model//2, 1) if self.data_config.explain_size is None else self.data_config.explain_size
-            
-            network_params, networks = configure_model(model_params.core_model_name, model_params.core_params, obs_shape = obs_shape, condition_dim=self.label_size, z_dim=explain_size)
-            
-            self.core_ccnet = CooperativeNetwork(model_params.core_model_name, networks, network_params, self.task_type, self.device, encoder=self.encoder_ccnet)
-            self.core_trainer = CausalTrainer(self.core_ccnet, training_params, optimization_params)
-        else:
-            self.core_ccnet = None
-            self.core_trainer = None
+        obs_shape = [self.state_size] if self.use_encoder else self.data_config.obs_shape
+        explain_size = max(model_params.core_params.d_model//2, 1) if self.data_config.explain_size is None else self.data_config.explain_size
+        self.label_size = self.data_config.label_size
+        self.task_type = self.data_config.task_type
+        
+        model_networks, network_params = configure_model(model_params.core_model_name, model_params.core_params, obs_shape = obs_shape, condition_dim=self.label_size, z_dim=explain_size)
+        
+        self.core_ccnet = CooperativeNetwork(model_params.core_model_name, model_networks, network_params, self.task_type, self.device, encoder=self.encoder_ccnet)
+        self.core_trainer = CausalTrainer(self.core_ccnet, training_params, optimization_params)
 
     def __exit__(self):
         if self.use_wandb:
@@ -111,7 +111,6 @@ class TrainerHub:
                 if self.helper.should_checkpoint() and self.use_core:
                     test_results = self.test(testset) if self.use_test else self.evaluate(testset)
                 self.helper.finalize_training_step(epoch, iters, len(dataloader), core_metric, encoder_metric, test_results)
-                
 
     def evaluate(self, eval_dataset):
         source_batch, target_batch = get_random_batch(eval_dataset, self.batch_size)
@@ -123,9 +122,6 @@ class TrainerHub:
         inferred_trajectory = self.core_ccnet.infer(state_trajectory, padding_mask)
         
         test_results = calculate_test_results(inferred_trajectory, target_trajectory, padding_mask, self.task_type, num_classes=self.label_size)
-        
-        if self.use_wandb:
-            log_to_wandb({'Test': test_results})
         
         return test_results
 
@@ -139,20 +135,15 @@ class TrainerHub:
         inferred_trajectory = self.core_ccnet.infer(state_trajectory, padding_mask)
         
         test_results = calculate_test_results(inferred_trajectory, target_trajectory, padding_mask, self.task_type, num_classes=self.label_size)
-        
-        if self.use_wandb:
-            log_to_wandb({'Test': test_results})
             
         return test_results
     
     def should_end_training(self, epoch):
         return self.helper.iters > self.max_iters or epoch > self.max_epoch
 
-    # Helper methods
     def initialize_training(self, trainset):
         self.helper.initialize_train(trainset)
 
-        
     def train_iteration(self, iters, source_batch, target_batch):
         set_random_seed(iters)
         

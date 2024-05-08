@@ -13,7 +13,7 @@ from tools.tensor import adjust_tensor_dim
 from framework.utils.ccnet_util import determine_activation_by_task_type
                     
 class CooperativeNetwork:
-    def __init__(self, model_name, networks, network_params, task_type, device, 
+    def __init__(self, model_name, model_networks, network_params, task_type, device, 
                  encoder = None):
         """
         Initializes the Cooperative Network with specified model parameters and computational device.
@@ -30,27 +30,23 @@ class CooperativeNetwork:
         if isinstance(network_params, GPTModelParams):
             self.use_gpt = True 
         elif isinstance(network_params, ImageModelParams):
-            self.use_gpt = False 
-        
-        explainer_network = networks[0]
-        reasoner_network = networks[1]
-        producer_network = networks[2]
+            self.use_gpt = False
 
-        self.encoder = encoder
         task_act_fn = determine_activation_by_task_type(task_type)
             
         # Add model_name prefix to the network names
         network_names = ["explainer", "reasoner", "producer"]
         self.model_name = model_name
         self.network_names = [f"{model_name}_{name}" for name in network_names]
-        self.explainer =  Explainer(explainer_network, network_params, act_fn="layer_norm").to(device)
-        self.reasoner =  Reasoner(reasoner_network, network_params, act_fn=task_act_fn).to(device)
-        self.producer =  Producer(producer_network, network_params, act_fn="none").to(device)
+        self.explainer =  Explainer(model_networks[0], network_params, act_fn="layer_norm").to(device)
+        self.reasoner =  Reasoner(model_networks[1], network_params, act_fn=task_act_fn).to(device)
+        self.producer =  Producer(model_networks[2], network_params, act_fn="none").to(device)
         self.networks = [self.explainer, self.reasoner, self.producer]
         
         self.explain_size = network_params.z_dim
         self.label_size = network_params.condition_dim
         self.device = device
+        self.encoder = encoder
 
     def encode(self, data, padding_mask = None):
         """

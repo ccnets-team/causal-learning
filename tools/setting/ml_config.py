@@ -39,9 +39,9 @@ def configure_model(model_name, params, obs_shape, condition_dim, z_dim):
     elif model_name == 'gpt':
         networks = GPT_COOPERATIVE_NETWORKS
     if isinstance(params, GPTModelParams):
-        return configure_gpt_model_params(params, obs_shape, condition_dim, z_dim), networks
+        return networks, configure_gpt_model_params(params, obs_shape, condition_dim, z_dim)
     elif isinstance(params, ImageModelParams):
-        return configure_image_model_params(params, obs_shape, condition_dim, z_dim), networks
+        return networks, configure_image_model_params(params, obs_shape, condition_dim, z_dim)
 
 def extend_obs_shape_channel(network_params):
     """
