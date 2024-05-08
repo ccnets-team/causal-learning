@@ -28,7 +28,8 @@ import torch
 from framework.ccnet.cooperative_network import CooperativeNetwork
 from framework.ccnet.cooperative_encoding_network import CooperativeEncodingNetwork
 from tools.setting.ml_config import configure_core_model, configure_encoder_model
-    
+from tools.tensor_utils import generate_padding_mask
+
 class TrainerHub:
     def __init__(self, ml_params: MLParameters, data_config: DataConfig, device, use_print=False, use_wandb=False, use_full_eval = False):
         
@@ -133,12 +134,12 @@ class TrainerHub:
         
         # Assuming convert_to_device is a function that handles device placement
         source_batch, target_batch = convert_to_device(source_batch, target_batch, self.device)
-
-        state_trajectory, target_trajectory, padding_mask = self.helper.setup_training_data(source_batch, target_batch)
         
-        inferred_trajectory = self.core_ccnet.infer(state_trajectory, padding_mask)
+        padding_mask = generate_padding_mask(source_batch)
         
-        test_results = calculate_test_results(inferred_trajectory, target_trajectory, padding_mask, self.task_type, num_classes=self.label_size)
+        inferred_trajectory = self.core_ccnet.infer(source_batch, padding_mask)
+        
+        test_results = calculate_test_results(inferred_trajectory, target_batch, padding_mask, self.task_type, num_classes=self.label_size)
         
         return test_results
 

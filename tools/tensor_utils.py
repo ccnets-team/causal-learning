@@ -26,6 +26,9 @@ def generate_padding_mask(source_batch):
     Returns:
     torch.Tensor: A 3D tensor of shape [batch_size, seq_len, 1] where padded elements are 1.
     """
+    if source_batch.dim() != 3:
+        return None
+    
     # Identify positions that are -inf (assuming -inf represents padding)
     padding_mask = (source_batch == float('-inf')).any(dim=-1)
 
