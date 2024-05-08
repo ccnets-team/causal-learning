@@ -82,7 +82,8 @@ class CausalTrainer(TrainerBase):
         # Compute the mean error, considering only the non-padded data
         if padding_mask is not None:
             discrepancy *= padding_mask
-            cooperative_error = discrepancy.sum(dim = 0, keepdim = True) / padding_mask.sum(dim = 0, keepdim = True).clamp_min(1)
+            expanded_mask = padding_mask.expand_as(discrepancy)
+            cooperative_error = discrepancy.sum(dim = 0, keepdim = True) / expanded_mask.clamp_min(1)
         else:
             cooperative_error = discrepancy.mean(dim = 0, keepdim = True)
         

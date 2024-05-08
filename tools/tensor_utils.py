@@ -3,6 +3,7 @@ COPYRIGHT (c) 2022. CCNets. All Rights reserved.
 '''
 import torch
 import random
+from torch.nn.utils.rnn import pad_sequence
 
 def adjust_tensor_dim(tensor, target_dim = 3):
     # Determine how many dimensions need to be added or removed
@@ -45,12 +46,11 @@ def get_random_batch(eval_dataset, batch_size):
     batch = [eval_dataset[i] for i in range(start_index, min(end_index, len(eval_dataset)))]
     source_batch, target_batch = zip(*batch)
 
-    # Convert tuples to tensors if not already tensors
-    source_batch = torch.stack(source_batch)  # Assumes source_batch elements are tensors
-    if all(isinstance(x, torch.Tensor) for x in target_batch):
-        target_batch = torch.stack(target_batch)  # Use torch.stack if target_batch elements are tensors
-    else:
-        target_batch = torch.tensor(target_batch)  # This line assumes all elements are numeric
+    # Check if the elements are tensors, convert only if they are not
+    source_batch = pad_sequence([s if isinstance(s, torch.Tensor) else torch.tensor(s) for s in source_batch],
+                                batch_first=True, padding_value=0)
+    target_batch = pad_sequence([t if isinstance(t, torch.Tensor) else torch.tensor(t) for t in target_batch],
+                                batch_first=True, padding_value=0)
 
     return source_batch, target_batch
     
