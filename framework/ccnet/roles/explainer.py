@@ -21,7 +21,7 @@ class Explainer(nn.Module):
         net (nn.Module): The main neural network module that processes the embedded or raw input.
     """
 
-    def __init__(self, net, network_params, input_shape, output_size, act_fn='layer_norm'):
+    def __init__(self, net, network_params, act_fn='none'):
         """
         Initializes the Explainer module with the specified network architecture and parameters.
 
@@ -30,14 +30,15 @@ class Explainer(nn.Module):
             network_params (object): Parameters specific to the neural network being used.
             input_shape (tuple): The shape of the input data.
             output_size (int): The size of the output tensor after final transformation.
-            act_fn (str): The activation function name to use in the final layer (default 'layer_norm').
+            act_fn (str): The activation function name to use in the final layer (default 'none').
         """
         super(Explainer, self).__init__()
+        
+        input_shape, d_model, output_size = network_params.obs_shape, network_params.d_model, network_params.z_dim
         
         # Check if the input is image data based on the dimensionality
         self.use_image = len(input_shape) != 1
         
-        d_model = network_params.d_model  # Dimensionality of the model
         # For non-image, tabular data:
         if not self.use_image:
             input_size = input_shape[-1]  # Size of the last dimension of the input

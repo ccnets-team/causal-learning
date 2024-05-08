@@ -22,7 +22,7 @@ class Producer(nn.Module):
         final_layer (nn.Module): The final transformation layer to produce the desired output size.
     """
 
-    def __init__(self, net, network_params, condition_size, explain_size, output_shape, act_fn='none'):
+    def __init__(self, net, network_params, act_fn='none'):
         """
         Initializes the Producer module with network architecture and parameters.
 
@@ -35,7 +35,7 @@ class Producer(nn.Module):
             act_fn (str): The activation function name to use in the final layer (default 'none').
         """
         super(Producer, self).__init__()
-        d_model = network_params.d_model
+        output_shape, d_model, explain_size, condition_size = network_params.obs_shape, network_params.d_model, network_params.z_dim, network_params.condition_dim
         self.use_image = len(output_shape) != 1
 
         # Embedding layer for combined condition and explanation inputs

@@ -9,11 +9,11 @@ from .roles.explainer import Explainer
 from .roles.reasoner import Reasoner
 from .roles.producer import Producer
 from tools.setting.ml_params import GPTModelParams, ImageModelParams 
-from tools.tensor import adjust_tensor_dim, determine_activation_by_task_type
-import math
+from tools.tensor import adjust_tensor_dim
+from framework.utils.ccnet_util import determine_activation_by_task_type
                     
 class CooperativeNetwork:
-    def __init__(self, model_name, networks, network_params, task_type, obs_shape, label_size, explain_size, device, 
+    def __init__(self, model_name, networks, network_params, task_type, device, 
                  encoder = None):
         """
         Initializes the Cooperative Network with specified model parameters and computational device.
@@ -31,9 +31,6 @@ class CooperativeNetwork:
             self.use_gpt = True 
         elif isinstance(network_params, ImageModelParams):
             self.use_gpt = False 
-            network_params.obs_shape = obs_shape
-            network_params.z_dim = explain_size
-            network_params.condition_dim = label_size
         
         explainer_network = networks[0]
         reasoner_network = networks[1]
@@ -46,13 +43,13 @@ class CooperativeNetwork:
         network_names = ["explainer", "reasoner", "producer"]
         self.model_name = model_name
         self.network_names = [f"{model_name}_{name}" for name in network_names]
-        self.explainer =  Explainer(explainer_network, network_params, obs_shape, explain_size, act_fn="layer_norm").to(device)
-        self.reasoner =  Reasoner(reasoner_network, network_params, obs_shape, explain_size, label_size, act_fn=task_act_fn).to(device)
-        self.producer =  Producer(producer_network, network_params, label_size, explain_size, obs_shape, act_fn="none").to(device)
+        self.explainer =  Explainer(explainer_network, network_params, act_fn="layer_norm").to(device)
+        self.reasoner =  Reasoner(reasoner_network, network_params, act_fn=task_act_fn).to(device)
+        self.producer =  Producer(producer_network, network_params, act_fn="none").to(device)
         self.networks = [self.explainer, self.reasoner, self.producer]
         
-        self.explain_size = explain_size
-        self.label_size = label_size
+        self.explain_size = network_params.z_dim
+        self.label_size = network_params.condition_dim
         self.device = device
 
     def encode(self, data, padding_mask = None):

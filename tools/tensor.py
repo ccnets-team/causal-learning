@@ -33,31 +33,6 @@ def generate_padding_mask(source_batch):
     
     return padding_mask.unsqueeze(-1).float()
 
-def determine_activation_by_task_type(task_type):
-    """
-    Determines the appropriate activation function for a model component based on the machine learning task type.
-
-    Parameters:
-    - task_type (str): Specifies the type of machine learning task. Valid types are:
-        'binary_classification', 'multi_class_classification', 'multi_label_classification', 'regression'.
-
-    Returns:
-    - str: The name of the activation function suitable for the given task type. 'linear' indicates no activation.
-
-    Raises:
-    - ValueError: If an unsupported task type is provided.
-    """
-    if task_type == "multi_class_classification":
-        return 'softmax'
-    elif task_type == "binary_classification":
-        return 'sigmoid'
-    elif task_type == "multi_label_classification":
-        return 'sigmoid'  # Multiple independent binary classifications
-    elif task_type == "regression":
-        return 'linear'  # Typically no activation function (i.e., linear) is used for regression outputs
-    else:
-        raise ValueError(f"Invalid task type: {task_type}")
-
 def get_random_batch(eval_dataset, batch_size):
     num_batches = len(eval_dataset) // batch_size
     random_index = random.randint(0, num_batches - 1) if num_batches > 0 else 0

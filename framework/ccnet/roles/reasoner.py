@@ -9,7 +9,9 @@ import torch
 import torch.nn as nn
 from nn.utils.init import init_weights, create_layer
 from nn.utils.init import ContinuousFeatureJointLayer
-from copy import deepcopy
+from framework.utils.ccnet_util import convert_explanation_to_image_shape
+from tools.setting.ml_config import extend_obs_shape_channel
+
 
 class Reasoner(nn.Module):
     """
@@ -27,7 +29,7 @@ class Reasoner(nn.Module):
         final_layer (nn.Module): The final transformation layer to produce the desired output.
     """
 
-    def __init__(self, net, network_params, input_shape, explain_size, output_size, act_fn='sigmoid'):
+    def __init__(self, net, network_params, act_fn='none'):
         """
         Initializes the Reasoner module with network architecture and parameters.
 
@@ -37,24 +39,18 @@ class Reasoner(nn.Module):
             input_shape (tuple): The shape of the input data.
             explain_size (int): Size of the explanation component.
             output_size (int): The size of the output tensor after final transformation.
-            act_fn (str): The activation function name to use in the final layer (default 'sigmoid').
+            act_fn (str): The activation function name to use in the final layer (default None).
         """
         super(Reasoner, self).__init__()
-        d_model = network_params.d_model
-        self.obs_shape = input_shape
+        input_shape, d_model, explain_size, output_size = network_params.obs_shape, network_params.d_model, network_params.z_dim, network_params.condition_dim
+        
         self.use_image = len(input_shape) != 1
+        self.obs_shape = input_shape
         self.explain_size = explain_size
 
         if self.use_image:
-            # Create a deep copy of network_params to prevent modifications from affecting the original
-            _network_params = deepcopy(network_params)
-            
-            # Increase the number of channels by 1. Ensure this is done correctly:
-            _network_params.obs_shape = list(_network_params.obs_shape)  # Convert to list if it's a tuple
-            _network_params.obs_shape[0] += 1  # Increment the channel count
-            
             # Initialize the neural network for image data
-            self.net = net(_network_params)
+            self.net = net(extend_obs_shape_channel(network_params))
             self.image_elements = torch.prod(torch.tensor(self.obs_shape[1:], dtype=torch.int)).item()
         else:
             # Concatenate the observation and explanation sizes for non-image data embedding
@@ -94,11 +90,5 @@ class Reasoner(nn.Module):
         y = self.final_layer(y)
         return y
 
-    def _convert_explanation_to_image_shape(self, e):
-        """ Convert the explanation vector to match the target image shape with the first dimension set to 1. """
-        explain_shape = [1] + list(self.obs_shape[1:])  # Set first dim to 1, rest match target shape
-        e1 = e.repeat(1, self.image_elements // self.explain_size)
-        e2 = torch.zeros_like(e[:, :self.image_elements % self.explain_size])
-        expanded_e = torch.cat([e1, e2], dim=-1)  # Repeat to match the volume of target shape
-        expanded_e = expanded_e.view(-1, *explain_shape)  # Reshape explanation vector to the new explain_shape
-        return expanded_e
+    def _convert_explanation_to_image_shape(self, explanation):
+        return convert_explanation_to_image_shape(explanation = explanation, image_shape = self.obs_shape, explain_size = self.explain_size, image_elements = self.image_elements)

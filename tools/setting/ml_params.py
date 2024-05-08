@@ -1,5 +1,5 @@
 from nn.gpt import GPT
-from nn.custom_style_gan import Discriminator, ConditionalDiscriminator, Generator
+from nn.custom_style_gan import Discriminator, Generator
 from nn.custom_resnet import cnn_ResNet, transpose_cnn_ResNet
 
 STYLEGAN_COOPERATIVE_NETWORKS = [Discriminator, Discriminator, Generator]
@@ -7,7 +7,7 @@ RESNET_COOPERATIVE_NETWORKS = [cnn_ResNet, cnn_ResNet, transpose_cnn_ResNet]
 GPT_COOPERATIVE_NETWORKS = [GPT, GPT, GPT]
 
 class GPTModelParams:
-    def __init__(self, num_layers=6, d_model=256, dropout=0.05):
+    def __init__(self, num_layers=6, d_model=256, dropout=0.05, obs_shape = [], z_dim = None, condition_dim=None):
         """
         Initialize parameters for a GPT model configuration.
         
@@ -19,6 +19,9 @@ class GPTModelParams:
         self.num_layers = num_layers
         self.d_model = d_model
         self.dropout = dropout
+        self.obs_shape = obs_shape
+        self.z_dim = z_dim
+        self.condition_dim = condition_dim
 
 class ImageModelParams:
     def __init__(self, num_layers=6, d_model=512, obs_shape=[], z_dim=None, condition_dim=None):
@@ -40,8 +43,7 @@ class ImageModelParams:
 
 class ModelParameters:
     def __init__(self, core_model_name = 'gpt', encoder_model_name = 'stylegan', 
-                 core_networks=GPT_COOPERATIVE_NETWORKS, core_params=GPTModelParams(),
-                 encoding_networks=STYLEGAN_COOPERATIVE_NETWORKS, encoding_params=ImageModelParams()):
+                 core_params=GPTModelParams(), encoding_params=ImageModelParams()):
         """
         Comprehensive model parameters, combining core and encoding networks.
         
@@ -53,9 +55,7 @@ class ModelParameters:
         """
         self.core_model_name = core_model_name
         self.encoder_model_name = encoder_model_name
-        self.core_networks = core_networks
         self.core_params = core_params
-        self.encoding_networks = encoding_networks
         self.encoding_params = encoding_params
     
 class OptimizationParameters:
