@@ -27,21 +27,19 @@ def load_dataset(path):
     return trainset, testset
 
 def collate_fn(batch):
-    # Unzip the batch data
     X, y = zip(*batch)
-    # Pad sequences so they are all the same length as the longest sequence
-    X_padded = pad_sequence(X, batch_first=True, padding_value=0)  # Assumes 0 is an appropriate padding value
-    y_padded = pad_sequence(y, batch_first=True, padding_value=-1)  # Use -1 or another flag value for labels, if necessary
+    X_padded = pad_sequence(X, batch_first=True, padding_value=0)
+    y_padded = pad_sequence(y, batch_first=True, padding_value=-1)
     return X_padded, y_padded
 
-def get_data_loader(dataset, batch_size, shuffle = False, num_workers = 0, collate=collate_fn):
-    return torch.utils.data.DataLoader(dataset, batch_size = batch_size, shuffle = shuffle, num_workers = num_workers, collate_fn=collate, drop_last=True)
+def get_data_loader(dataset, batch_size, num_workers = 0, collate=collate_fn):
+    return torch.utils.data.DataLoader(dataset, batch_size = batch_size, shuffle = True, num_workers = num_workers, collate_fn=collate, drop_last=True)
 
-def get_eval_loader(evalset, batch_size, shuffle = False, num_workers = 0, collate = collate_fn):
-    return torch.utils.data.DataLoader(evalset, batch_size = batch_size, shuffle = shuffle, num_workers = num_workers, collate_fn=collate, drop_last=True)
+def get_eval_loader(evalset, batch_size, num_workers = 0, collate = collate_fn):
+    return torch.utils.data.DataLoader(evalset, batch_size = batch_size, shuffle = False, num_workers = num_workers, collate_fn=collate, drop_last=True)
 
 def get_test_loader(testset, batch_size, num_workers=0, collate=collate_fn):
-    return torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=num_workers, collate_fn=collate, drop_last=True)
+    return torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=num_workers, collate_fn=collate, drop_last=False)
 
 def save_trainer(model_path, trainer):
     # Lists of components to be saved for GPT

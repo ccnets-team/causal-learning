@@ -6,6 +6,9 @@ import random
 from torch.nn.utils.rnn import pad_sequence
 
 def adjust_tensor_dim(tensor, target_dim = 3):
+    if tensor is None:
+        return None
+    
     # Determine how many dimensions need to be added or removed
     required_dims = target_dim - tensor.dim()
     if required_dims > 0:
@@ -19,23 +22,34 @@ def adjust_tensor_dim(tensor, target_dim = 3):
                 tensor = tensor.squeeze(0)  # Squeeze dimension at index 1 if it's 1
     return tensor
 
-def generate_padding_mask(source_batch):
+def generate_padding_mask(source_data, target_data, padding_values = [0, -1]):
     """
-    Generate a padding mask for the source batch where all -inf values are masked.
+    Generate a padding mask for the source data where padding values are masked and apply it.
     Args:
-    source_batch (torch.Tensor): Tensor of shape [batch_size, seq_len, obs_size]
+    source_data (torch.Tensor): Tensor of shape [batch_size, seq_len, obs_size]
     Returns:
-    torch.Tensor: A 3D tensor of shape [batch_size, seq_len, 1] where padded elements are 1.
+    torch.Tensor: The source_data tensor with padded positions zeroed out.
+    torch.Tensor: A boolean tensor of shape [batch_size, seq_len, 1] indicating padding.
     """
-    if source_batch.dim() != 3:
-        return None
+    if source_data.dim() != 3:
+        return source_data, target_data, None
     
-    # Identify positions that are -inf (assuming -inf represents padding)
-    padding_mask = (source_batch == float('-inf')).any(dim=-1)
+    # Identify padding positions
+    padding_positions_x = (source_data == padding_values[0]).any(dim=-1)
+    padding_positions_y = (target_data == padding_values[1]).any(dim=-1)
+    padding_positions = padding_positions_x & padding_positions_y
+    # Create a mask where true values indicate non-padding, false indicate padding
+    padding_mask = ~padding_positions
+    padding_mask = padding_mask.unsqueeze(-1).float()
+    
+    # Expand the mask to the size of source_data for element-wise multiplication
+    expanded_non_padding_mask = padding_mask.expand_as(source_data)
 
-    padding_mask = ~padding_mask
-    
-    return padding_mask.unsqueeze(-1).float()
+    # Zero out padding positions in the source_data and target_data
+    source_data = source_data * expanded_non_padding_mask
+    target_data = target_data * padding_mask
+
+    return source_data, target_data, padding_mask
 
 def get_random_batch(eval_dataset, batch_size):
     num_batches = len(eval_dataset) // batch_size
@@ -46,14 +60,12 @@ def get_random_batch(eval_dataset, batch_size):
     batch = [eval_dataset[i] for i in range(start_index, min(end_index, len(eval_dataset)))]
     source_batch, target_batch = zip(*batch)
 
-    # Check if the elements are tensors, convert only if they are not
-    source_batch = pad_sequence([s if isinstance(s, torch.Tensor) else torch.tensor(s) for s in source_batch],
-                                batch_first=True, padding_value=0)
-    target_batch = pad_sequence([t if isinstance(t, torch.Tensor) else torch.tensor(t) for t in target_batch],
-                                batch_first=True, padding_value=0)
+    # Convert elements to tensors only if they are not already tensors
+    source_batch = pad_sequence(source_batch, batch_first=True, padding_value=0)
+    target_batch = pad_sequence(target_batch, batch_first=True, padding_value=-1)
 
     return source_batch, target_batch
-    
+
 def convert_to_device(source_batch, target_batch, device):
     source_batch, target_batch = source_batch.float().to(device), target_batch.float().to(device)
     return source_batch, target_batch

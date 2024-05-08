@@ -85,30 +85,25 @@ class TrainerHubHelper:
         """Determine the file path for saving models based on the current count."""
         return self.model_path if self.cnt_print % 2 == 0 else self.temp_path
             
-    def setup_training_data(self, source_batch, target_batch):
-
+    def setup_training_data(self, source_batch, target_batch, padding_mask = None):
+        
         # Encode inputs to prepare them for causal training
-        source_code, target_code = self.encode_inputs(source_batch, target_batch)
+        source_code, target_code = self.encode_inputs(source_batch, target_batch, padding_mask)
         
         if self.use_gpt:
             # Adjust tensor dimensions for causal processing
             state_trajectory = adjust_tensor_dim(source_code, target_dim=3)  # off when it's img data set
             target_trajectory = adjust_tensor_dim(target_code, target_dim=3)  # off when it's img data set
-            
-            # Generate padding mask based on state trajectory
-            padding_mask = generate_padding_mask(state_trajectory)
-            
-            state_trajectory[(padding_mask == 0).expand_as(state_trajectory)].zero_()
+            padding_mask = adjust_tensor_dim(padding_mask, target_dim=3)  # off when it's img data set
         else:
             state_trajectory = source_code
             target_trajectory = target_code
-            padding_mask = None
         
         return state_trajectory, target_trajectory, padding_mask
 
-    def encode_inputs(self, observation, labels):
+    def encode_inputs(self, observation, labels, padding_mask = None):
         with torch.no_grad():
-            encoded_obseartion = observation if self.encoder_ccnet is None else self.encoder_ccnet.encode(observation)
+            encoded_obseartion = observation if self.encoder_ccnet is None else self.encoder_ccnet.encode(observation, padding_mask = padding_mask)
         return encoded_obseartion, labels
 
     def finalize_training_step(self, epoch_idx, iter_idx, len_dataloader, core_metric=None, encoder_metric=None, test_results=None) -> None:

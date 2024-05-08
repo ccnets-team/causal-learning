@@ -79,7 +79,7 @@ class OptimizationParameters:
         self.max_grad_norm = max_grad_norm
 
 class TrainingParameters:
-    def __init__(self, num_epoch=100, max_iters=1e+6, batch_size=64, seq_len=1):
+    def __init__(self, num_epoch=100, max_iters=1e+6, batch_size=64):
         """
         Initialize training parameters for machine learning models.
         
@@ -87,7 +87,6 @@ class TrainingParameters:
         - num_epoch (int): Number of training epochs. One epoch represents a complete pass through the entire dataset.
         - total_iters (int): Total number of iterations or updates to the model during training.
         - batch_size (int): Number of samples to process in each batch during training.
-        - seq_len (int): Length of the input sequences, applicable primarily in models dealing with sequence data.
         
         Note: Training will halt when either the total number of epochs ('num_epoch') or the total number of iterations
         ('total_iters') is reached, whichever comes first. This dual limit approach provides control over training duration and computational resources.
@@ -95,7 +94,6 @@ class TrainingParameters:
         self.max_epoch = num_epoch
         self.max_iters = int(max_iters)  # Ensure total_iters is an integer to avoid type issues.
         self.batch_size = batch_size
-        self.seq_len = seq_len
 
 class MLParameters:
     def __init__(self, 

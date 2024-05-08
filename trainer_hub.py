@@ -23,7 +23,6 @@ from tools.wandb_logger import wandb_end
 from tools.report import calculate_test_results
 from tools.wandb_logger import log_to_wandb
 from tools.tensor_utils import get_random_batch, convert_to_device 
-import torch
 
 from framework.ccnet.cooperative_network import CooperativeNetwork
 from framework.ccnet.cooperative_encoding_network import CooperativeEncodingNetwork
@@ -96,12 +95,14 @@ class TrainerHub:
         # Prepare batches by moving them to the appropriate device.
         source_batch, target_batch = convert_to_device(source_batch, target_batch, device=self.device)
         
+        source_batch, target_batch, padding_mask = generate_padding_mask(source_batch, target_batch)
+        
         # Train the encoder if enabled and obtain metrics.
-        encoder_metric = self.encoder_trainer.train_models(source_batch) if self.use_encoder else None
+        encoder_metric = self.encoder_trainer.train_models(source_batch, padding_mask) if self.use_encoder else None
 
         # Train the core model if enabled and obtain metrics.
         if self.use_core:
-            state_trajectory, target_trajectory, padding_mask = self.helper.setup_training_data(source_batch, target_batch)
+            state_trajectory, target_trajectory, padding_mask = self.helper.setup_training_data(source_batch, target_batch, padding_mask)
             core_metric = self.core_trainer.train_models(state_trajectory, target_trajectory, padding_mask)
         else:
             core_metric = None
@@ -135,7 +136,7 @@ class TrainerHub:
         # Assuming convert_to_device is a function that handles device placement
         source_batch, target_batch = convert_to_device(source_batch, target_batch, self.device)
         
-        padding_mask = generate_padding_mask(source_batch)
+        source_batch, target_batch, padding_mask = generate_padding_mask(source_batch, target_batch)
         
         inferred_trajectory = self.core_ccnet.infer(source_batch, padding_mask)
         
