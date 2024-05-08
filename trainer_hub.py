@@ -69,7 +69,7 @@ class TrainerHub:
 
     def setup_encoder(self, model_params, training_params, optimization_params):
         obs_shape = self.data_config.obs_shape
-        stoch_size, det_size = max(network_params.encoding_params.d_model//2, 1), max(network_params.encoding_params.d_model//2, 1)
+        stoch_size, det_size = max(model_params.encoding_params.d_model//2, 1), max(model_params.encoding_params.d_model//2, 1)
         
         model_networks, network_params = configure_model(model_params.encoder_model_name, model_params.encoding_params, obs_shape = obs_shape, condition_dim=stoch_size, z_dim=det_size)
         
