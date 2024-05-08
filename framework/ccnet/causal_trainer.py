@@ -36,9 +36,9 @@ class CausalTrainer(TrainerBase):
 
         ################################  Prediction Losses  ###########################################
         # Calculate prediction losses for inference, generation, and reconstruction.
-        inference_loss = self.loss_fn(reconstructed_state, generated_state, padding_mask)
-        generation_loss = self.loss_fn(generated_state, state, padding_mask)
-        reconstruction_loss = self.loss_fn(reconstructed_state, state, padding_mask)
+        inference_loss = self.loss_fn(reconstructed_state, generated_state)
+        generation_loss = self.loss_fn(generated_state, state)
+        reconstruction_loss = self.loss_fn(reconstructed_state, state)
 
         ################################  Model Losses  ################################################
         # Calculate model errors based on the losses.
@@ -68,19 +68,11 @@ class CausalTrainer(TrainerBase):
         )
         return metrics
 
-    def loss_fn(self, predict, target, padding_mask=None):
+    def loss_fn(self, predict, target):
         discrepancy = (predict - target.detach()).abs()
         
-        if padding_mask is not None:
-            # Use the padding mask to zero out the discrepancies where the padding is
-            discrepancy *= padding_mask
-            expanded_padding_mask = padding_mask.expand_as(discrepancy)
-        
         # Calculate the mean only on non-padded data
-        if padding_mask is not None:
-            prediction_loss = discrepancy.sum(dim=-1, keepdim = True) / expanded_padding_mask.sum(dim=-1, keepdim = True).clamp_min(1)
-        else:
-            prediction_loss = discrepancy.mean(dim=-1, keepdim = True)
+        prediction_loss = discrepancy.mean(dim=-1, keepdim = True)
         
         return prediction_loss
         
@@ -89,8 +81,8 @@ class CausalTrainer(TrainerBase):
         
         # Compute the mean error, considering only the non-padded data
         if padding_mask is not None:
-            expanded_padding_mask = padding_mask.expand_as(discrepancy)
-            cooperative_error = discrepancy.sum(dim = 0, keepdim = True) / expanded_padding_mask.sum(dim = 0, keepdim = True).clamp_min(1)
+            discrepancy *= padding_mask
+            cooperative_error = discrepancy.sum(dim = 0, keepdim = True) / padding_mask.sum(dim = 0, keepdim = True).clamp_min(1)
         else:
             cooperative_error = discrepancy.mean(dim = 0, keepdim = True)
         

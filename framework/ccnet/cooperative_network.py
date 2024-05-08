@@ -55,7 +55,7 @@ class CooperativeNetwork:
         self.label_size = label_size
         self.device = device
 
-    def encode(self, data):
+    def encode(self, data, padding_mask = None):
         """
         Encodes the input data using the encoder if available.
 
@@ -66,10 +66,10 @@ class CooperativeNetwork:
             Tensor: Encoded data.
         """
         if self.encoder:
-            data = self.encoder.encode(data)
+            data = self.encoder.encode(data, padding_mask)
         return data
 
-    def decode(self, encoded_data):
+    def decode(self, encoded_data, padding_mask = None):
         """
         Decodes the input data using the decoder if available.
 
@@ -80,10 +80,10 @@ class CooperativeNetwork:
             Tensor: Decoded data.
         """
         if self.encoder:
-            encoded_data = self.encoder.decode(encoded_data)
+            encoded_data = self.encoder.decode(encoded_data, padding_mask)
         return encoded_data
    
-    def explain(self, input_data):
+    def explain(self, input_data, padding_mask = None):
         """
         Generates an explanation for the input data without updating the explainer model.
 
@@ -94,13 +94,13 @@ class CooperativeNetwork:
             Tensor: Explanation tensor.
         """
         with torch.no_grad():
-            encoded_input = self.encode(input_data)
+            encoded_input = self.encode(input_data, padding_mask)
             if self.use_gpt:
                 encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
-            explanation = self.explainer(encoded_input)
+            explanation = self.explainer(encoded_input, padding_mask)
         return explanation
 
-    def infer(self, input_data, use_encode = True):
+    def infer(self, input_data, padding_mask = None):
         """
         Infers output from input data using the explainer and reasoner models without updating them.
 
@@ -111,17 +111,17 @@ class CooperativeNetwork:
             Tensor: Inferred output tensor.
         """
         with torch.no_grad():
-            encoded_input = self.encode(input_data) if use_encode else input_data
+            encoded_input = self.encode(input_data, padding_mask)
             if self.use_gpt:
                 original_dim = len(encoded_input.shape)
                 encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
-            explanation = self.explainer(encoded_input)
-            reasoned_output = self.reasoner(encoded_input, explanation)
+            explanation = self.explainer(encoded_input, padding_mask)
+            reasoned_output = self.reasoner(encoded_input, explanation, padding_mask)
             if self.use_gpt:
                 reasoned_output = adjust_tensor_dim(reasoned_output, target_dim=original_dim)
         return reasoned_output
     
-    def reason(self, input_data, explanation):
+    def reason(self, input_data, explanation, padding_mask = None):
         """
         Uses the explanations and input data to reason about the output without updating the model.
 
@@ -133,16 +133,16 @@ class CooperativeNetwork:
             Tensor: Reasoned output tensor.
         """
         with torch.no_grad():
-            encoded_input = self.encode(input_data)
+            encoded_input = self.encode(input_data, padding_mask)
             if self.use_gpt:
                 original_dim = len(encoded_input.shape)
                 encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
-            reasoned_output = self.reasoner(encoded_input, explanation)
+            reasoned_output = self.reasoner(encoded_input, explanation, padding_mask)
             if self.use_gpt:
                 reasoned_output = adjust_tensor_dim(reasoned_output, target_dim=original_dim)
         return reasoned_output
 
-    def generate(self, condition_data):
+    def generate(self, condition_data, padding_mask = None):
         """
         Generates new data based on input conditions using random explanations without updating the producer model.
 
@@ -157,13 +157,13 @@ class CooperativeNetwork:
                 original_dim = len(condition_data.shape)
                 condition_data = adjust_tensor_dim(condition_data, target_dim=3)
             random_explanation = torch.randn(condition_data.size(0), self.explanation_size).to(self.device)   
-            generated_output = self.producer(condition_data, random_explanation)
+            generated_output = self.producer(condition_data, random_explanation, padding_mask)
             if self.use_gpt:
                 generated_output = adjust_tensor_dim(generated_output, target_dim=original_dim)
-            generated_data = self.decode(generated_output)
+            generated_data = self.decode(generated_output, padding_mask)
         return generated_data
 
-    def produce(self, condition_data, explanation):
+    def produce(self, condition_data, explanation, padding_mask = None):
         """
         Generates new data based on conditions and explanations without updating the producer model.
 
@@ -179,13 +179,13 @@ class CooperativeNetwork:
                 original_dim = len(condition_data.shape)
                 condition_data = adjust_tensor_dim(condition_data, target_dim=3)
                 explanation = adjust_tensor_dim(explanation, target_dim=3)
-            produced_output = self.producer(condition_data, explanation)
+            produced_output = self.producer(condition_data, explanation, padding_mask)
             if self.use_gpt:
                 produced_output = adjust_tensor_dim(produced_output, target_dim=original_dim)
-            produced_data = self.decode(produced_output)
+            produced_data = self.decode(produced_output, padding_mask)
         return produced_data
     
-    def reconstruct(self, input_data):
+    def reconstruct(self, input_data, padding_mask = None):
         """
         Reconstructs the input data by first explaining, then reasoning, and finally producing the output,
         all without updating the models.
@@ -197,14 +197,14 @@ class CooperativeNetwork:
             Tensor: Reconstructed output data tensor.
         """
         with torch.no_grad():
-            encoded_input = self.encode(input_data)
+            encoded_input = self.encode(input_data, padding_mask)
             if self.use_gpt:
                 original_dim = len(encoded_input.shape)
                 encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
-            explanation = self.explainer(encoded_input)
-            inferred_output = self.reasoner(encoded_input, explanation)
-            reconstructed_output = self.producer(inferred_output, explanation)
+            explanation = self.explainer(encoded_input, padding_mask)
+            inferred_output = self.reasoner(encoded_input, explanation, padding_mask)
+            reconstructed_output = self.producer(inferred_output, explanation, padding_mask)
             if self.use_gpt:
                 reconstructed_output = adjust_tensor_dim(reconstructed_output, target_dim=original_dim)
-            reconstructed_data = self.decode(reconstructed_output)
+            reconstructed_data = self.decode(reconstructed_output, padding_mask)
         return reconstructed_data

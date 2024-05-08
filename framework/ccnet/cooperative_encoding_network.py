@@ -35,7 +35,7 @@ class CooperativeEncodingNetwork:
         self.stoch_size = stoch_size
         self.device = device
             
-    def encode(self, input_data: torch.Tensor) -> torch.Tensor:
+    def encode(self, input_data: torch.Tensor, padding_mask = None) -> torch.Tensor:
         """
         Encodes input data using the explainer and reasoner models.
 
@@ -46,12 +46,12 @@ class CooperativeEncodingNetwork:
         - encoded_data: A concatenated tensor of encoded deterministic and stochastic variables.
         """
         with torch.no_grad():
-            deterministic_variables = self.explainer(input_data)
-            stochastic_variables = self.reasoner(input_data, deterministic_variables)
+            deterministic_variables = self.explainer(input_data, padding_mask)
+            stochastic_variables = self.reasoner(input_data, deterministic_variables, padding_mask)
             encoded_data = torch.cat([stochastic_variables, deterministic_variables], dim=-1)
         return encoded_data
 
-    def decode(self, encoded_data: torch.Tensor) -> torch.Tensor:
+    def decode(self, encoded_data: torch.Tensor, padding_mask = None) -> torch.Tensor:
         """
         Decodes the encoded tensor using the producer model to reconstruct the input data.
 
@@ -64,5 +64,5 @@ class CooperativeEncodingNetwork:
         with torch.no_grad():
             stochastic_variables = encoded_data[..., :self.stoch_size]
             deterministic_variables = encoded_data[..., self.stoch_size:]
-            reconstructed_data = self.producer(stochastic_variables, deterministic_variables)
+            reconstructed_data = self.producer(stochastic_variables, deterministic_variables, padding_mask)
         return reconstructed_data

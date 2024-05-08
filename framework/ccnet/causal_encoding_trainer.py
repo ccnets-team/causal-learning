@@ -32,7 +32,7 @@ class CausalEncodingTrainer(TrainerBase):
         self.network_names = encoder.network_names
         self.layer_norm = torch.nn.LayerNorm(encoder.stoch_size, elementwise_affine=False).to(encoder.device)
 
-    def train_models(self, input_observation, **kwargs):
+    def train_models(self, input_observation, padding_mask=None):
         """
         Train the models using input observations. Generates multiple interpretations and compares them.
 
@@ -46,21 +46,21 @@ class CausalEncodingTrainer(TrainerBase):
 
         ################################  Forward Pass  ########################################
         # Generate explanations and features.
-        causal_explain = self.explainer(input_observation)
+        causal_explain = self.explainer(input_observation, padding_mask)
         random_explain = torch.randn_like(causal_explain)
         
-        causal_feature = self.reasoner(input_observation, causal_explain)
-        stochastic_feature = self.reasoner(input_observation, random_explain)
+        causal_feature = self.reasoner(input_observation, causal_explain, padding_mask)
+        stochastic_feature = self.reasoner(input_observation, random_explain, padding_mask)
         
         # Reset random seed for reproducibility before each generation.        
         self.reset_seed()
-        cc_generated_observation = self.producer(causal_feature, causal_explain.detach())
+        cc_generated_observation = self.producer(causal_feature, causal_explain.detach(), padding_mask)
         self.reset_seed()
-        cs_generated_observation = self.producer(causal_feature, random_explain)
+        cs_generated_observation = self.producer(causal_feature, random_explain, padding_mask)
         self.reset_seed()
-        sc_generated_observation = self.producer(stochastic_feature.detach(), causal_explain)
+        sc_generated_observation = self.producer(stochastic_feature.detach(), causal_explain, padding_mask)
         self.reset_seed()
-        ss_generated_observation = self.producer(stochastic_feature, random_explain).detach()
+        ss_generated_observation = self.producer(stochastic_feature, random_explain, padding_mask).detach()
 
         ################################  Path Costs  ###########################################
         cost_ds = self.cost_fn(cs_generated_observation, ss_generated_observation)
@@ -69,14 +69,14 @@ class CausalEncodingTrainer(TrainerBase):
         cost_cs = self.cost_fn(cs_generated_observation, input_observation)
 
         ################################  Causal Losses  ########################################
-        recognition_loss = self.loss_fn(cost_ds, cost_sc)
-        generation_loss = self.loss_fn(cost_sd, cost_cs)
-        reconstruction_loss = self.loss_fn(cc_generated_observation, input_observation)
+        recognition_loss = self.loss_fn(cost_ds, cost_sc, padding_mask)
+        generation_loss = self.loss_fn(cost_sd, cost_cs, padding_mask)
+        reconstruction_loss = self.loss_fn(cc_generated_observation, input_observation, padding_mask)
 
         ################################  Model Errors  #########################################
-        explainer_error = self.error_fn(recognition_loss + generation_loss, reconstruction_loss)
-        reasoner_error = self.error_fn(reconstruction_loss, generation_loss - recognition_loss)
-        producer_error = self.error_fn(reconstruction_loss, recognition_loss - generation_loss)
+        explainer_error = self.error_fn(recognition_loss + generation_loss, reconstruction_loss, padding_mask)
+        reasoner_error = self.error_fn(reconstruction_loss, generation_loss - recognition_loss, padding_mask)
+        producer_error = self.error_fn(reconstruction_loss, recognition_loss - generation_loss, padding_mask)
 
         ################################  Backward Pass  ########################################
         self.backwards(
@@ -112,7 +112,7 @@ class CausalEncodingTrainer(TrainerBase):
         path_cost = (predict - target.detach()).abs()
         return path_cost
 
-    def loss_fn(self, predict, target):
+    def loss_fn(self, predict, target, padding_mask = None):
         """
         Compute mean absolute loss between predictions and targets.
 
@@ -126,7 +126,7 @@ class CausalEncodingTrainer(TrainerBase):
         causal_loss = (predict - target.detach()).abs().mean()
         return causal_loss
     
-    def error_fn(self, predict, target):
+    def error_fn(self, predict, target, padding_mask = None):
         """
         Compute absolute error between the predicted and target values.
 

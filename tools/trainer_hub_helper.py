@@ -96,6 +96,8 @@ class TrainerHubHelper:
             
             # Generate padding mask based on state trajectory
             padding_mask = generate_padding_mask(state_trajectory)
+            
+            state_trajectory[(padding_mask == 0).expand_as(state_trajectory)].zero_()
         else:
             state_trajectory = source_code
             target_trajectory = target_code

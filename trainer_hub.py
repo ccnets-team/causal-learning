@@ -120,7 +120,7 @@ class TrainerHub:
 
         state_trajectory, target_trajectory, padding_mask = self.helper.setup_training_data(source_batch, target_batch)
         
-        inferred_trajectory = self.core_ccnet.infer(state_trajectory, use_encode=False)
+        inferred_trajectory = self.core_ccnet.infer(state_trajectory, padding_mask)
         
         test_results = calculate_test_results(inferred_trajectory, target_trajectory, padding_mask, self.task_type, num_classes=self.label_size)
         
@@ -136,7 +136,7 @@ class TrainerHub:
 
         state_trajectory, target_trajectory, padding_mask = self.helper.setup_training_data(source_batch, target_batch)
 
-        inferred_trajectory = self.core_ccnet.infer(state_trajectory, use_encode=False)
+        inferred_trajectory = self.core_ccnet.infer(state_trajectory, padding_mask)
         
         test_results = calculate_test_results(inferred_trajectory, target_trajectory, padding_mask, self.task_type, num_classes=self.label_size)
         
