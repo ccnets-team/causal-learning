@@ -22,15 +22,15 @@ from nn.utils.init import set_random_seed
 from tools.wandb_logger import wandb_end
 from tools.report import calculate_test_results
 from tools.wandb_logger import log_to_wandb
-from tools.tensor import get_random_batch, convert_to_device 
+from tools.tensor_utils import get_random_batch, convert_to_device 
 import torch
 
 from framework.ccnet.cooperative_network import CooperativeNetwork
 from framework.ccnet.cooperative_encoding_network import CooperativeEncodingNetwork
-from tools.setting.ml_config import configure_model
+from tools.setting.ml_config import configure_core_model, configure_encoder_model
     
 class TrainerHub:
-    def __init__(self, ml_params: MLParameters, data_config: DataConfig, device, use_print=False, use_wandb=False, use_test = False):
+    def __init__(self, ml_params: MLParameters, data_config: DataConfig, device, use_print=False, use_wandb=False, use_full_eval = False):
         
         self.data_config = data_config
         self.device = device
@@ -41,7 +41,7 @@ class TrainerHub:
 
         self.use_print = use_print
         self.use_wandb = use_wandb
-        self.use_test = use_test
+        self.use_full_eval = use_full_eval
         training_params = ml_params.training
         self.batch_size = training_params.batch_size
         self.max_epoch = training_params.max_epoch
@@ -68,35 +68,50 @@ class TrainerHub:
             self.setup_core_network(model_params, training_params, optimization_params)
 
     def setup_encoder(self, model_params, training_params, optimization_params):
-        obs_shape = self.data_config.obs_shape
-        stoch_size, det_size = max(model_params.encoding_params.d_model//2, 1), max(model_params.encoding_params.d_model//2, 1)
+
+        model_networks, network_params = configure_encoder_model(self.data_config, model_params.encoder_model_name, model_params.encoding_params)
         
-        model_networks, network_params = configure_model(model_params.encoder_model_name, model_params.encoding_params, obs_shape = obs_shape, condition_dim=stoch_size, z_dim=det_size)
-        
-        self.encoder_ccnet = CooperativeEncodingNetwork(model_params.encoder_model_name, model_networks, network_params, self.device)
+        self.encoder_ccnet = CooperativeEncodingNetwork(model_networks, network_params, self.device)
         self.encoder_trainer = CausalEncodingTrainer(self.encoder_ccnet, training_params, optimization_params)
-        self.state_size = stoch_size + det_size
+        
 
     def setup_core_network(self, model_params, training_params, optimization_params):    
-        obs_shape = [self.state_size] if self.use_encoder else self.data_config.obs_shape
-        explain_size = max(model_params.core_params.d_model//2, 1) if self.data_config.explain_size is None else self.data_config.explain_size
         self.label_size = self.data_config.label_size
         self.task_type = self.data_config.task_type
         
-        model_networks, network_params = configure_model(model_params.core_model_name, model_params.core_params, obs_shape = obs_shape, condition_dim=self.label_size, z_dim=explain_size)
-        
-        self.core_ccnet = CooperativeNetwork(model_params.core_model_name, model_networks, network_params, self.task_type, self.device, encoder=self.encoder_ccnet)
+        model_networks, network_params = configure_core_model(self.data_config, model_params.core_model_name, model_params.core_params)
+            
+        self.core_ccnet = CooperativeNetwork(model_networks, network_params, self.task_type, self.device, encoder=self.encoder_ccnet)
         self.core_trainer = CausalTrainer(self.core_ccnet, training_params, optimization_params)
 
     def __exit__(self):
         if self.use_wandb:
             wandb_end()
+
+    def train_iteration(self, iters, source_batch, target_batch):
+        set_random_seed(iters)
+        self.helper.init_time_step()
         
+        # Prepare batches by moving them to the appropriate device.
+        source_batch, target_batch = convert_to_device(source_batch, target_batch, device=self.device)
+        
+        # Train the encoder if enabled and obtain metrics.
+        encoder_metric = self.encoder_trainer.train_models(source_batch) if self.use_encoder else None
+
+        # Train the core model if enabled and obtain metrics.
+        if self.use_core:
+            state_trajectory, target_trajectory, padding_mask = self.helper.setup_training_data(source_batch, target_batch)
+            core_metric = self.core_trainer.train_models(state_trajectory, target_trajectory, padding_mask)
+        else:
+            core_metric = None
+            
+        return core_metric, encoder_metric
+            
     def train(self, trainset: Dataset, testset: Dataset = None):
         """
         Train the model based on the provided policy.
         """
-        self.initialize_training(trainset)
+        self.helper.initialize_train(trainset)
         
         for epoch in tqdm_notebook(range(self.max_epoch), desc='Epochs', leave=False):
             dataloader = get_data_loader(trainset, min(len(trainset), self.batch_size))
@@ -107,13 +122,15 @@ class TrainerHub:
             for iters, (source_batch, target_batch) in enumerate(tqdm_notebook(dataloader, desc='Iterations', leave=False)):
                 core_metric, encoder_metric = self.train_iteration(iters, source_batch, target_batch)
 
-                test_results = None
-                if self.helper.should_checkpoint() and self.use_core:
-                    test_results = self.test(testset) if self.use_test else self.evaluate(testset)
+                test_results = self.evaluate(testset)
+                    
                 self.helper.finalize_training_step(epoch, iters, len(dataloader), core_metric, encoder_metric, test_results)
 
     def evaluate(self, eval_dataset):
-        source_batch, target_batch = get_random_batch(eval_dataset, self.batch_size)
+        if not self.use_core or not self.helper.should_checkpoint():
+            return None
+        source_batch, target_batch = eval_dataset[:] if self.use_full_eval else get_random_batch(eval_dataset, self.batch_size)
+        
         # Assuming convert_to_device is a function that handles device placement
         source_batch, target_batch = convert_to_device(source_batch, target_batch, self.device)
 
@@ -125,40 +142,5 @@ class TrainerHub:
         
         return test_results
 
-    def test(self, test_dataset):
-        source_batch, target_batch = test_dataset[:]
-        
-        source_batch, target_batch = convert_to_device(source_batch, target_batch, self.device)
-
-        state_trajectory, target_trajectory, padding_mask = self.helper.setup_training_data(source_batch, target_batch)
-
-        inferred_trajectory = self.core_ccnet.infer(state_trajectory, padding_mask)
-        
-        test_results = calculate_test_results(inferred_trajectory, target_trajectory, padding_mask, self.task_type, num_classes=self.label_size)
-            
-        return test_results
-    
     def should_end_training(self, epoch):
         return self.helper.iters > self.max_iters or epoch > self.max_epoch
-
-    def initialize_training(self, trainset):
-        self.helper.initialize_train(trainset)
-
-    def train_iteration(self, iters, source_batch, target_batch):
-        set_random_seed(iters)
-        
-        self.helper.init_time_step()
-        
-        core_metric = None
-        encoder_metric = None
-        
-        source_batch, target_batch = convert_to_device(source_batch, target_batch, device=self.device)
-        
-        if self.use_encoder:
-            encoder_metric = self.encoder_trainer.train_models(source_batch)
-
-        if self.use_core:
-            state_trajectory, target_trajectory, padding_mask = self.helper.setup_training_data(source_batch, target_batch)
-            core_metric = self.core_trainer.train_models(state_trajectory, target_trajectory, padding_mask)
-        
-        return core_metric, encoder_metric

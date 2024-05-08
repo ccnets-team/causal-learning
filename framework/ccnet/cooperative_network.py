@@ -9,12 +9,11 @@ from .roles.explainer import Explainer
 from .roles.reasoner import Reasoner
 from .roles.producer import Producer
 from tools.setting.ml_params import GPTModelParams, ImageModelParams 
-from tools.tensor import adjust_tensor_dim
-from framework.utils.ccnet_util import determine_activation_by_task_type
+from tools.tensor_utils import adjust_tensor_dim
+from framework.utils.ccnet_utils import determine_activation_by_task_type
                     
 class CooperativeNetwork:
-    def __init__(self, model_name, model_networks, network_params, task_type, device, 
-                 encoder = None):
+    def __init__(self, model_networks, network_params, task_type, device, encoder = None):
         """
         Initializes the Cooperative Network with specified model parameters and computational device.
 
@@ -34,6 +33,7 @@ class CooperativeNetwork:
 
         task_act_fn = determine_activation_by_task_type(task_type)
             
+        model_name = network_params.model_name
         # Add model_name prefix to the network names
         network_names = ["explainer", "reasoner", "producer"]
         self.model_name = model_name

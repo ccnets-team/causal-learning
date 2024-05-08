@@ -27,46 +27,39 @@ Authors:
 '''
 
 import math
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 class BasicBlock(nn.Module):
     expansion = 1
+
     def __init__(self, in_planes, planes, transpose, stride=1):
         super(BasicBlock, self).__init__()
-        kernel_size3 = 3
-        kernel_size1 = 1
-        if transpose is True and stride != 1:
-            if stride == 3:
-                Conv2d = nn.ConvTranspose2d
-                kernel_size3 += 2
-                kernel_size1 += 2
-            else:
-                Conv2d = nn.ConvTranspose2d
-                kernel_size3 += 1
-                kernel_size1 += 1
+        if transpose and stride > 1:
+            Conv2d = nn.ConvTranspose2d
+            kernel_size = 4
         else:
             Conv2d = nn.Conv2d
+            kernel_size = 3
 
-        self.conv1 = Conv2d(
-            in_planes, planes, kernel_size=kernel_size3, stride=stride, padding=1, bias=False)
+        self.conv1 = Conv2d(in_planes, planes, kernel_size=kernel_size, stride=stride, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
 
-        self.conv2 = Conv2d(planes, planes, kernel_size=3,
-                               stride=1, padding=1, bias=False)
+        self.conv2 = nn.Conv2d(
+            planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
 
         self.relu = nn.ReLU(inplace=True)
         self.shortcut = nn.Sequential()
+        
         if stride != 1 or in_planes != planes:
             self.shortcut = nn.Sequential(
-                Conv2d(in_planes, planes,
-                          kernel_size=kernel_size1, stride=stride, bias=False),
-                nn.BatchNorm2d(planes)
+                Conv2d(in_planes, planes * self.expansion, kernel_size=kernel_size, stride=stride, padding=1, bias=False),
+                nn.BatchNorm2d(planes * self.expansion)
             )
 
     def forward(self, x):
+        # check transpose False and x is odd size
         out = self.conv1(x)
         out = self.bn1(out)
         out = self.relu(out)
@@ -122,7 +115,7 @@ class Bottleneck(nn.Module):
         return out
 
 class ResNet(nn.Module):
-    def __init__(self, network_params, block, transpose):
+    def __init__(self, network_params, block, transpose = False):
         super(ResNet, self).__init__()
         obs_shape = network_params.obs_shape
         d_model = network_params.d_model
@@ -165,19 +158,18 @@ class ResNet(nn.Module):
     def _make_layer(self, block, in_planes, out_plaines, num_blocks, transpose, stride):
         layers = []
         strides = [stride] + [1] * (num_blocks - 1)
-        for stride in strides:
-            layers.append(block(in_planes, out_plaines, transpose, stride))
-            self.in_planes = out_plaines * block.expansion
-            in_planes = out_plaines
+        for s in strides:
+            layers.append(block(in_planes, out_plaines, transpose, s))
+            in_planes = out_plaines * block.expansion
         return nn.Sequential(*layers)
 
     def forward(self, x):
         if self.transpose:
-            x = x.view([x.size(0), -1, 1, 1])  # Ensuring it matches expected input dimensions for the initial 
-            x = x.repeat([1, 1, self.initial_h, self.initial_w])
+            x = x.view(x.size(0), -1, 1, 1).repeat(1, 1, self.initial_h, self.initial_w)
         x = self.layers(x)
         if self.transpose:
-            x = F.interpolate(x, size=(self.h, self.w), mode='bilinear', align_corners=False)
+            if x.size(2) != self.h or x.size(3) != self.w:
+                x = F.interpolate(x, size=(self.h, self.w), mode='bilinear', align_corners=False)
         x = self.final_layer(x)
         return x
 

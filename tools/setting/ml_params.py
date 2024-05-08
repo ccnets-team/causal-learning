@@ -7,7 +7,7 @@ RESNET_COOPERATIVE_NETWORKS = [cnn_ResNet, cnn_ResNet, transpose_cnn_ResNet]
 GPT_COOPERATIVE_NETWORKS = [GPT, GPT, GPT]
 
 class GPTModelParams:
-    def __init__(self, num_layers=6, d_model=256, dropout=0.05, obs_shape = [], z_dim = None, condition_dim=None):
+    def __init__(self, model_name = 'gpt', num_layers=6, d_model=256, dropout=0.05, obs_shape = [], condition_dim=None, z_dim = None):
         """
         Initialize parameters for a GPT model configuration.
         
@@ -16,15 +16,16 @@ class GPTModelParams:
         - d_model (int): The dimensionality of the model's embeddings and hidden layers.
         - dropout (float): Dropout rate to use between layers to prevent overfitting.
         """
+        self.model_name = model_name
         self.num_layers = num_layers
         self.d_model = d_model
         self.dropout = dropout
         self.obs_shape = obs_shape
-        self.z_dim = z_dim
         self.condition_dim = condition_dim
+        self.z_dim = z_dim
 
 class ImageModelParams:
-    def __init__(self, num_layers=6, d_model=512, obs_shape=[], z_dim=None, condition_dim=None):
+    def __init__(self, model_name = 'resnet', num_layers=6, d_model=512, obs_shape=[], condition_dim=None, z_dim=None):
         """
         Parameters for encoding networks, possibly for use in models like VAEs or conditional GANs.
         
@@ -35,14 +36,15 @@ class ImageModelParams:
         - z_dim (int, optional): Dimensionality of the latent space.
         - condition_dim (int, optional): Dimensionality of any conditioning variables.
         """
+        self.model_name = model_name
         self.num_layers = num_layers
         self.d_model = d_model
         self.obs_shape = obs_shape
-        self.z_dim = z_dim
         self.condition_dim = condition_dim
+        self.z_dim = z_dim
 
 class ModelParameters:
-    def __init__(self, core_model_name = 'gpt', encoder_model_name = 'stylegan', 
+    def __init__(self, core_model_name = 'gpt', encoder_model_name = 'resnet', 
                  core_params=GPTModelParams(), encoding_params=ImageModelParams()):
         """
         Comprehensive model parameters, combining core and encoding networks.

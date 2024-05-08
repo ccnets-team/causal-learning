@@ -1,34 +1,5 @@
-import math
-from tools.setting.ml_params import GPTModelParams, ImageModelParams, RESNET_COOPERATIVE_NETWORKS, STYLEGAN_COOPERATIVE_NETWORKS, GPT_COOPERATIVE_NETWORKS
+from tools.setting.ml_params import RESNET_COOPERATIVE_NETWORKS, STYLEGAN_COOPERATIVE_NETWORKS, GPT_COOPERATIVE_NETWORKS
 from copy import deepcopy
-
-def configure_image_model_params(params, obs_shape, condition_dim, z_dim):
-    if not isinstance(params, ImageModelParams):
-        return params
-    
-    """ Configure parameters for an image model based on image dimensions. """
-    num_channels, h, w = obs_shape  # Assume `obs_shape` is available directly
-    min_num_layers = int(math.log2(min(h, w)))
-    num_layers = min(params.num_layers, min_num_layers)
-
-    # Adjust `d_model` based on the effective number of layers
-    adjusted_d_model = params.d_model // (2 ** (params.num_layers - num_layers))
-    
-    params.d_model = adjusted_d_model
-    params.num_layers = num_layers
-    params.obs_shape = obs_shape
-    params.condition_dim = condition_dim    
-    params.z_dim = z_dim
-    return params
-
-def configure_gpt_model_params(params, obs_shape, condition_dim, z_dim):
-    if not isinstance(params, GPTModelParams):
-        return params
-    
-    params.obs_shape = obs_shape
-    params.condition_dim = condition_dim    
-    params.z_dim = z_dim
-    return params
 
 def configure_model(model_name, params, obs_shape, condition_dim, z_dim):
     networks = None
@@ -38,10 +9,24 @@ def configure_model(model_name, params, obs_shape, condition_dim, z_dim):
         networks = RESNET_COOPERATIVE_NETWORKS
     elif model_name == 'gpt':
         networks = GPT_COOPERATIVE_NETWORKS
-    if isinstance(params, GPTModelParams):
-        return networks, configure_gpt_model_params(params, obs_shape, condition_dim, z_dim)
-    elif isinstance(params, ImageModelParams):
-        return networks, configure_image_model_params(params, obs_shape, condition_dim, z_dim)
+    params.model_name = model_name
+    params.obs_shape = obs_shape
+    params.condition_dim = condition_dim    
+    params.z_dim = z_dim    
+    return networks, params
+
+def configure_encoder_model(data_config, model_name, model_params):
+    obs_shape = data_config.obs_shape
+    stoch_size, det_size = max(model_params.d_model//2, 1), max(model_params.d_model//2, 1)
+    if data_config.state_size is None:
+        data_config.state_size = stoch_size + det_size
+    return configure_model(model_name, model_params, obs_shape, condition_dim=stoch_size, z_dim=det_size)
+    
+def configure_core_model(data_config, model_name, model_params):
+    obs_shape = data_config.obs_shape if data_config.state_size is None else [data_config.state_size]
+    label_size = data_config.label_size
+    explain_size = max(model_params.d_model//2, 1) if data_config.explain_size is None else data_config.explain_size
+    return configure_model(model_name, model_params, obs_shape, condition_dim=label_size, z_dim=explain_size)
 
 def extend_obs_shape_channel(network_params):
     """

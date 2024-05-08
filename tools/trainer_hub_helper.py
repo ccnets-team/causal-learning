@@ -10,8 +10,9 @@ from tools.image_debugger import ImageDebugger
 from tools.logger import get_log_name
 import os
 import logging
-from tools.tensor import adjust_tensor_dim, generate_padding_mask, encode_inputs
+from tools.tensor_utils import adjust_tensor_dim, generate_padding_mask
 from tools.metric_tracker import MetricsTracker
+import torch
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -87,7 +88,7 @@ class TrainerHubHelper:
     def setup_training_data(self, source_batch, target_batch):
 
         # Encode inputs to prepare them for causal training
-        source_code, target_code = encode_inputs(self.encoder_ccnet, source_batch, target_batch)
+        source_code, target_code = self.encode_inputs(source_batch, target_batch)
         
         if self.use_gpt:
             # Adjust tensor dimensions for causal processing
@@ -105,45 +106,70 @@ class TrainerHubHelper:
         
         return state_trajectory, target_trajectory, padding_mask
 
-    def finalize_training_step(self, epoch_idx, iter_idx, len_dataloader, core_metric = None, encoder_metric = None, test_results = None) -> None:
-        self.update_metrics(core_metric, encoder_metric)
+    def encode_inputs(self, observation, labels):
+        with torch.no_grad():
+            encoded_obseartion = observation if self.encoder_ccnet is None else self.encoder_ccnet.encode(observation)
+        return encoded_obseartion, labels
 
+    def finalize_training_step(self, epoch_idx, iter_idx, len_dataloader, core_metric=None, encoder_metric=None, test_results=None) -> None:
+        """Perform end-of-step operations including metrics update and checkpointing."""
+        self.update_metrics(core_metric, encoder_metric)
+        
         if self.should_checkpoint():
-            self.handle_checkpoint(epoch_idx, iter_idx, len_dataloader, test_results)
+            self.perform_checkpoint_operations(epoch_idx, iter_idx, len_dataloader, test_results)
 
         self.increment_counters()
 
     def update_metrics(self, core_metric = None, encoder_metric = None):
-        """Updates metrics and records time spent since the last checkpoint."""
+        """Update training metrics if available."""
         if core_metric is not None:
             self.core_metrics += core_metric
         if encoder_metric is not None:
             self.encoder_metrics += encoder_metric
 
-    def handle_checkpoint(self, epoch_idx, iter_idx, len_dataloader, test_results = None):
+    def perform_checkpoint_operations(self, epoch_idx, iter_idx, len_dataloader, test_results=None):
+        """Handle all operations required at checkpoint: logging, saving, and metrics reset."""
         time_cost = time.time() - self.pivot_time
-        wb_image = None
+        wb_image = self.update_image()
+        
+        self.log_checkpoint_details(time_cost, epoch_idx, iter_idx, len_dataloader, wb_image)
+        self.save_trainers()
+        self.reset_metrics()
 
+        if self.use_core and test_results is not None:
+            self.handle_test_results(test_results)
+
+    def handle_test_results(self, test_results=None):
+        """Print and log test results if core is used."""
+        print_test_results(test_results)
+        log_test_results(self.tensorboard, self.iters, test_results)
+
+    def increment_counters(self):
+        """Increment iteration and checkpoint counters."""
+        self.iters += 1
+        self.cnt_checkpoints += 1
+
+    def update_image(self):
         if self.use_image:
-            """Update and log images if using image data."""
+            # Update and display images when image data is enabled
             self.image_debugger.update_images()
             image_display = self.image_debugger.display_image()
+            
+            # Log the image to Wandb if enabled
             if self.use_wandb:
-                wb_image = wandb.Image(image_display)
-
-        self.log_checkpoint_details(time_cost, epoch_idx, iter_idx, len_dataloader, wb_image)
+                return wandb.Image(image_display)
+            
+        # Return None if images are not used or logging is not enabled
+        return None
+    
+    def save_trainers(self):
         save_path = self.determine_save_path()
+        """Saves the current state of the trainers."""
         if self.use_core:
             save_trainer(save_path, self.core_trainer)
         if self.use_encoder:
             save_trainer(save_path, self.encoder_trainer)
-        self.reset_metrics()
-
-        """Handles operations to be performed at each checkpoint."""
-        if self.use_core and test_results is not None:
-            print_test_results(test_results)
-            log_test_results(self.tensorboard, self.iters, test_results)
-
+            
     def log_checkpoint_details(self, time_cost, epoch_idx, iter_idx, len_dataloader, wb_image):
         """Calculates average metrics over the checkpoints."""
         avg_core_metric = self.core_metrics / float(self.num_checkpoints) if self.use_core else None
@@ -183,8 +209,5 @@ class TrainerHubHelper:
         self.cnt_checkpoints = 0
         self.cnt_print += 1
 
-    def increment_counters(self):
-        """Increments general counters for iterations and checkpoints."""
-        self.iters += 1
-        self.cnt_checkpoints += 1
+
 

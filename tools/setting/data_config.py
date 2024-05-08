@@ -15,7 +15,7 @@ class DataConfig:
             - For 'regression': Typically 1 for single target regression, more for multiple regression targets.
         show_image_indices (list, optional): Indices of images to show for visualization; defaults to None.
     """
-    def __init__(self, dataset_name: str, task_type: str, obs_shape: list, label_size: int, explain_size: int = None, show_image_indices: list = None):
+    def __init__(self, dataset_name: str, task_type: str, obs_shape: list, label_size: int, explain_size: int = None, state_size: int = None, show_image_indices: list = None):
         valid_task_types = ['binary_classification', 'multi_class_classification', 
                             'multi_label_classification', 'regression', 'encoding']
         if task_type not in valid_task_types:
@@ -26,6 +26,7 @@ class DataConfig:
         self.obs_shape = obs_shape
         self.label_size = label_size
         self.explain_size = explain_size
+        self.state_size = state_size
         self.show_image_indices = show_image_indices or []
 
     def __repr__(self):
@@ -34,4 +35,5 @@ class DataConfig:
         """
         return (f"DataConfig(dataset_name={self.dataset_name}, task_type={self.task_type}, "
                 f"obs_shape={self.obs_shape}, label_size={self.label_size}, "
+                f"explain_size={self.explain_size}, state_size={self.state_size},"
                 f"show_image_indices={self.show_image_indices})")

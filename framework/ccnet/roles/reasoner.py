@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 from nn.utils.init import init_weights, create_layer
 from nn.utils.init import ContinuousFeatureJointLayer
-from framework.utils.ccnet_util import convert_explanation_to_image_shape
+from framework.utils.ccnet_utils import convert_explanation_to_image_shape
 from tools.setting.ml_config import extend_obs_shape_channel
 
 
