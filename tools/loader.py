@@ -28,8 +28,15 @@ def load_dataset(path):
 
 def collate_fn(batch):
     X, y = zip(*batch)
-    X_padded = pad_sequence(X, batch_first=True, padding_value=0)
-    y_padded = pad_sequence(y, batch_first=True, padding_value=-1)
+    # Directly use the tensors from X if they are already tensors, else convert appropriately
+    X_padded = pad_sequence([x.clone().detach() if isinstance(x, torch.Tensor) else torch.tensor(x) for x in X], batch_first=True, padding_value=0)
+    
+    if any(label is None for label in y):
+        y_padded = None
+    else:
+        # Directly use the tensors from y if they are already tensors, else convert appropriately
+        y_padded = pad_sequence([label.clone().detach() if isinstance(label, torch.Tensor) else torch.tensor(label) for label in y], batch_first=True, padding_value=-1)
+    
     return X_padded, y_padded
 
 def get_data_loader(dataset, batch_size, num_workers = 0, collate=collate_fn):

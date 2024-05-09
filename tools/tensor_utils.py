@@ -36,7 +36,7 @@ def generate_padding_mask(source_data, target_data, padding_values = [0, -1]):
     
     # Identify padding positions
     padding_positions_x = (source_data == padding_values[0]).any(dim=-1)
-    padding_positions_y = (target_data == padding_values[1]).any(dim=-1)
+    padding_positions_y = (target_data == padding_values[1]).any(dim=-1) if target_data is not None else torch.ones_like(padding_positions_x)
     padding_positions = padding_positions_x & padding_positions_y
     # Create a mask where true values indicate non-padding, false indicate padding
     padding_mask = ~padding_positions
@@ -47,17 +47,18 @@ def generate_padding_mask(source_data, target_data, padding_values = [0, -1]):
 
     # Zero out padding positions in the source_data and target_data
     source_data = source_data * expanded_non_padding_mask
-    target_data = target_data * padding_mask
+    if target_data is not None:
+        target_data = target_data * padding_mask
 
     return source_data, target_data, padding_mask
 
-def get_random_batch(eval_dataset, batch_size):
-    num_batches = len(eval_dataset) // batch_size
+def get_random_batch(dataset, batch_size):
+    num_batches = len(dataset) // batch_size
     random_index = random.randint(0, num_batches - 1) if num_batches > 0 else 0
     start_index = random_index * batch_size
     end_index = start_index + batch_size
 
-    batch = [eval_dataset[i] for i in range(start_index, min(end_index, len(eval_dataset)))]
+    batch = [dataset[i] for i in range(start_index, min(end_index, len(dataset)))]
     source_batch, target_batch = zip(*batch)
 
     # Convert elements to tensors only if they are not already tensors
@@ -67,7 +68,9 @@ def get_random_batch(eval_dataset, batch_size):
     return source_batch, target_batch
 
 def convert_to_device(source_batch, target_batch, device):
-    source_batch, target_batch = source_batch.float().to(device), target_batch.float().to(device)
+    source_batch = source_batch.float().to(device)
+    if target_batch is not None:
+        target_batch = target_batch.float().to(device)
     return source_batch, target_batch
 
 def encode_inputs(encoder, observation, labels):

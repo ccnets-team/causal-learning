@@ -8,7 +8,8 @@ from nn.custom_deepFM import DeepFM
 GPT_COOPERATIVE_NETWORK = [GPT, GPT, GPT]
 RESNET_COOPERATIVE_NETWORK = [cnn_ResNet, cnn_ResNet, transpose_cnn_ResNet]
 STYLEGAN_COOPERATIVE_NETWORK = [Discriminator, Discriminator, Generator]
-TABULAR_COOPERATIVE_NETWORK = [DeepFM, VariableSelectionFlow, SuperNet]
+TABULAR_COOPERATIVE_NETWORK = [DeepFM, DeepFM, SuperNet]
+# TABULAR_COOPERATIVE_NETWORK = [DeepFM, VariableSelectionFlow, SuperNet]
 
 class GPTModelParams:
     def __init__(self, model_name = 'gpt', num_layers=6, d_model=256, dropout=0.05, obs_shape = [], condition_dim=None, z_dim = None):

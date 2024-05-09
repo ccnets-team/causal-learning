@@ -15,9 +15,9 @@ class DataConfig:
             - For 'regression': Typically 1 for single target regression, more for multiple regression targets.
         show_image_indices (list, optional): Indices of images to show for visualization; defaults to None.
     """
-    def __init__(self, dataset_name: str, task_type: str, obs_shape: list, label_size: int, explain_size: int = None, state_size: int = None, show_image_indices: list = None):
-        valid_task_types = ['binary_classification', 'multi_class_classification', 
-                            'multi_label_classification', 'regression', 'encoding']
+    def __init__(self, dataset_name: str, task_type: str, obs_shape: list, label_size: int = None, explain_size: int = None, state_size: int = None, show_image_indices: list = None):
+        valid_task_types = ['binary_classification', 'multi_class_classification', 'multi_label_classification', 'regression', 
+                            'encoding', 'augmentation', 'generation', 'reconstruction']
         if task_type not in valid_task_types:
             raise ValueError(f"Invalid task_type '{task_type}'. Valid options are {valid_task_types}")
 
