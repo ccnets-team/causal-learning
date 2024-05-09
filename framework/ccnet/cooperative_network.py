@@ -11,7 +11,8 @@ from .roles.producer import Producer
 from tools.setting.ml_params import GPTModelParams, ImageModelParams 
 from tools.tensor_utils import adjust_tensor_dim
 from framework.utils.ccnet_utils import determine_activation_by_task_type
-                    
+import torch.nn.functional as F
+
 class CooperativeNetwork:
     def __init__(self, model_networks, network_params, task_type, device, encoder = None):
         """
@@ -46,6 +47,7 @@ class CooperativeNetwork:
         self.explain_size = network_params.z_dim
         self.label_size = network_params.condition_dim
         self.device = device
+        self.task_act_fn = task_act_fn
         self.encoder = encoder
 
     def encode(self, data, padding_mask = None):
@@ -135,9 +137,9 @@ class CooperativeNetwork:
                 reasoned_output = adjust_tensor_dim(reasoned_output, target_dim=original_dim)
         return reasoned_output
 
-    def generate(self, condition_data, padding_mask = None):
+    def generate(self, explanation, padding_mask = None):
         """
-        Generates new data based on input conditions using random explanations without updating the producer model.
+        Generates new data based on input explanations with random conditions without updating the producer model.
 
         Args:
             condition_data (Tensor): Input condition data tensor.
@@ -146,13 +148,14 @@ class CooperativeNetwork:
             Tensor: Generated output data tensor.
         """
         with torch.no_grad():
-            if self.use_gpt:
-                original_dim = len(condition_data.shape)
-                condition_data = adjust_tensor_dim(condition_data, target_dim=3)
-            random_explanation = torch.randn(condition_data.size(0), self.explanation_size).to(self.device)   
-            generated_output = self.producer(condition_data, random_explanation, padding_mask)
-            if self.use_gpt:
-                generated_output = adjust_tensor_dim(generated_output, target_dim=original_dim)
+            if self.task_act_fn == "sigmoid":
+                condition_data = torch.rand((*explanation.shape[:-1], self.label_size)).to(self.device)
+            elif self.task_act_fn == "softmax":
+                logits = torch.randn((*explanation.shape[:-1], self.label_size)).to(self.device)
+                condition_data = F.softmax(logits, dim=-1)
+            else:
+                condition_data = torch.randn((*explanation.shape[:-1], self.label_size)).to(self.device)
+            generated_output = self.producer(condition_data, explanation, padding_mask)
             generated_data = self.decode(generated_output, padding_mask)
         return generated_data
 
