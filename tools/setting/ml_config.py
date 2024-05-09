@@ -48,3 +48,24 @@ def extend_obs_shape_channel(network_params):
     copy_network_params.obs_shape[0] += 1
     
     return copy_network_params
+
+def modify_attribute_value(network_params, attribute, value):
+    """
+    Modify a specific attribute value in the network parameters object.
+    
+    Args:
+        network_params (object): An object containing network parameters.
+        attribute (str): The attribute name to modify.
+        value: The new value to assign to the specified attribute.
+
+    Returns:
+        object: A modified copy of network_params with the updated attribute value.
+    """
+    # Create a deep copy of network parameters to ensure the original parameters remain unmodified
+    copy_network_params = deepcopy(network_params)
+    
+    if hasattr(copy_network_params, attribute):
+        # Update the specified attribute with the new value
+        setattr(copy_network_params, attribute, value)
+    
+    return copy_network_params

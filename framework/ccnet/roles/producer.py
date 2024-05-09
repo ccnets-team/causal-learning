@@ -7,6 +7,7 @@
 import torch.nn as nn
 from nn.utils.init import init_weights, create_layer
 from nn.utils.init import ContinuousFeatureJointLayer
+from tools.setting.ml_config import modify_attribute_value
 
 class Producer(nn.Module):
     """
@@ -35,14 +36,16 @@ class Producer(nn.Module):
             act_fn (str): The activation function name to use in the final layer (default 'none').
         """
         super(Producer, self).__init__()
-        output_shape, d_model, explain_size, condition_size = network_params.obs_shape, network_params.d_model, network_params.z_dim, network_params.condition_dim
+        producer_params = modify_attribute_value(network_params, 'dropout', 0.0)
+        
+        output_shape, d_model, explain_size, condition_size = producer_params.obs_shape, producer_params.d_model, producer_params.z_dim, producer_params.condition_dim
         self.use_image = len(output_shape) != 1
 
         # Embedding layer for combined condition and explanation inputs
         self.input_embedding_layer = ContinuousFeatureJointLayer(d_model, condition_size, explain_size)
 
         # Initialize the main network module
-        self.net = net(network_params)
+        self.net = net(producer_params)
         if not self.use_image:
             output_size = output_shape[-1]
             # Activation layer and final layer to adjust to the required output size

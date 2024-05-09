@@ -87,7 +87,7 @@ def generate_condition_data(label_shape, task_type, device, enable_discrete_cond
 
     return condition_data.float()
 
-def generate_condition_data(label_shape, task_type, device, enable_discrete_conditions=False):
+def generate_condition_data(label_shape, task_type, device):
     """
     Generates task-specific condition data for different types of machine learning tasks,
     ensuring the condition data matches the label shape and appropriate data type.
@@ -103,19 +103,10 @@ def generate_condition_data(label_shape, task_type, device, enable_discrete_cond
     """
     if task_type == "multi_class_classification":
         logits = torch.randn(label_shape).to(device)
-        if enable_discrete_conditions:
-            # Generate discrete class labels using argmax for classification
-            condition_data = torch.argmax(logits, dim=-1)
-            # Convert to one-hot encoding if discrete conditions are enabled
-            condition_data = F.one_hot(condition_data, num_classes=logits.shape[-1]).float()
-        else:
-            # Use softmax to simulate probabilities across classes
-            condition_data = torch.softmax(logits, dim=-1)
+        # Use softmax to simulate probabilities across classes
+        condition_data = torch.softmax(logits, dim=-1)
     elif task_type in ["binary_classification", "multi_label_classification"]:
         condition_data = torch.rand(label_shape).to(device)
-        if enable_discrete_conditions:
-            # Generate binary labels (discrete) using a threshold
-            condition_data = (torch.sigmoid(condition_data) > 0.5).long()
     elif task_type == "regression":
         # For regression tasks, always use continuous values
         condition_data = torch.randn(label_shape).to(device)
@@ -124,4 +115,4 @@ def generate_condition_data(label_shape, task_type, device, enable_discrete_cond
         condition_data = torch.randn(label_shape).to(device)
 
     # Ensure the condition data is in float dtype unless explicitly discrete
-    return condition_data.float() if not enable_discrete_conditions else condition_data
+    return condition_data.float()
