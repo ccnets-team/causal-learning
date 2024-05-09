@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 
 def convert_explanation_to_image_shape(explanation, image_shape, explain_size, image_elements):
     """
@@ -55,3 +56,33 @@ def determine_activation_by_task_type(task_type):
         return 'linear'  # Typically no activation function (i.e., linear) is used for regression outputs
     else:
         raise ValueError(f"Invalid task type: {task_type}")
+
+def generate_condition_data(label_shape, task_type, device):
+    """
+    Generates task-specific condition data for different types of machine learning tasks,
+    ensuring the condition data matches the label shape and appropriate data type.
+
+    Args:
+    - label_shape (tuple): The shape of the output tensor expected to match label specifications.
+    - task_type (str): Specifies the machine learning task type.
+    - device (str): Specifies the device for tensor operations.
+
+    Returns:
+    - Tensor: A tensor of condition data appropriate for the specified task type, all in float dtype.
+    """
+    logits = torch.randn(label_shape).to(device)
+    if task_type == "multi_class_classification":
+        # Generate indices and convert to one-hot encoding to maintain dimensionality
+        class_indices = torch.argmax(logits, dim=-1)
+        condition_data = F.one_hot(class_indices, num_classes=logits.shape[-1])
+    elif task_type in ["binary_classification", "multi_label_classification"]:
+        # Generate binary labels and convert to float
+        condition_data = (torch.sigmoid(logits) > 0.5)
+    elif task_type == "regression":
+        # Directly use continuous values for regression
+        condition_data = logits
+    else:
+        # Use random noise for unknown task types, ensuring it's in float dtype
+        condition_data = logits
+
+    return condition_data.float()
