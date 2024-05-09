@@ -31,8 +31,6 @@ class GPTModelParams:
 class ImageModelParams:
     def __init__(self, model_name = 'resnet', num_layers=6, d_model=512, obs_shape=[], condition_dim=None, z_dim=None):
         """
-        Parameters for encoding networks, possibly for use in models like VAEs or conditional GANs.
-        
         Args:
         - num_layers (int): Number of layers in the encoding network.
         - d_model (int): Dimensionality of the encoding model's layers.
@@ -47,6 +45,24 @@ class ImageModelParams:
         self.condition_dim = condition_dim
         self.z_dim = z_dim
 
+class TabularModelParams:
+    def __init__(self, model_name = 'tabular', num_layers=5, d_model=256, dropout=0.05, obs_shape=[], condition_dim=None, z_dim=None):
+        """
+        Args:
+        - num_layers (int): Number of layers in the encoding network.
+        - d_model (int): Dimensionality of the encoding model's layers.
+        - obs_shape (list): The shape of the input observations/data.
+        - z_dim (int, optional): Dimensionality of the latent space.
+        - condition_dim (int, optional): Dimensionality of any conditioning variables.
+        """
+        self.model_name = model_name
+        self.num_layers = num_layers
+        self.d_model = d_model
+        self.dropout = dropout
+        self.obs_shape = obs_shape
+        self.condition_dim = condition_dim
+        self.z_dim = z_dim
+        
 class ModelParameters:
     def __init__(self, core_model_name = 'gpt', encoder_model_name = 'resnet', 
                  core_params=GPTModelParams(), encoding_params=ImageModelParams()):

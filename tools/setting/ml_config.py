@@ -1,4 +1,4 @@
-from tools.setting.ml_params import RESNET_COOPERATIVE_NETWORKS, STYLEGAN_COOPERATIVE_NETWORKS, GPT_COOPERATIVE_NETWORKS
+from tools.setting.ml_params import RESNET_COOPERATIVE_NETWORKS, STYLEGAN_COOPERATIVE_NETWORKS, GPT_COOPERATIVE_NETWORKS, TABULAR_COOPERATIVE_NETWORKS
 from copy import deepcopy
 
 def configure_model(model_name, params, obs_shape, condition_dim, z_dim):
@@ -9,6 +9,11 @@ def configure_model(model_name, params, obs_shape, condition_dim, z_dim):
         networks = RESNET_COOPERATIVE_NETWORKS
     elif model_name == 'gpt':
         networks = GPT_COOPERATIVE_NETWORKS
+    elif model_name == 'tabular':
+        networks = TABULAR_COOPERATIVE_NETWORKS
+    else:
+        raise ValueError(f"Model name '{model_name}' is not supported.")
+        
     params.model_name = model_name
     params.obs_shape = obs_shape
     params.condition_dim = condition_dim    

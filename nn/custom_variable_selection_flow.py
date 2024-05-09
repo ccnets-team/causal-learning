@@ -76,9 +76,7 @@ class VariableSelection(nn.Module):
             x.append(self.grns[idx](input_))
         x = torch.stack(x, dim=1)
 
-        result = torch.matmul(v.transpose(-1, -2), x.transpose(-2, -3))
-        outputs = torch.sum(result, dim=-1)
-        # outputs = torch.squeeze(torch.matmul(v.transpose(-1, -2), x), dim=1)
+        outputs = (v* x).squeeze(-1)
         return outputs
 
 class VariableSelectionFlow(nn.Module):

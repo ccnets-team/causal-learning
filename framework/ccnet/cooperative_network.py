@@ -29,7 +29,7 @@ class CooperativeNetwork:
         # Initialize model names and configurations.        
         if isinstance(network_params, GPTModelParams):
             self.use_gpt = True 
-        elif isinstance(network_params, ImageModelParams):
+        else:
             self.use_gpt = False
 
         task_act_fn = determine_activation_by_task_type(task_type)
