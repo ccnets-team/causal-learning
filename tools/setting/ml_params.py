@@ -5,10 +5,10 @@ from nn.custom_super_net import SuperNet
 from nn.custom_variable_selection_flow import VariableSelectionFlow
 from nn.custom_deepFM import DeepFM
 
-GPT_COOPERATIVE_NETWORKS = [GPT, GPT, GPT]
-RESNET_COOPERATIVE_NETWORKS = [cnn_ResNet, cnn_ResNet, transpose_cnn_ResNet]
-STYLEGAN_COOPERATIVE_NETWORKS = [Discriminator, Discriminator, Generator]
-TABULAR_COOPERATIVE_NETWORKS = [DeepFM, VariableSelectionFlow, SuperNet]
+GPT_COOPERATIVE_NETWORK = [GPT, GPT, GPT]
+RESNET_COOPERATIVE_NETWORK = [cnn_ResNet, cnn_ResNet, transpose_cnn_ResNet]
+STYLEGAN_COOPERATIVE_NETWORK = [Discriminator, Discriminator, Generator]
+TABULAR_COOPERATIVE_NETWORK = [DeepFM, VariableSelectionFlow, SuperNet]
 
 class GPTModelParams:
     def __init__(self, model_name = 'gpt', num_layers=6, d_model=256, dropout=0.05, obs_shape = [], condition_dim=None, z_dim = None):
@@ -46,7 +46,7 @@ class ImageModelParams:
         self.z_dim = z_dim
 
 class TabularModelParams:
-    def __init__(self, model_name = 'tabular', num_layers=5, d_model=256, dropout=0.05, obs_shape=[], condition_dim=None, z_dim=None):
+    def __init__(self, model_name = 'tabular', num_layers=4, d_model=256, dropout=0.0, obs_shape=[], condition_dim=None, z_dim=None):
         """
         Args:
         - num_layers (int): Number of layers in the encoding network.

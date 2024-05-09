@@ -1,16 +1,16 @@
-from tools.setting.ml_params import RESNET_COOPERATIVE_NETWORKS, STYLEGAN_COOPERATIVE_NETWORKS, GPT_COOPERATIVE_NETWORKS, TABULAR_COOPERATIVE_NETWORKS
+from tools.setting.ml_params import RESNET_COOPERATIVE_NETWORK, STYLEGAN_COOPERATIVE_NETWORK, GPT_COOPERATIVE_NETWORK, TABULAR_COOPERATIVE_NETWORK
 from copy import deepcopy
 
 def configure_model(model_name, params, obs_shape, condition_dim, z_dim):
-    networks = None
+    cooperative_network = None
     if model_name == 'stylegan':
-        networks = STYLEGAN_COOPERATIVE_NETWORKS
+        cooperative_network = STYLEGAN_COOPERATIVE_NETWORK
     elif model_name == 'resnet':
-        networks = RESNET_COOPERATIVE_NETWORKS
+        cooperative_network = RESNET_COOPERATIVE_NETWORK
     elif model_name == 'gpt':
-        networks = GPT_COOPERATIVE_NETWORKS
+        cooperative_network = GPT_COOPERATIVE_NETWORK
     elif model_name == 'tabular':
-        networks = TABULAR_COOPERATIVE_NETWORKS
+        cooperative_network = TABULAR_COOPERATIVE_NETWORK
     else:
         raise ValueError(f"Model name '{model_name}' is not supported.")
         
@@ -18,7 +18,7 @@ def configure_model(model_name, params, obs_shape, condition_dim, z_dim):
     params.obs_shape = obs_shape
     params.condition_dim = condition_dim    
     params.z_dim = z_dim    
-    return networks, params
+    return cooperative_network, params
 
 def configure_encoder_model(data_config, model_name, model_params):
     obs_shape = data_config.obs_shape
