@@ -21,7 +21,6 @@ from tools.loader import get_data_loader, get_test_loader
 from nn.utils.init import set_random_seed
 from tools.wandb_logger import wandb_end
 from tools.report import calculate_test_results
-from tools.wandb_logger import log_to_wandb
 from tools.tensor_utils import get_random_batch, convert_to_device 
 
 from framework.ccnet.cooperative_network import CooperativeNetwork
@@ -58,6 +57,10 @@ class TrainerHub:
         
         self.helper = TrainerHubHelper(self, data_config, ml_params, device, use_print, use_wandb)
 
+    def __exit__(self):
+        if self.use_wandb:
+            wandb_end()
+
     def setup_models(self, ml_params):
         training_params, model_params, optimization_params = ml_params
         
@@ -73,7 +76,6 @@ class TrainerHub:
         
         self.encoder_ccnet = CooperativeEncodingNetwork(model_networks, network_params, self.device)
         self.encoder_trainer = CausalEncodingTrainer(self.encoder_ccnet, training_params, optimization_params)
-        
 
     def setup_core_network(self, model_params, training_params, optimization_params):    
         self.label_size = self.data_config.label_size
@@ -83,10 +85,6 @@ class TrainerHub:
             
         self.core_ccnet = CooperativeNetwork(model_networks, network_params, self.task_type, self.device, encoder=self.encoder_ccnet)
         self.core_trainer = CausalTrainer(self.core_ccnet, training_params, optimization_params)
-
-    def __exit__(self):
-        if self.use_wandb:
-            wandb_end()
 
     def train_iteration(self, iters, source_batch, target_batch):
         set_random_seed(iters)
@@ -128,12 +126,19 @@ class TrainerHub:
                     
                 self.helper.finalize_training_step(epoch, iters, len(dataloader), core_metric, encoder_metric, test_results)
 
-    def evaluate(self, eval_dataset):
+    def evaluate(self, dataset):
         if not self.use_core or not self.helper.should_checkpoint():
             return None
-        source_batch, target_batch = eval_dataset[:] if self.use_full_eval else get_random_batch(eval_dataset, self.batch_size)
+        source_batch, target_batch = dataset[:] if self.use_full_eval else get_random_batch(dataset, self.batch_size)
         
-        # Assuming convert_to_device is a function that handles device placement
+        return self.validate(source_batch, target_batch)
+    
+    def test(self, dataset):
+        source_batch, target_batch = dataset[:]
+        return self.validate(source_batch, target_batch)
+
+    def validate(self, source_batch, target_batch):
+            # Assuming convert_to_device is a function that handles device placement
         source_batch, target_batch = convert_to_device(source_batch, target_batch, self.device)
         
         source_batch, target_batch, padding_mask = generate_padding_mask(source_batch, target_batch)
@@ -143,6 +148,7 @@ class TrainerHub:
         test_results = calculate_test_results(inferred_trajectory, target_batch, padding_mask, self.task_type, num_classes=self.label_size)
         
         return test_results
-
+    
     def should_end_training(self, epoch):
         return self.helper.iters > self.max_iters or epoch > self.max_epoch
+    

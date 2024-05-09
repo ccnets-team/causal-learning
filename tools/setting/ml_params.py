@@ -61,7 +61,7 @@ class ModelParameters:
         self.encoding_params = encoding_params
     
 class OptimizationParameters:
-    def __init__(self, learning_rate=2e-4, decay_rate_100k=0.05, scheduler_type='exponential', clip_grad_range=None, max_grad_norm=1.0):
+    def __init__(self, learning_rate=2e-4, decay_rate_100k=0.01, scheduler_type='exponential', clip_grad_range=None, max_grad_norm=1.0):
         """
         Parameters for optimization, including learning rate adjustments and gradient clipping.
         

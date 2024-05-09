@@ -113,3 +113,5 @@ class ImageDebugger:
             data_uri = base64.b64encode(output.getvalue()).decode('utf-8')
             img_tag = f'<img src="data:image/png;base64,{data_uri}" style="width: {self.max_display_size}px; height: {self.max_display_size}px;" />'  # Adjust width as necessary
             display(HTML(img_tag))
+            
+        return img

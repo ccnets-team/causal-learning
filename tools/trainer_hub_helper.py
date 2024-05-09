@@ -5,7 +5,7 @@ from tools.wandb_logger import wandb_init
 from tools.loader import save_trainer
 from tools.logger import log_train_data, log_test_results
 from tools.print import print_iter, print_lr, print_trainer, print_test_results
-from tools.wandb_logger import wandb_log_train_data
+from tools.wandb_logger import wandb_log_train_data, wandb_log_eval_data
 from tools.image_debugger import ImageDebugger
 from tools.logger import get_log_name
 import os
@@ -133,7 +133,9 @@ class TrainerHubHelper:
 
         if self.use_core and test_results is not None:
             self.handle_test_results(test_results)
-
+            if self.use_wandb:
+                wandb_log_eval_data(test_results, wb_image)
+                
     def handle_test_results(self, test_results=None):
         """Print and log test results if core is used."""
         print_test_results(test_results)
