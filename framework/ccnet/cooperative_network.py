@@ -138,7 +138,7 @@ class CooperativeNetwork:
                 reasoned_output = adjust_tensor_dim(reasoned_output, target_dim=original_dim)
         return reasoned_output
 
-    def generate(self, explanation, padding_mask=None):
+    def generate(self, explanation, padding_mask=None, enable_discrete_conditions=False):
         """
         Generates new data based on input explanations with random discrete conditions without updating the producer model.
 
@@ -150,7 +150,7 @@ class CooperativeNetwork:
         """
         with torch.no_grad():
             label_shape = explanation.shape[:-1] + (self.label_size,)
-            condition_data = generate_condition_data(label_shape, self.task_type, self.device)
+            condition_data = generate_condition_data(label_shape, self.task_type, self.device, enable_discrete_conditions)
             generated_output = self.producer(condition_data, explanation, padding_mask)
             generated_data = self.decode(generated_output, padding_mask)
 
