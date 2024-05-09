@@ -21,7 +21,6 @@ from tools.loader import get_data_loader, get_test_loader
 from nn.utils.init import set_random_seed
 from tools.wandb_logger import wandb_end
 from tools.report import calculate_test_results
-from tools.wandb_logger import log_to_wandb
 from tools.tensor_utils import get_random_batch, convert_to_device 
 
 from framework.ccnet.cooperative_network import CooperativeNetwork

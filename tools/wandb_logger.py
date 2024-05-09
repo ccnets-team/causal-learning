@@ -46,11 +46,10 @@ def wandb_init(data_config, ml_params):
     wandb.login()
     
     data_config_dict = convert_to_dict(data_config)
-    ml_params_net_explainer, ml_params_net_reasoner, ml_params_net_producer = convert_to_dict(ml_params.model.explainer_params),convert_to_dict(ml_params.model.reasoner_params),convert_to_dict(ml_params.model.producer_params)
+    ml_params_core_params, ml_params_encoding_params = convert_to_dict(ml_params.model.core_params),convert_to_dict(ml_params.model.encoding_params)
     ml_params_dict = convert_to_dict(ml_params)
-    ml_params_dict['model']['explainer_params'] = ml_params_net_explainer
-    ml_params_dict['model']['reasoner_params'] = ml_params_net_reasoner
-    ml_params_dict['model']['producer_params'] = ml_params_net_producer
+    ml_params_dict['model']['core_params'] = ml_params_core_params
+    ml_params_dict['model']['encoding_params'] = ml_params_encoding_params
     
     data_config_dict = {k: v for k, v in data_config_dict.items() if isinstance(v, (int, float, str, bool))}
     data_config_dict = dict(sorted(data_config_dict.items(), key=sort_key))
@@ -141,7 +140,12 @@ def wandb_log_train_data(time_cost, lr, core_metric=None, encoder_metric=None, i
     train_metrics = {**core_metric, **encoder_metric}
     _wandb_log_data(train_metrics, log_data)
 
-def log_to_wandb(metrics):
-    log_data = {}
-    _wandb_log_data(metrics, log_data=log_data)
+def wandb_log_eval_data(metrics, images):
+    additional_logs = {}
+    if images is not None:
+        additional_logs["WB Images"] = images
+        
+    log_data = {**additional_logs}
+    eval_metrics = {"Evaluate": metrics}
+    _wandb_log_data(eval_metrics, log_data=log_data)
 
