@@ -1,10 +1,14 @@
 from nn.gpt import GPT
 from nn.custom_style_gan import Discriminator, Generator
 from nn.custom_resnet import cnn_ResNet, transpose_cnn_ResNet
+from nn.custom_super_net import SuperNet
+from nn.custom_variable_selection_flow import VariableSelectionFlow
+from nn.custom_deepFM import DeepFM
 
-STYLEGAN_COOPERATIVE_NETWORKS = [Discriminator, Discriminator, Generator]
-RESNET_COOPERATIVE_NETWORKS = [cnn_ResNet, cnn_ResNet, transpose_cnn_ResNet]
 GPT_COOPERATIVE_NETWORKS = [GPT, GPT, GPT]
+RESNET_COOPERATIVE_NETWORKS = [cnn_ResNet, cnn_ResNet, transpose_cnn_ResNet]
+STYLEGAN_COOPERATIVE_NETWORKS = [Discriminator, Discriminator, Generator]
+TABULAR_COOPERATIVE_NETWORKS = [DeepFM, VariableSelectionFlow, SuperNet]
 
 class GPTModelParams:
     def __init__(self, model_name = 'gpt', num_layers=6, d_model=256, dropout=0.05, obs_shape = [], condition_dim=None, z_dim = None):

@@ -1,26 +1,29 @@
-########################################################
-# Custom StyleGAN2 Conditional Generator and Discriminator
-# This module contains customized implementations of the StyleGAN2 architecture,
-# including a Mapping Network that maps latent vectors to style codes used
-# across the generator for dynamic and conditional style modulation.
-#
-# StyleGAN2 was originally developed by researchers at NVIDIA, with significant contributions from:
-# - Tero Karras: Principal architect of the StyleGAN series.
-# - Samuli Laine: Co-developer of the StyleGAN architectures.
-# - Miika Aittala: Contributed to advancements in image quality and training techniques.
-# - Janne Hellsten: Worked on optimization and refinement of generative models.
-# - Jaakko Lehtinen: Provided theoretical insights and practical improvements to the GAN training process.
-# - Timo Aila: Co-authored innovations in neural rendering and generative adversarial networks.
-#
-# Generative Adversarial Networks (GANs) were originally invented by Ian Goodfellow in 2014.
-# This groundbreaking work laid the foundation for subsequent developments in the field,
-# including StyleGAN and StyleGAN2.
-#
-# References:
-# "Analyzing and Improving the Image Quality of StyleGAN" (Karras et al., 2019)
-# "Generative Adversarial Nets" (Goodfellow et al., 2014)
-# This implementation may include modifications to the original design to suit specific conditional generation tasks.
-########################################################
+"""
+Custom StyleGAN2 Conditional Generator and Discriminator
+
+This module contains customized implementations of the StyleGAN2 architecture,
+including a Mapping Network that maps latent vectors to style codes used
+across the generator for dynamic and conditional style modulation.
+
+StyleGAN2 was originally developed by researchers at NVIDIA, with significant contributions from:
+- Tero Karras: Principal architect of the StyleGAN series.
+- Samuli Laine: Co-developer of the StyleGAN architectures.
+- Miika Aittala: Contributed to advancements in image quality and training techniques.
+- Janne Hellsten: Worked on optimization and refinement of generative models.
+- Jaakko Lehtinen: Provided theoretical insights and practical improvements to the GAN training process.
+- Timo Aila: Co-authored innovations in neural rendering and generative adversarial networks.
+
+Generative Adversarial Networks (GANs) were originally invented by Ian Goodfellow in 2014.
+This groundbreaking work laid the foundation for subsequent developments in the field,
+including StyleGAN and StyleGAN2.
+
+References:
+- "Analyzing and Improving the Image Quality of StyleGAN" (Karras et al., 2019)
+- "Generative Adversarial Nets" (Goodfellow et al., 2014)
+
+This implementation may include modifications to the original design to suit specific conditional generation tasks.
+"""
+
 
 import torch
 import torch.nn as nn

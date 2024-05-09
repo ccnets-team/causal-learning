@@ -84,7 +84,7 @@ class Reasoner(nn.Module):
             y = self.net(z)
         else:
             z = self.input_embedding_layer(obs, e)
-            y = self.net(z) if padding_mask is None else self.net(z, padding_mask)
+            y = self.net(z) if padding_mask is None else self.net(z, padding_mask = padding_mask)
             
         y = self.relu(y)
         y = self.final_layer(y)

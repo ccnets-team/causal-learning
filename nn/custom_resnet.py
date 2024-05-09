@@ -32,7 +32,7 @@ import torch.nn.functional as F
 
 class BasicBlock(nn.Module):
     expansion = 1
-
+    
     def __init__(self, in_planes, planes, transpose, stride=1):
         super(BasicBlock, self).__init__()
         if transpose and stride > 1:

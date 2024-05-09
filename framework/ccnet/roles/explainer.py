@@ -71,7 +71,7 @@ class Explainer(nn.Module):
             e = self.net(x)
         else:
             x = self.input_embedding_layer(x)
-            e = self.net(x) if padding_mask is None else self.net(x, padding_mask)
+            e = self.net(x) if padding_mask is None else self.net(x, padding_mask = padding_mask)
 
         e = self.relu(e)
         e = self.final_layer(e)

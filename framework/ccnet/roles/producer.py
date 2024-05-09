@@ -75,7 +75,7 @@ class Producer(nn.Module):
         else:
             # Reverse the tensor sequence for processing
             reversed_z, reversed_padding_mask = self.flip_tensor(z, padding_mask)
-            reversed_x = self.net(reversed_z) if reversed_padding_mask is None else self.net(reversed_z, reversed_padding_mask)
+            reversed_x = self.net(reversed_z) if reversed_padding_mask is None else self.net(reversed_z, padding_mask = reversed_padding_mask)
             # Reverse the output sequence back to original order
             x, _ = self.flip_tensor(reversed_x)
             x = self.relu(x)
