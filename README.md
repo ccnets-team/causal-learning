@@ -1,4 +1,4 @@
-# Causal Reinforcement Learning Framework by CCNets
+# Causal Learning Framework by CCNets
 
 [![Static Badge](https://img.shields.io/badge/Release-v1.1.1-%25%2300FF00)](https://github.com/ccnets-team/causal-rl)
 [![Static Badge](https://img.shields.io/badge/LICENSE-DUAL-%23512BD4)](./LICENSE/)
