@@ -25,38 +25,48 @@ needs or to optimize performance for particular tasks.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-class DeepFM(nn.Module):
+import math
+    
+class ContinuousDeepFM(nn.Module):
     def __init__(self, network_params):
-        super(DeepFM, self).__init__()
-        hidden_size, num_layers = network_params.d_model, network_params.num_layers 
+        super(ContinuousDeepFM, self).__init__()
+        d_model, num_layers, dropout = network_params.d_model, network_params.num_layers, network_params.dropout
+        self.num_features = d_model
+        self.embed_dim = int(math.sqrt(d_model)) 
 
-        state_dim = hidden_size
-        output_dim = hidden_size
-        self.state_dim = state_dim
-        self.num_layers = num_layers
-        
-        # Define hidden layers for 2nd order terms
-        self.dnn = nn.ModuleList()
+        # Initialize 2D parameters for continuous features
+        self.first_order_weights = nn.Parameter(torch.randn(d_model, d_model))
+        self.bias = nn.Parameter(torch.zeros((d_model,)))
+
+        # Second-order weights
+        self.second_order_weights = nn.Parameter(torch.randn(d_model, d_model))  # Adjusted
+
+        # Deep network part
+        self.feature_weights = nn.Parameter(torch.randn(d_model, d_model))
+        layers = []
+        # Define reasonable layer sizes
         for i in range(num_layers):
-            self.dnn.append(nn.Linear(hidden_size, hidden_size))
-        # Define output layer
-        self.output_layer = nn.Linear(hidden_size, output_dim)
-        
-        
+            layers.append(nn.Linear(d_model, d_model))
+            layers.append(nn.ReLU())
+            layers.append(nn.Dropout(dropout))
+        layers.append(nn.Linear(d_model, d_model))
+        self.mlp = nn.Sequential(*layers)
+
     def forward(self, x):
-        # Expand the input tensor along the feature dimension
-        # Interaction terms
-        
-        interactions = torch.matmul(x.unsqueeze(2), x.unsqueeze(1))
-        interactions = F.relu(interactions.sum(2))
-        # Hidden layers for 2nd order terms
-        hidden_output = x.view(-1, self.state_dim)
-        for i in range(self.num_layers):
-            hidden_output = F.relu(self.dnn[i](hidden_output))
-        
-        # Output layer
-        output = self.output_layer((hidden_output + interactions)/2.)
-        
-        # Add linear terms and hidden layer outputs element-wise
-        return output
+        # First-order term computations
+        first_order = torch.matmul(x, self.first_order_weights) + self.bias
+
+        # Second-order term computations
+        interactions = x.unsqueeze(-1) * x.unsqueeze(-2)  # Creating pairwise feature interactions
+        interactions = torch.matmul(interactions, self.second_order_weights)
+        sum_squared = torch.sum(interactions ** 2, dim=-2)
+        squared_sum = torch.sum(interactions, dim=-2) ** 2
+        second_order = 0.5 * (sum_squared - squared_sum)
+
+        # Deep component
+        feature_interactions = torch.matmul(x, self.feature_weights)
+        deep_component = self.mlp(feature_interactions)
+
+        # Output layer: Combine all three components
+        result = first_order + second_order + deep_component
+        return result
