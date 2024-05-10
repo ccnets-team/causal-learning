@@ -26,19 +26,25 @@
 CCNet is a new ML framework designed to uncover and model causal relationships between input observations (X) and labels (y) in datasets. This framework employs three neural networks to form a cooperative structure that enables bidirectional inference between input (X) and target (y).
 
 ## **Key Capabilities**
-CCNets harnesses its capability through six core functions: Explain, Reason, Produce, Infer, Reconstruct, and Generate. Each of these functions plays a crucial role:
+CCNet consists of three neural networks having role of —Explainer, Reasoner, and Producer—to execute six fundamental operations in machine learning:
 
-`Explain`: Identifies key features from **Input Observations** and extracts an **Explanation Vector**. 
+- `Explain`: Extracts key features from input observations (X) to form an Explanation Vector(e), which captures the essential aspects of the data.
 
-`Reason`: Utilizes the **Explanation** and **Input Observations** to reason about the **Label**.
+- `Reason`: Utilizes the Explanation Vector alongside Input Observations (X) to infer the associated label (y) of the observation.
 
-`Produce`: Generates new data based on **Conditions** and **Explanation**.
+- `Produce`: Generates new data based on specified conditions and the derived Explanation(e), enabling the creation of data instances that resemble authentic observations.
 
-`Infer`:  Infers output from **Input Data** using the *explainer* and *reasoner* networks.
+- `Infer`: Determines outputs (y') from input data (X) by integrating the insights from both the Explainer and Reasoner networks, providing a prediction or outcome based on learned patterns.
 
-`Reconstruct`: Reconstructs the **Input Data** by first explaining, then reasoning , and filnally producing the output.
+- `Generate`: Constructs new data using the Explanation Vector with randomly sampled conditions (y), allowing for the exploration of possible data scenarios that could occur under different circumstances.
 
-`Generate`: Generate new data based on **Explanation** with **Random Discrete Conditions** 
+- `Reconstruct`: Rebuilds input data (X) by sequentially explaining, reasoning, and then producing the output, effectively creating a reconstructed version of the input based on the network's understanding and reasoning.
+
+
+
+```
+This framework learns an explanation vector 𝑒 that transforms the associations observed between inputs 𝑋 and outputs y into a causal relationship. Here, 𝑒 and 𝑦 are considered comprehensive factors instrumental in generating 𝑋.
+```
 
 # ❗️ ****Dependencies****
 
@@ -78,65 +84,22 @@ pip install ipywidgets==8.1.2
     ```
 # 📖 **Features**
 
-### 1. Integrating Encoder and Core Nets
+### Dual Cooperative Network Architecture in CCNets API:
 
-CCNet is designed with a robust architecture comprising two main components: the Encoder Cooperative Network and the Core Cooperative Network. This setup enables efficient handling and processing of diverse data types through specialized encoding techniques.
-
-<p align="center">
-  <img src="https://github.com/ccnets-team/causal-learning/assets/95277008/734fbf41-c312-4d30-a68e-212e626bc226" alt="two_nets" width="700">
-</p>
-
-- `Core Cooperative Network (GPT-based)`: Acts as the framework’s central network, where the encoded data from the Encoder Cooperative Network is further analyzed. It is adept at handling the complexities of causal inference and prediction, seamlessly integrating various forms of data.
-<hr>
-<br>
+CCNets harnesses a dual cooperative network structure, each designed to optimize the processing and analysis of complex datasets
 
 <p align="center">
   <img src="https://github.com/ccnets-team/causal-learning/assets/95277008/7b66bf01-d917-419d-8979-b8693df67a5d" alt="two_nets" width="700">
 </p>
 
-- `Encoder Cooperative Network`: Responsible for converting input data into a format that is conducive for causal analysis. For **image data**, this component transforms it into a *trajectory* format, effectively capturing the temporal and spatial dynamics, which are crucial for subsequent processing by the Core Cooperative Network.
+- **Core Cooperative Network (GPT-based)**
 
+    At the core of CCNets’ architecture is a Cooperative Network configured with GPT models. These models are optimized for sequence learning and label comprehension within extensive datasets. They serve as the central processing unit, adept at handling and interpreting sequence data and extracting meaningful insights from complex patterns.
 
+- **Encoder Cooperative Network**
 
-### 2. Data Type Flexibility
+    The Encoder Cooperative Network is engineered to preprocess and transform raw input data into a format that significantly enhances the analytical capabilities of the Core Cooperative Network. This network specializes in adapting raw data into a structured, analyzable form. For example, in handling image data, this network translates visual information into a trajectory format.
 
-CCNets stands out for its versatility in handling almost all types of data, which is made possible through specific mechanisms tailored to optimize causal inference:
-
-- `Tubular Data`: Typically used in traditional machine learning scenarios where structured data is prevalent.
-
-- `Image Data`: Processed into trajectories by the Encoder Net to ensure detailed capture and analysis.
-
-- `Time-Series Data`: Utilizes the GPT model to manage inherently sequential data, allowing for more effective analysis by maintaining temporal integrity, essential for accurate causal predictions.
-
-- `Imbalanced Data`: Innovatively addresses challenges associated with imbalanced datasets by causally recreating data for minority label classes. This method effectively augments the dataset, providing a balanced environment for model training and overcoming issues related to data scarcity.
-
-
-
-### 3. Various Supported Models
-CCNets is compatible with a variety of state-of-the-art models, which enhance its adaptability and effectiveness across different applications:
-
-- `GPT`: Excellent for handling sequential data like time-series, using its robust capabilities to understand and generate text based on underlying causal relationships.
-
-- `StyleGAN`: Employed for generating high-quality, artificial images that can be further analyzed for causal relationships.
-
-
-- `DeepFM`: Combines deep learning with factorization machines to effectively manage recommendation systems and causal inference in sparse data scenarios.
-
-- `SuperNet`: Provides flexibility in architecture choices, optimized for specific causal inference tasks, accommodating various requirements and enhancing model performance.
-
-
-### 4. Supported ML Tasks
-- `Classification`: Tailored for accuracy and efficiency in categorizing data.
-
-- `Regression`: Capable of predicting continuous outputs based on causal relationships.
-
-- `Encoding`: Transforms raw data into a meaningful framework-ready format.
-
-- `Data Augmentation`: Enhances limited datasets through causal-based synthetic data generation.
-
-- `Controlled Generation`: Employs causal insights to generate data with specific characteristics.
-
-- `Reconstruction`: Rebuilds data or scenarios to verify and refine causal hypotheses.
 
 <br>
 <br>
