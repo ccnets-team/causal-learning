@@ -1,0 +1,6 @@
+jupyter
+pandas==2.2.2
+scikit-learn==1.1.0
+transformers==4.40.2
+tensorboard==2.16.2
+ipywidgets==8.1.2
