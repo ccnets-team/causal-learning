@@ -1,6 +1,6 @@
 # Causal Learning Framework by CCNets
 
-[![Static Badge](https://img.shields.io/badge/Release-v1.1.1-%25%2300FF00)](https://github.com/ccnets-team/causal-rl)
+[![Static Badge](https://img.shields.io/badge/Release-v1.1.1-%25%2300FF00)](https://github.com/ccnets-team/causal-learning)
 [![Static Badge](https://img.shields.io/badge/LICENSE-DUAL-%23512BD4)](./LICENSE/)
 [![Static Badge](https://img.shields.io/badge/Python-3.9.18-%233776AB)](https://www.python.org/)
 [![Static Badge](https://img.shields.io/badge/PyTorch-2.3.0-%23EE4C2C)](https://pytorch.org/get-started/locally/)
@@ -23,7 +23,7 @@
 
 ## **Introduction**
 
-CCNets is an innovative ML framework specifically designed for uncovering and modeling causal relationships between features and labels in complex datasets. This framework employs a unique structure comprising encoder cooperative network and core cooperative network to facilitate a deeper understanding of causality in data.
+CCNet is a new ML framework designed to uncover and model causal relationships between input observations (X) and labels (y) in datasets. This framework employs three neural networks to form a cooperative structure that enables bidirectional inference between input (X) and target (y).
 
 ## **Key Capabilities**
 CCNets harnesses its capability through six core functions: Explain, Reason, Produce, Infer, Reconstruct, and Generate. Each of these functions plays a crucial role:
@@ -80,7 +80,7 @@ pip install ipywidgets==8.1.2
 
 ### 1. Integrating Encoder and Core Nets
 
-CCNets is designed with a robust architecture comprising two main components: the Encoder Cooperative Network and the Core Cooperative Network. This setup enables efficient handling and processing of diverse data types through specialized encoding techniques.
+CCNet is designed with a robust architecture comprising two main components: the Encoder Cooperative Network and the Core Cooperative Network. This setup enables efficient handling and processing of diverse data types through specialized encoding techniques.
 
 <p align="center">
   <img src="https://github.com/ccnets-team/causal-learning/assets/95277008/734fbf41-c312-4d30-a68e-212e626bc226" alt="two_nets" width="700">
