@@ -23,7 +23,9 @@
 
 ## **Introduction**
 
-CCNet is a new ML framework designed to uncover and model causal relationships between input observations (X) and labels (y) in datasets. This framework employs three neural networks to form a cooperative structure that enables bidirectional inference between input (X) and target (y).
+CCNet is a new ML framework designed to uncover and model causal relationships between input observations 𝑋 and labels 𝑦 in datasets. This framework employs three neural networks to form a cooperative structure that enables bidirectional inference between input 𝑋 and target 𝑦.
+
+This framework learns an explanation vector 𝑒 that transforms the associations observed between inputs 𝑋 and outputs y into a causal relationship. Here, 𝑒 and 𝑦 are considered comprehensive factors instrumental in generating 𝑋.
 
 ## **Key Capabilities**
 CCNet consists of three neural networks having role of —Explainer, Reasoner, and Producer—to execute six fundamental operations in machine learning:
@@ -40,11 +42,7 @@ CCNet consists of three neural networks having role of —Explainer, Reasoner, a
 
 - `Reconstruct`: Rebuilds input data (X) by sequentially explaining, reasoning, and then producing the output, effectively creating a reconstructed version of the input based on the network's understanding and reasoning.
 
-
-
-```
-This framework learns an explanation vector 𝑒 that transforms the associations observed between inputs 𝑋 and outputs y into a causal relationship. Here, 𝑒 and 𝑦 are considered comprehensive factors instrumental in generating 𝑋.
-```
+<br>
 
 # ❗️ ****Dependencies****
 
