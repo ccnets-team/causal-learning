@@ -2,30 +2,35 @@ from nn.gpt import GPT
 from nn.custom_style_gan import Discriminator, Generator
 from nn.custom_resnet import cnn_ResNet, transpose_cnn_ResNet
 from nn.custom_deepFM import ContinuousDeepFM
+from nn.custom_super_net import SuperNet
 from dataclasses import dataclass, field
 
 GPT_COOPERATIVE_NETWORK = [GPT, GPT, GPT]
 RESNET_COOPERATIVE_NETWORK = [cnn_ResNet, cnn_ResNet, transpose_cnn_ResNet]
 STYLEGAN_COOPERATIVE_NETWORK = [Discriminator, Discriminator, Generator]
-DEEPFM_COOPERATIVE_NETWORK = [ContinuousDeepFM, ContinuousDeepFM, ContinuousDeepFM]
+DEEPFM_COOPERATIVE_NETWORK = [ContinuousDeepFM, ContinuousDeepFM, SuperNet]
 
+@dataclass
 class ModelConfig:
-    def __init__(self, model_name = 'gpt', num_layers=6, d_model=256, dropout=0.05, obs_shape = [], condition_dim=None, z_dim = None):
-        """
-        Initialize parameters for a GPT model configuration.
-        
-        Args:
-        - num_layers (int): Number of transformer layers in the GPT model.
-        - d_model (int): The dimensionality of the model's embeddings and hidden layers.
-        - dropout (float): Dropout rate to use between layers to prevent overfitting.
-        """
-        self.model_name = model_name
-        self.num_layers = num_layers
-        self.d_model = d_model
-        self.dropout = dropout
-        self.obs_shape = obs_shape
-        self.condition_dim = condition_dim
-        self.z_dim = z_dim
+    model_name: str
+    
+    num_layers: int = 6
+    d_model: int = 256
+    dropout: float = 0.05
+    
+    obs_shape: list = field(default_factory=list)
+    condition_dim: int = None
+    z_dim: int = None
+
+    def __post_init__(self):
+        if self.model_name.lower() == 'none':
+            # Handle the case where no model is required
+            self.num_layers = 0
+            self.d_model = 0
+            self.dropout = 0
+            self.obs_shape = []
+            self.condition_dim = None
+            self.z_dim = None
 
 @dataclass
 class TrainingParameters:
@@ -48,18 +53,31 @@ class TrainingParameters:
 @dataclass
 class ModelParameters:
     """
-    Comprehensive parameters defining core and encoding models configurations.
+    Comprehensive parameters defining core and encoding model configurations.
     
     Attributes:
-        core_model (str): Identifier for the core model, typically a transformer model like 'gpt'.
-        encoder_model (str): Identifier for the encoder model, typically used for preprocessing inputs like 'resnet'.
-        core_config (ModelConfig): Configuration object for the core model.
-        encoder_config (ModelConfig): Configuration object for the encoder model.
+        core_model (str): Identifier for the core model. A value of 'none' indicates no core model is used.
+        encoder_model (str): Identifier for the encoder model. A value of 'none' indicates no encoder model is used.
+        core_config (ModelConfig or None): Configuration object for the core model, if applicable.
+        encoder_config (ModelConfig or None): Configuration object for the encoder model, if applicable.
     """
     core_model: str = 'gpt'
     encoder_model: str = 'resnet'
-    core_config: ModelConfig = field(default_factory=lambda: ModelConfig(model_name='gpt'))
-    encoder_config: ModelConfig = field(default_factory=lambda: ModelConfig(model_name='resnet'))
+    core_config: ModelConfig = field(init=False)
+    encoder_config: ModelConfig = field(init=False)
+
+    def __post_init__(self):
+        # Conditionally initialize the core_config
+        if self.core_model.lower() != 'none':
+            self.core_config = ModelConfig(model_name=self.core_model)
+        else:
+            self.core_config = None  # Properly handle 'none' to avoid creating a config
+
+        # Conditionally initialize the encoder_config
+        if self.encoder_model.lower() != 'none':
+            self.encoder_config = ModelConfig(model_name=self.encoder_model)
+        else:
+            self.encoder_config = None  # Properly handle 'none' to avoid creating a config
 
 @dataclass
 class OptimizationParameters:
