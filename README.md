@@ -14,7 +14,6 @@
 - [🎈 **Overview**](#🎈-overview)
 - [❗️ **Dependencies**](#❗️-dependencies)
 - [📥 **Installation**](#📥-installation)
-- [🏃 **Quick Start**](#🏃-quick-start)
 - [📖 **Features**](#📖-features)
 - [🔎 **API Documentation**](#🔎-api-documentation)
 - [🐞 **Issue Reporting Policy**](#🐞-issue-reporting-policy)
