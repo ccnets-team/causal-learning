@@ -43,7 +43,7 @@ class TrainerHub:
         self.use_full_eval = use_full_eval
         training_params = ml_params.training
         self.batch_size = training_params.batch_size
-        self.max_epoch = training_params.max_epoch
+        self.num_epoch = training_params.num_epoch
         self.max_iters = training_params.max_iters
 
         self.encoder_ccnet = None
@@ -113,7 +113,7 @@ class TrainerHub:
         """
         self.helper.initialize_train(trainset)
         
-        for epoch in tqdm_notebook(range(self.max_epoch), desc='Epochs', leave=False):
+        for epoch in tqdm_notebook(range(self.num_epoch), desc='Epochs', leave=False):
             dataloader = get_data_loader(trainset, min(len(trainset), self.batch_size))
 
             if self.should_end_training(epoch = epoch):
@@ -150,5 +150,5 @@ class TrainerHub:
         return test_results
     
     def should_end_training(self, epoch):
-        return self.helper.iters > self.max_iters or epoch > self.max_epoch
+        return self.helper.iters > self.max_iters or epoch > self.num_epoch
     

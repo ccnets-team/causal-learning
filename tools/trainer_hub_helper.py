@@ -183,7 +183,7 @@ class TrainerHubHelper:
 
     def print_checkpoint_info(self, time_cost, epoch_idx, iter_idx, len_dataloader, avg_core_metric = None, avg_encoder_metric = None):
         """Prints formatted information about the current checkpoint."""
-        print_iter(epoch_idx, self.parent.max_epoch, iter_idx, len_dataloader, time_cost)
+        print_iter(epoch_idx, self.parent.num_epoch, iter_idx, len_dataloader, time_cost)
         if avg_core_metric is not None and avg_encoder_metric is not None:
             print_lr(self.encoder_trainer.optimizers, self.core_trainer.optimizers)
         elif avg_core_metric is not None:
