@@ -8,7 +8,6 @@ import torch
 from .roles.explainer import Explainer
 from .roles.reasoner import Reasoner
 from .roles.producer import Producer
-from tools.setting.ml_params import GPTModelParams, ImageModelParams 
 from tools.tensor_utils import adjust_tensor_dim
 from framework.utils.ccnet_utils import determine_activation_by_task_type, generate_condition_data
 import torch.nn.functional as F
@@ -27,7 +26,7 @@ class CooperativeNetwork:
             encoder (optional): Encoder object for input data preprocessing.
         """
         # Initialize model names and configurations.        
-        if isinstance(network_params, GPTModelParams):
+        if network_params.model_name == 'gpt':
             self.use_gpt = True 
         else:
             self.use_gpt = False

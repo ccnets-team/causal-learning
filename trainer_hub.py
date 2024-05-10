@@ -34,9 +34,9 @@ class TrainerHub:
         self.data_config = data_config
         self.device = device
         
-        self.use_core = ml_params.core_model_name != 'none'
-        self.use_gpt = ml_params.core_model_name == 'gpt'
-        self.use_encoder = ml_params.encoder_model_name != 'none'
+        self.use_core = ml_params.core_model != 'none'
+        self.use_gpt = ml_params.core_model == 'gpt'
+        self.use_encoder = ml_params.encoder_model != 'none'
 
         self.use_print = use_print
         self.use_wandb = use_wandb
@@ -72,7 +72,7 @@ class TrainerHub:
 
     def setup_encoder(self, model_params, training_params, optimization_params):
 
-        model_networks, network_params = configure_encoder_model(self.data_config, model_params.encoder_model_name, model_params.encoding_params)
+        model_networks, network_params = configure_encoder_model(self.data_config, model_params.encoder_model, model_params.encoder_config)
         
         self.encoder_ccnet = CooperativeEncodingNetwork(model_networks, network_params, self.device)
         self.encoder_trainer = CausalEncodingTrainer(self.encoder_ccnet, training_params, optimization_params)
@@ -81,7 +81,7 @@ class TrainerHub:
         self.label_size = self.data_config.label_size
         self.task_type = self.data_config.task_type
         
-        model_networks, network_params = configure_core_model(self.data_config, model_params.core_model_name, model_params.core_params)
+        model_networks, network_params = configure_core_model(self.data_config, model_params.core_model, model_params.core_config)
             
         self.core_ccnet = CooperativeNetwork(model_networks, network_params, self.task_type, self.device, encoder=self.encoder_ccnet)
         self.core_trainer = CausalTrainer(self.core_ccnet, training_params, optimization_params)

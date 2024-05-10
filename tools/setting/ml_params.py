@@ -1,15 +1,14 @@
 from nn.gpt import GPT
 from nn.custom_style_gan import Discriminator, Generator
 from nn.custom_resnet import cnn_ResNet, transpose_cnn_ResNet
-from nn.custom_super_net import SuperNet
 from nn.custom_deepFM import ContinuousDeepFM
 
 GPT_COOPERATIVE_NETWORK = [GPT, GPT, GPT]
 RESNET_COOPERATIVE_NETWORK = [cnn_ResNet, cnn_ResNet, transpose_cnn_ResNet]
 STYLEGAN_COOPERATIVE_NETWORK = [Discriminator, Discriminator, Generator]
-TABULAR_COOPERATIVE_NETWORK = [ContinuousDeepFM, ContinuousDeepFM, SuperNet]
+DEEPFM_COOPERATIVE_NETWORK = [ContinuousDeepFM, ContinuousDeepFM, ContinuousDeepFM]
 
-class GPTModelParams:
+class ModelConfig:
     def __init__(self, model_name = 'gpt', num_layers=6, d_model=256, dropout=0.05, obs_shape = [], condition_dim=None, z_dim = None):
         """
         Initialize parameters for a GPT model configuration.
@@ -27,44 +26,8 @@ class GPTModelParams:
         self.condition_dim = condition_dim
         self.z_dim = z_dim
 
-class ImageModelParams:
-    def __init__(self, model_name = 'resnet', num_layers=6, d_model=512, obs_shape=[], condition_dim=None, z_dim=None):
-        """
-        Args:
-        - num_layers (int): Number of layers in the encoding network.
-        - d_model (int): Dimensionality of the encoding model's layers.
-        - obs_shape (list): The shape of the input observations/data.
-        - z_dim (int, optional): Dimensionality of the latent space.
-        - condition_dim (int, optional): Dimensionality of any conditioning variables.
-        """
-        self.model_name = model_name
-        self.num_layers = num_layers
-        self.d_model = d_model
-        self.obs_shape = obs_shape
-        self.condition_dim = condition_dim
-        self.z_dim = z_dim
-
-class TabularModelParams:
-    def __init__(self, model_name = 'tabular', num_layers=4, d_model=256, dropout=0.0, obs_shape=[], condition_dim=None, z_dim=None):
-        """
-        Args:
-        - num_layers (int): Number of layers in the encoding network.
-        - d_model (int): Dimensionality of the encoding model's layers.
-        - obs_shape (list): The shape of the input observations/data.
-        - z_dim (int, optional): Dimensionality of the latent space.
-        - condition_dim (int, optional): Dimensionality of any conditioning variables.
-        """
-        self.model_name = model_name
-        self.num_layers = num_layers
-        self.d_model = d_model
-        self.dropout = dropout
-        self.obs_shape = obs_shape
-        self.condition_dim = condition_dim
-        self.z_dim = z_dim
-        
 class ModelParameters:
-    def __init__(self, core_model_name = 'gpt', encoder_model_name = 'resnet', 
-                 core_params=GPTModelParams(), encoding_params=ImageModelParams()):
+    def __init__(self, core_model = 'gpt', encoder_model = 'resnet'):
         """
         Comprehensive model parameters, combining core and encoding networks.
         
@@ -74,10 +37,10 @@ class ModelParameters:
         - dropout (float): Dropout rate for the core network.
         - encoding_networks (list): List of classes representing different encoding network types.
         """
-        self.core_model_name = core_model_name
-        self.encoder_model_name = encoder_model_name
-        self.core_params = core_params
-        self.encoding_params = encoding_params
+        self.core_model = core_model
+        self.encoder_model = encoder_model
+        self.core_config = ModelConfig(model_name = core_model)
+        self.encoder_config = ModelConfig(model_name = encoder_model)
     
 class OptimizationParameters:
     def __init__(self, learning_rate=2e-4, decay_rate_100k=0.01, scheduler_type='exponential', clip_grad_range=None, max_grad_norm=1.0):
@@ -118,12 +81,17 @@ class MLParameters:
     def __init__(self, 
                  training: TrainingParameters = None,
                  model: ModelParameters = None,
-                 optimization: OptimizationParameters = None):
-        # Initialize ML parameters
-        self.training = TrainingParameters() if training is None else training
-        self.model = ModelParameters() if model is None else model
-        self.optimization = OptimizationParameters() if optimization is None else optimization
-        self.selected_indices = []
+                 optimization: OptimizationParameters = None,
+                 **kwargs):
+        # Use kwargs to set up initial parameters, categorizing them for each parameter class
+        training_kwargs = {k: v for k, v in kwargs.items() if k in TrainingParameters.__annotations__}
+        model_kwargs = {k: v for k, v in kwargs.items() if k in ModelParameters.__annotations__}
+        optimization_kwargs = {k: v for k, v in kwargs.items() if k in OptimizationParameters.__annotations__}
+
+        # Initialize ML parameters with filtered kwargs
+        self.training = TrainingParameters(**training_kwargs) if training is None else training
+        self.model = ModelParameters(**model_kwargs) if model is None else model
+        self.optimization = OptimizationParameters(**optimization_kwargs) if optimization is None else optimization
 
     def __getattr__(self, name):
         # Check if the attribute is part of any of the parameter classes
@@ -134,7 +102,7 @@ class MLParameters:
 
     def __setattr__(self, name, value):
         # Set attribute if it's one of MLParameters' direct attributes
-        if name in ["training", "model", "optimization"]:
+        if name in ["training", "model", "optimization", "selected_indices"]:
             super().__setattr__(name, value)
         else:
             # Set attribute in one of the parameter classes
