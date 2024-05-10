@@ -17,15 +17,14 @@
 - [🏃 **Quick Start**](#🏃-quick-start)
 - [📖 **Features**](#📖-features)
 - [🔎 **API Documentation**](#🔎-api-documentation)
-- [🌟 **Contribution Guidelines**](#🌟-contribution-guidelines-)
-- [🐞 **Issue Reporting Policy**](#🐞-issue-reporting-policy-)
-- [✉️ **Support & Contact**](#✉️-support--contact)
+- [🐞 **Issue Reporting Policy**](#🐞-issue-reporting-policy)
+- [✉️ **LICENSE**](#✉️-LICENSE)
 
 # 🎈 Overview
 
 ## **Introduction**
 
-CCNets is an innovative ML framework specifically designed for uncovering and modeling causal relationships between features and labels in complex datasets. This framework employs a unique structure comprising encoder networks and core networks to facilitate a deeper understanding of causality in data.
+CCNets is an innovative ML framework specifically designed for uncovering and modeling causal relationships between features and labels in complex datasets. This framework employs a unique structure comprising encoder cooperative network and core cooperative network to facilitate a deeper understanding of causality in data.
 
 ## **Key Capabilities**
 CCNets harnesses its capability through six core functions: Explain, Reason, Produce, Infer, Reconstruct, and Generate. Each of these functions plays a crucial role:
@@ -40,7 +39,7 @@ CCNets harnesses its capability through six core functions: Explain, Reason, Pro
 
 `Reconstruct`: Reconstructs the **Input Data** by first explaining, then reasoning , and filnally producing the output.
 
-`Generate`: Generate new data based on **Explanation** with **random discrete Conditions** 
+`Generate`: Generate new data based on **Explanation** with **Random Discrete Conditions** 
 
 # ❗️ ****Dependencies****
 
@@ -82,15 +81,21 @@ pip install ipywidgets==8.1.2
 
 ### 1. Integrating Encoder and Core Nets
 
-CCNets is designed with a robust architecture comprising two main components: the Encoder Net and the Core Net. This setup enables efficient handling and processing of diverse data types through specialized encoding techniques.
+CCNets is designed with a robust architecture comprising two main components: the Encoder Cooperative Network and the Core Cooperative Network. This setup enables efficient handling and processing of diverse data types through specialized encoding techniques.
 
 <p align="center">
-  <img src="https://github.com/ccnets-team/causal-learning/assets/95277008/734fbf41-c312-4d30-a68e-212e626bc226" alt="two_nets" width="1000>
+  <img src="https://github.com/ccnets-team/causal-learning/assets/95277008/734fbf41-c312-4d30-a68e-212e626bc226" alt="two_nets" width="700">
 </p>
 
+- `Core Cooperative Network (GPT-based)`: Acts as the framework’s central network, where the encoded data from the Encoder Cooperative Network is further analyzed. It is adept at handling the complexities of causal inference and prediction, seamlessly integrating various forms of data.
+<hr>
+<br>
 
-- `Encoder Net`: Responsible for converting input data into a format that is conducive for causal analysis. For **image data**, this component transforms it into a *trajectory* format, effectively capturing the temporal and spatial dynamics, which are crucial for subsequent processing by the Core Net.
-- `Core Net`: Acts as the framework’s central network, where the encoded data from the Encoder Net is further analyzed. It is adept at handling the complexities of causal inference and prediction, seamlessly integrating various forms of data.
+<p align="center">
+  <img src="https://github.com/ccnets-team/causal-learning/assets/95277008/7b66bf01-d917-419d-8979-b8693df67a5d" alt="two_nets" width="700">
+</p>
+
+- `Encoder Cooperative Network`: Responsible for converting input data into a format that is conducive for causal analysis. For **image data**, this component transforms it into a *trajectory* format, effectively capturing the temporal and spatial dynamics, which are crucial for subsequent processing by the Core Cooperative Network.
 
 
 
@@ -121,15 +126,32 @@ CCNets is compatible with a variety of state-of-the-art models, which enhance it
 - `SuperNet`: Provides flexibility in architecture choices, optimized for specific causal inference tasks, accommodating various requirements and enhancing model performance.
 
 
+### 4. Supported ML Tasks
+- `Classification`: Tailored for accuracy and efficiency in categorizing data.
+
+- `Regression`: Capable of predicting continuous outputs based on causal relationships.
+
+- `Encoding`: Transforms raw data into a meaningful framework-ready format.
+
+- `Data Augmentation`: Enhances limited datasets through causal-based synthetic data generation.
+
+- `Controlled Generation`: Employs causal insights to generate data with specific characteristics.
+
+- `Reconstruction`: Rebuilds data or scenarios to verify and refine causal hypotheses.
+
+<br>
+<br>
 
 # 🔎 **API Documentation**
 
 - We're currently in the process of building our official documentation webpage to better assist you. In the meantime, if you have any specific questions or need clarifications, feel free to reach out through our other support channels. We appreciate your patience and understanding!
 
-
+<br>
+<br>
 
 # 🐞 **Issue Reporting Policy**
-
+<details>
+<summary>More Information</summary>
 Thank you for taking the time to report issues and provide feedback. This helps improve our project for everyone! To ensure that your issue is handled efficiently, please follow the guidelines below:
 
 ### **1. Choose the Right Template:**
@@ -160,25 +182,13 @@ After submitting an issue, please check back periodically. Maintainers or other 
 
 Thank you for helping improve our project! Your feedback and contributions are invaluable.
 
-
 </details>
 
-
-# ✉️ **Support & Contact**
-
-Facing issues or have questions about our framework? We're here to help!
-
-1. **Issue Tracker**:
-    - If you've encountered a bug or have a feature request, please open an issue on our **[GitHub Issues page](https://github.com/ccnets-team/causal-rl/issues)**. Be sure to check existing issues to avoid duplicates.
-2. **Social Media**:
-    - Stay updated with announcements and news by following us on **[LinkedIn](https://www.linkedin.com/company/ccnets)**.
-3. **Emergency Contact**:
-    - If there are security concerns or critical issues, contact our emergency team at support@ccnets.org.
-
-*Please be respectful and constructive in all interactions.*
+<br>
+<br>
 
 
-# LICENSE
+# ✉️ **LICENSE**
 Causal Learning is dual-licensed under the GNU General Public License version 3(GPLv3) and a separate Commercial License.
 
 Please consult the [LICENSE](./LICENSE/) files in the repository for more detailed information on the licensing of Causal Learning.
