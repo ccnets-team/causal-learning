@@ -6,8 +6,6 @@ import base64
 from IPython.display import display, clear_output, Image, HTML
 from PIL import Image as PILImage, ImageDraw, ImageFont
 
-
-# self.n_img_ch
 class ImageDebugger:
     def __init__(self, image_ccnet, data_config, device, use_core=False):
         self.device = device
@@ -23,12 +21,21 @@ class ImageDebugger:
         self.max_display_size = 800
 
     def _load_images_and_labels(self, dataset, indices):
-        images, labels = [], []
+        images = []
+        labels = [] if self.use_core else None
+        
         for idx in indices:
-            img, lbl = dataset[idx]
-            images.append(img.unsqueeze(0))
-            labels.append(lbl.unsqueeze(0).type(torch.float))
-        return torch.cat(images).to(self.device), torch.cat(labels).to(self.device)
+            img = dataset[idx][0].unsqueeze(0)
+            images.append(img)
+            
+            if self.use_core:
+                lbl = dataset[idx][1].unsqueeze(0).type(torch.float)
+                labels.append(lbl)
+        
+        if self.use_core:
+            return torch.cat(images).to(self.device), torch.cat(labels).to(self.device)
+        else:
+            return torch.cat(images).to(self.device), None
 
     def initialize_(self, dataset):
         self.debug_images, self.debug_labels = self._load_images_and_labels(dataset, self.show_image_indices)
@@ -40,7 +47,10 @@ class ImageDebugger:
             img = np.transpose(img.numpy(), (1, 2, 0))
             if self.n_img_ch == 1:
                 img = np.stack([img[:, :, 0]] * 3, axis=-1)  # Convert grayscale to RGB by repeating the channel
-            self.m_canvas[:self.n_img_h, self.n_img_w * (i + 1):self.n_img_w * (i + 2)] = (img * 255).astype(np.uint8)
+            image_values = (img * 255).astype(np.uint8)
+            self.m_canvas[:self.n_img_h, self.n_img_w * (i + 1):self.n_img_w * (i + 2)] = image_values
+            if not self.use_core:
+                self.m_canvas[self.n_img_h * (i + 1):self.n_img_h * (i + 2), :self.n_img_w] = image_values
 
     def update_images(self):
         with torch.no_grad():
@@ -116,8 +126,16 @@ class ImageDebugger:
 
                 # Draw text on the image
                 for label, position in zip(labels, positions):
-                    draw.text(position, label, font=font, fill=(0, 0, 0))  # Black color for text                    
-                    
+                    draw.text(position, label, font=font, fill=(0, 0, 0))  # Black color for text      
+        else:
+            font = ImageFont.load_default()  # Load default font
+            # Assume 'labels' list contains only one label for simplicity here
+            labels = ["Explain from the left \n Feature from below"]
+            # Calculate positions based on the image dimensions
+            positions = [(self.n_img_w // 8, self.n_img_h // 2 + self.n_img_h * i) for i in range(len(labels))]
+            # Draw the text on the image
+            for label, position in zip(labels, positions):
+                draw.text(position, label, font=font, fill="black")
 
         # Save the image to a byte buffer to then display it using HTML
         with io.BytesIO() as output:
