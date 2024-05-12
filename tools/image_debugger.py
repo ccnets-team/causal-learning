@@ -130,7 +130,7 @@ class ImageDebugger:
         else:
             font = ImageFont.load_default()  # Load default font
             # Assume 'labels' list contains only one label for simplicity here
-            labels = ["Explain from the left \n Feature from below"]
+            labels = ["Explain from the right \n Feature from below"]
             # Calculate positions based on the image dimensions
             positions = [(self.n_img_w // 8, self.n_img_h // 2 + self.n_img_h * i) for i in range(len(labels))]
             # Draw the text on the image
