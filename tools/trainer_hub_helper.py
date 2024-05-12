@@ -16,11 +16,10 @@ import torch
 
 from torch.utils.tensorboard import SummaryWriter
 
-DEFAULT_PRINT_INTERVAL = 50
 DEFAULT_SAVE_INTERVAL = 1000
 
 class TrainerHubHelper:
-    def __init__(self, parent, data_config, ml_params, device, use_print, use_wandb):
+    def __init__(self, parent, data_config, ml_params, device, use_print, use_wandb, print_interval):
         self.parent = parent
         self.device = device
         
@@ -40,7 +39,7 @@ class TrainerHubHelper:
         self.encoder_ccnet = self.parent.encoder_ccnet
         self.encoder_trainer = self.parent.encoder_trainer
         
-        self.num_checkpoints = DEFAULT_PRINT_INTERVAL
+        self.num_checkpoints = print_interval
         self.save_interval = DEFAULT_SAVE_INTERVAL
         
         self.model_path, self.temp_path, self.log_path = self.setup_directories()
@@ -63,6 +62,9 @@ class TrainerHubHelper:
         self.iters, self.cnt_checkpoints, self.cnt_print = 0, 0, 0
         if self.use_image:
             self.image_debugger.initialize_(dataset)
+
+    def should_save_model(self):
+        return self.cnt_checkpoints % self.save_interval == 0 and self.cnt_checkpoints != 0
     
     def should_checkpoint(self):
         return self.cnt_checkpoints % self.num_checkpoints == 0 and self.cnt_checkpoints != 0

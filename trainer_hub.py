@@ -28,8 +28,10 @@ from framework.ccnet.cooperative_encoding_network import CooperativeEncodingNetw
 from tools.setting.ml_config import configure_core_model, configure_encoder_model
 from tools.tensor_utils import generate_padding_mask
 
+DEFAULT_PRINT_INTERVAL = 50
+
 class TrainerHub:
-    def __init__(self, ml_params: MLParameters, data_config: DataConfig, device, use_print=False, use_wandb=False, use_full_eval = False):
+    def __init__(self, ml_params: MLParameters, data_config: DataConfig, device, use_print=False, use_wandb=False, use_full_eval = False, print_interval = DEFAULT_PRINT_INTERVAL):
         
         self.data_config = data_config
         self.device = device
@@ -55,7 +57,7 @@ class TrainerHub:
         
         self.setup_models(ml_params)
         
-        self.helper = TrainerHubHelper(self, data_config, ml_params, device, use_print, use_wandb)
+        self.helper = TrainerHubHelper(self, data_config, ml_params, device, use_print, use_wandb, print_interval)
 
     def __exit__(self):
         if self.use_wandb:
@@ -119,7 +121,7 @@ class TrainerHub:
             if self.should_end_training(epoch = epoch):
                 break
 
-            for iters, (source_batch, target_batch) in enumerate(tqdm_notebook(dataloader, desc='Iterations', leave=False)):
+            for iters, (source_batch, target_batch) in enumerate(dataloader):
                 core_metric, encoder_metric = self.train_iteration(iters, source_batch, target_batch)
 
                 test_results = self.evaluate(testset)
