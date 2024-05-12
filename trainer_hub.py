@@ -121,7 +121,7 @@ class TrainerHub:
             if self.should_end_training(epoch = epoch):
                 break
 
-            for iters, (source_batch, target_batch) in enumerate(tqdm_notebook(dataloader, desc='Iterations', leave=False)):
+            for iters, (source_batch, target_batch) in enumerate(dataloader):
                 core_metric, encoder_metric = self.train_iteration(iters, source_batch, target_batch)
 
                 test_results = self.evaluate(testset)
