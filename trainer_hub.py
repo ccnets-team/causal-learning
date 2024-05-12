@@ -127,7 +127,7 @@ class TrainerHub:
                 self.helper.finalize_training_step(epoch, iters, len(dataloader), core_metric, encoder_metric, test_results)
 
     def evaluate(self, dataset):
-        if not self.use_core or not self.helper.should_checkpoint():
+        if not self.use_core or not self.helper.should_checkpoint() or dataset is None:
             return None
         source_batch, target_batch = dataset[:] if self.use_full_eval else get_random_batch(dataset, self.batch_size)
         
