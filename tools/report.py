@@ -36,9 +36,8 @@ def calculate_test_results(inferred_y, target_y, padding_mask = None, task_type 
 
     # Flatten the tensors if they have a sequence dimension, assuming the last dimension could be class probabilities
     if inferred_y.dim() > 2:
-        inferred_y = inferred_y.view(-1, inferred_y.size(-1))
-    if target_y.dim() > 2:
-        target_y = target_y.view(-1, target_y.size(-1))
+        inferred_y = inferred_y[:, -1]
+        target_y = target_y[:, -1]
 
     # Move tensors to CPU for compatibility with sklearn metrics
     inferred_y = inferred_y.cpu()
