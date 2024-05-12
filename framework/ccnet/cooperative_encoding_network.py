@@ -70,7 +70,7 @@ class CooperativeEncodingNetwork:
             self.__set_train(True)
         return reconstructed_data
     
-    def synthesize(self, input_data: torch.Tensor, padding_mask=None, output_multiplier: int = 10) -> torch.Tensor:
+    def synthesize(self, input_data: torch.Tensor, padding_mask=None, output_multiplier: int = None) -> torch.Tensor:
         """
         Synthesizes new data by cross-matching stochastic and deterministic variables from the encoded data,
         with options to either repeat or interleave these matches.
@@ -91,7 +91,10 @@ class CooperativeEncodingNetwork:
             deterministic_variables = encoded_data[..., self.stoch_size:]
             
             batch_size = input_data.size(0)
-            output_multiplier = min(batch_size, output_multiplier)
+            if output_multiplier is None:
+                output_multiplier = batch_size
+            else:
+                output_multiplier = min(batch_size, output_multiplier)
 
             # Interleave the expanded data: s1, s2, s3, s1, s2, s3 and d1, d1, d1, d2, d2, d2
             indices = torch.arange(stochastic_variables.size(0)).repeat(output_multiplier)
