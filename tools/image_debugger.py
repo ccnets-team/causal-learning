@@ -127,6 +127,16 @@ class ImageDebugger:
                 # Draw text on the image
                 for label, position in zip(labels, positions):
                     draw.text(position, label, font=font, fill=(0, 0, 0))  # Black color for text      
+            elif self.dataset_name == 'celebA_animal':
+                font = ImageFont.load_default()  # Load default font
+
+                # Define labels and their positions
+                labels = ["Male", "Female", "Dog", "Cat"]
+                positions = [(self.n_img_w//4, self.n_img_h//2 + self.n_img_h* (i + 1)) for i in range(len(labels))]  # Adjust positions as needed
+
+                # Draw text on the image
+                for label, position in zip(labels, positions):
+                    draw.text(position, label, font=font, fill=(0, 0, 0))  # Black color for text                          
         else:
             font = ImageFont.load_default()  # Load default font
             # Assume 'labels' list contains only one label for simplicity here
