@@ -121,7 +121,7 @@ class ImageDebugger:
                 font = ImageFont.load_default()  # Load default font
 
                 # Define labels and their positions
-                labels = ["Real photo", "Real photo", "Ukiyoe style", "Ukiyoe style"]
+                labels = ["Male photo", "Female photo", "Old painting", "Old painting"]
                 positions = [(self.n_img_w//4, self.n_img_h//2 + self.n_img_h* (i + 1)) for i in range(len(labels))]  # Adjust positions as needed
 
                 # Draw text on the image
