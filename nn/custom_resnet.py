@@ -73,7 +73,7 @@ class BasicBlock(nn.Module):
         return out
 
 class Bottleneck(nn.Module):
-    expansion = 4  # Increase the output channels by a factor of 4
+    expansion = 2  # Increase the output channels by a factor of 2
 
     def __init__(self, in_planes, planes, transpose, stride=1):
         super(Bottleneck, self).__init__()
