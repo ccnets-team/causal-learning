@@ -1,4 +1,4 @@
-from tools.setting.ml_params import RESNET_COOPERATIVE_NETWORK, STYLEGAN_COOPERATIVE_NETWORK, GPT_COOPERATIVE_NETWORK, DEEPFM_COOPERATIVE_NETWORK
+from tools.setting.ml_params import RESNET_COOPERATIVE_NETWORK, STYLEGAN_COOPERATIVE_NETWORK, GPT_COOPERATIVE_NETWORK, DEEPFM_COOPERATIVE_NETWORK, RESNET_BOTTLE_NECK_COOPERATIVE_NETWORK
 from copy import deepcopy
 
 def configure_model(model_name, params, obs_shape, condition_dim, z_dim):
@@ -7,6 +7,8 @@ def configure_model(model_name, params, obs_shape, condition_dim, z_dim):
         cooperative_network = STYLEGAN_COOPERATIVE_NETWORK
     elif model_name == 'resnet':
         cooperative_network = RESNET_COOPERATIVE_NETWORK
+    elif model_name == 'resnet_bottle_neck':
+        cooperative_network = RESNET_BOTTLE_NECK_COOPERATIVE_NETWORK
     elif model_name == 'gpt':
         cooperative_network = GPT_COOPERATIVE_NETWORK
     elif model_name == 'deepfm':

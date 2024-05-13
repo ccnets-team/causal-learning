@@ -73,45 +73,48 @@ class BasicBlock(nn.Module):
         return out
 
 class Bottleneck(nn.Module):
-    expansion = 4
+    expansion = 4  # Increase the output channels by a factor of 4
+
     def __init__(self, in_planes, planes, transpose, stride=1):
         super(Bottleneck, self).__init__()
 
-        if transpose is True:
+        if transpose and stride > 1:
             Conv2d = nn.ConvTranspose2d
-
+            kernel_size = 4
         else:
             Conv2d = nn.Conv2d
-        
-        kernel_size1 = 1
-        kernel_size3 = 3
-        if stride > 1:
-            kernel_size3 += 1
-            kernel_size1 += 1
+            kernel_size = 3
 
-        self.conv1 = Conv2d(in_planes, planes, kernel_size=1, bias=False)
+        # First 1x1 convolution
+        self.conv1 = Conv2d(in_planes, planes, kernel_size=kernel_size, stride=stride,  padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
-        self.conv2 = Conv2d(planes, planes, kernel_size=kernel_size3,
-                               stride=stride, padding=1, bias=False)
-        self.bn2 = nn.BatchNorm2d(planes)
-        self.conv3 = Conv2d(planes, self.expansion *
-                               planes, kernel_size=1, bias=False)
-        self.bn3 = nn.BatchNorm2d(self.expansion*planes)
 
+        # 3x3 convolution, this is where we handle the main feature transformations
+        self.conv2 = Conv2d(planes, planes * self.expansion, kernel_size=3, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(planes * self.expansion)
+
+        # Second 1x1 convolution
+        self.conv3 = Conv2d(planes * self.expansion, planes, kernel_size=3, padding=1, bias=False)
+        self.bn3 = nn.BatchNorm2d(planes)
+
+        # Shortcut path for identity mapping
         self.shortcut = nn.Sequential()
-        if stride != 1 or in_planes != self.expansion*planes:
+        if stride != 1 or in_planes != planes:
             self.shortcut = nn.Sequential(
-                Conv2d(in_planes, self.expansion*planes,
-                          kernel_size=kernel_size1, stride=stride, bias=False),
-                nn.BatchNorm2d(self.expansion*planes)
+                Conv2d(in_planes, planes, kernel_size=kernel_size, stride=stride, padding=1, bias=False),
+                nn.BatchNorm2d(planes)
             )
 
     def forward(self, x):
+        identity = self.shortcut(x)
+
         out = F.relu(self.bn1(self.conv1(x)))
         out = F.relu(self.bn2(self.conv2(out)))
         out = self.bn3(self.conv3(out))
-        out += self.shortcut(x)
+
+        out += identity
         out = F.relu(out)
+
         return out
 
 class ResNet(nn.Module):
@@ -146,9 +149,9 @@ class ResNet(nn.Module):
         self.layers = nn.Sequential(*layers)
 
         if transpose:
-            final = nn.Sequential(nn.Conv2d(current_d_model* block.expansion, noutp, 1), nn.Tanh())
+            final = nn.Sequential(nn.Conv2d(current_d_model, noutp, 1), nn.Tanh())
         else:
-            final = [nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(current_d_model * block.expansion, noutp)]
+            final = [nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(current_d_model , noutp)]
         self.final_layer = nn.Sequential(*final)
 
         self.d_model = d_model
@@ -160,7 +163,7 @@ class ResNet(nn.Module):
         strides = [stride] + [1] * (num_blocks - 1)
         for s in strides:
             layers.append(block(in_planes, out_plaines, transpose, s))
-            in_planes = out_plaines * block.expansion
+            in_planes = out_plaines 
         return nn.Sequential(*layers)
 
     def forward(self, x):
@@ -173,8 +176,14 @@ class ResNet(nn.Module):
         x = self.final_layer(x)
         return x
 
-def cnn_ResNet(network_params):
+def ResNet_basic(network_params):
     return ResNet(network_params, BasicBlock, transpose = False)
 
-def transpose_cnn_ResNet(network_params):
+def transpose_ResNet_basic(network_params):
     return ResNet(network_params, BasicBlock, transpose = True)
+
+def ResNet_bottle_neck(network_params):
+    return ResNet(network_params, Bottleneck, transpose = False)
+
+def transpose_ResNet_bottle_neck(network_params):
+    return ResNet(network_params, Bottleneck, transpose = True)
