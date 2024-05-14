@@ -11,7 +11,7 @@ from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_sc
 import torch
 import numpy as np
 
-def calculate_test_results(inferred_y, target_y, padding_mask = None, task_type = None , num_classes=None, average='macro'):
+def calculate_test_results(inferred_y, target_y, task_type = None , num_classes=None, average='macro'):
     """
     Calculates performance metrics for tasks using PyTorch tensors that might have batch and sequence dimensions.
     Parameters:
@@ -25,14 +25,6 @@ def calculate_test_results(inferred_y, target_y, padding_mask = None, task_type 
     - metrics: A dictionary containing relevant performance metrics.
     """
     metrics = {}
-
-    # Apply the padding mask if provided
-    if padding_mask is not None:
-        # Flatten the mask and use it to filter out padded values
-        valid_indices = padding_mask.bool().expand_as(inferred_y)
-        label_size = inferred_y.size(-1)
-        inferred_y = inferred_y[valid_indices].view(-1, label_size)
-        target_y = target_y[valid_indices].view(-1, label_size)
 
     # Move tensors to CPU for compatibility with sklearn metrics
     inferred_y = inferred_y.cpu()
@@ -65,7 +57,10 @@ def calculate_test_results(inferred_y, target_y, padding_mask = None, task_type 
         mae = torch.mean(torch.abs(target_y - inferred_y))
         ss_total = torch.sum((target_y - torch.mean(target_y)) ** 2)
         ss_res = torch.sum((target_y - inferred_y) ** 2)
-        r2 = 1 - ss_res / ss_total if ss_total > 0 else torch.tensor(np.inf)
+        if ss_total == 0:
+            r2 = torch.tensor(float('nan'))
+        else:
+            r2 = 1 - ss_res / ss_total
 
         metrics['mse'] = mse.item()
         metrics['mae'] = mae.item()

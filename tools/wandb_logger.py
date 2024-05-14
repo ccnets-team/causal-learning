@@ -18,13 +18,14 @@ now = datetime.now()
 formatted_date = now.strftime("%y-%m-%d %H:%M:%S")
 
 def convert_to_dict(ml_params):
-    params_dict = ml_params.__dict__.copy()
+    if ml_params is not None:
+        params_dict = ml_params.__dict__.copy()
 
-    for key, value in params_dict.items():
-        if hasattr(value, '__dict__'):
-            params_dict[key] = value.__dict__
+        for key, value in params_dict.items():
+            if hasattr(value, '__dict__'):
+                params_dict[key] = value.__dict__
 
-    return params_dict
+        return params_dict
 
 def sort_key(item):
     key, value = item
