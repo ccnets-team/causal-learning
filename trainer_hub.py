@@ -103,7 +103,10 @@ class TrainerHub:
 
         # Train the core model if enabled and obtain metrics.
         if self.use_core:
-            state_trajectory, target_trajectory, padding_mask = self.helper.setup_training_data(source_batch, target_batch, padding_mask)
+            source_batch, target_batch = self.helper.encode_inputs(source_batch, target_batch, padding_mask)
+            
+            state_trajectory, target_trajectory, padding_mask = self.helper.prepare_batch_data(source_batch, target_batch, padding_mask)
+            
             core_metric = self.core_trainer.train_models(state_trajectory, target_trajectory, padding_mask)
         else:
             core_metric = None
@@ -149,11 +152,14 @@ class TrainerHub:
 
         for source_batch, target_batch in dataloader:
             source_batch, target_batch = convert_to_device(source_batch, target_batch, self.device)
+            
+            source_batch, target_batch = self.helper.encode_inputs(source_batch, target_batch)
+            
             source_batch, target_batch, padding_mask = generate_padding_mask(source_batch, target_batch)
             
-            inferred_batch = self.core_ccnet.infer(source_batch, padding_mask)
+            inferred_batch = self.core_ccnet.infer(source_batch, padding_mask, use_encoder = False)
 
-            if self.use_gpt:
+            if self.use_gpt and padding_mask is not None:
                 inferred_batch, target_batch = extract_last_elements_with_mask(inferred_batch, target_batch, padding_mask)
                 
             all_inferred_batches.append(inferred_batch)
