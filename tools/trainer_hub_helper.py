@@ -87,19 +87,29 @@ class TrainerHubHelper:
         """Determine the file path for saving models based on the current count."""
         return self.model_path if self.cnt_print % 2 == 0 else self.temp_path
             
-    def setup_training_data(self, source_batch, target_batch, padding_mask = None):
-        
-        # Encode inputs to prepare them for causal training
-        source_code, target_code = self.encode_inputs(source_batch, target_batch, padding_mask)
-        
+    def prepare_batch_data(self, source_batch, target_batch, padding_mask = None):
+        """
+        Prepares batch data by adjusting tensor dimensions for processing.
+
+        Parameters:
+        - source_batch (Tensor): The source batch tensor.
+        - target_batch (Tensor): The target batch tensor.
+        - padding_mask (Tensor, optional): The padding mask tensor.
+
+        Returns:
+        - state_trajectory (Tensor): The prepared source batch tensor.
+        - target_trajectory (Tensor): The prepared target batch tensor.
+        - padding_mask (Tensor, optional): The prepared padding mask tensor.
+        """
+                
         if self.use_gpt:
             # Adjust tensor dimensions for causal processing
-            state_trajectory = adjust_tensor_dim(source_code, target_dim=3)  # off when it's img data set
-            target_trajectory = adjust_tensor_dim(target_code, target_dim=3)  # off when it's img data set
+            state_trajectory = adjust_tensor_dim(source_batch, target_dim=3)  # off when it's img data set
+            target_trajectory = adjust_tensor_dim(target_batch, target_dim=3)  # off when it's img data set
             padding_mask = adjust_tensor_dim(padding_mask, target_dim=3)  # off when it's img data set
         else:
-            state_trajectory = source_code
-            target_trajectory = target_code
+            state_trajectory = source_batch
+            target_trajectory = target_batch
         
         return state_trajectory, target_trajectory, padding_mask
 
