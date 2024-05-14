@@ -57,7 +57,10 @@ def calculate_test_results(inferred_y, target_y, task_type = None , num_classes=
         mae = torch.mean(torch.abs(target_y - inferred_y))
         ss_total = torch.sum((target_y - torch.mean(target_y)) ** 2)
         ss_res = torch.sum((target_y - inferred_y) ** 2)
-        r2 = 1 - ss_res / ss_total if ss_total > 0 else torch.tensor(np.inf)
+        if ss_total == 0:
+            r2 = torch.tensor(float('nan'))
+        else:
+            r2 = 1 - ss_res / ss_total
 
         metrics['mse'] = mse.item()
         metrics['mae'] = mae.item()
