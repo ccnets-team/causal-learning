@@ -52,6 +52,46 @@ def generate_padding_mask(source_data, target_data, padding_values = [0, -1]):
 
     return source_data, target_data, padding_mask
 
+def extract_last_elements_with_mask(src, dst, padding_mask):
+    """
+    Extracts the last elements of src and dst sequences using the padding mask.
+
+    Parameters:
+    - src (Tensor): The source batch tensor of shape [B, S, F].
+    - dst (Tensor): The destination batch tensor of shape [B, S, L].
+    - padding_mask (Tensor): The padding mask tensor of shape [B, S, 1] where padding is marked by 1s.
+
+    Returns:
+    - selected_src (Tensor): A tensor containing only the last non-padding elements of src with shape [B, 1, F].
+    - selected_dst (Tensor): A tensor containing only the last non-padding elements of dst with shape [B, 1, L].
+    """
+    padding_mask = padding_mask.squeeze(dim=-1)  # Remove the last dimension
+    
+    # Calculate the cumulative sum along the sequence dimension (reverse order)
+    cumsum_mask = padding_mask.flip(dims=[1]).cumsum(dim=1).flip(dims=[1])
+    
+    # Find the indices of the last non-padding elements
+    last_indices = (cumsum_mask == 0).int().argmax(dim=1) - 1
+    
+    # Identify sequences that are completely padding (all ones in the padding mask)
+    all_padding = (padding_mask.sum(dim=1) == padding_mask.size(1))
+    
+    # Set last_indices to seq_len - 1 for sequences that are completely padding
+    seq_len = src.size(1)
+    last_indices = torch.where(all_padding, (seq_len - 1) * torch.ones_like(last_indices), last_indices)
+    
+    valid_indices = last_indices >= 0
+    
+    # Gather the last elements using the indices
+    batch_size = src.size(0)
+    
+    selected_src = src[torch.arange(batch_size, device=src.device), last_indices, :].unsqueeze(1)
+    selected_dst = dst[torch.arange(batch_size, device=src.device), last_indices, :].unsqueeze(1)
+    selected_src = selected_src[valid_indices]
+    selected_dst = selected_dst[valid_indices]
+    return selected_src, selected_dst
+
+
 def get_random_batch(dataset, batch_size):
     num_batches = len(dataset) // batch_size
     random_index = random.randint(0, num_batches - 1) if num_batches > 0 else 0

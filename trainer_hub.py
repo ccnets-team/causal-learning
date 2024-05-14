@@ -21,17 +21,18 @@ from tools.loader import get_data_loader, get_test_loader
 from nn.utils.init import set_random_seed
 from tools.wandb_logger import wandb_end
 from tools.report import calculate_test_results
-from tools.tensor_utils import get_random_batch, convert_to_device 
+from tools.tensor_utils import convert_to_device, get_random_batch
 
 from framework.ccnet.cooperative_network import CooperativeNetwork
 from framework.ccnet.cooperative_encoding_network import CooperativeEncodingNetwork
 from tools.setting.ml_config import configure_core_model, configure_encoder_model
-from tools.tensor_utils import generate_padding_mask
+from tools.tensor_utils import generate_padding_mask, extract_last_elements_with_mask
+import torch
 
 DEFAULT_PRINT_INTERVAL = 50
 
 class TrainerHub:
-    def __init__(self, ml_params: MLParameters, data_config: DataConfig, device, use_print=False, use_wandb=False, use_full_eval = False, print_interval = DEFAULT_PRINT_INTERVAL):
+    def __init__(self, ml_params: MLParameters, data_config: DataConfig, device, use_print=False, use_wandb=False, print_interval=DEFAULT_PRINT_INTERVAL):
         
         self.data_config = data_config
         self.device = device
@@ -42,9 +43,9 @@ class TrainerHub:
 
         self.use_print = use_print
         self.use_wandb = use_wandb
-        self.use_full_eval = use_full_eval
         training_params = ml_params.training
         self.batch_size = training_params.batch_size
+        self.eval_batch_size = 10 * training_params.batch_size
         self.num_epoch = training_params.num_epoch
         self.max_iters = training_params.max_iters
 
@@ -120,8 +121,8 @@ class TrainerHub:
 
             if self.should_end_training(epoch = epoch):
                 break
-
-            for iters, (source_batch, target_batch) in enumerate(dataloader):
+            # show me the max length of the dataset
+            for iters, (source_batch, target_batch) in enumerate(tqdm_notebook(dataloader, desc='Iterations', leave=False)):
                 core_metric, encoder_metric = self.train_iteration(iters, source_batch, target_batch)
 
                 test_results = self.evaluate(testset)
@@ -129,27 +130,40 @@ class TrainerHub:
                 self.helper.finalize_training_step(epoch, iters, len(dataloader), core_metric, encoder_metric, test_results)
 
     def evaluate(self, dataset):
-        if not self.use_core or not self.helper.should_checkpoint() or dataset is None:
+        if not self.use_core or dataset is None or not self.helper.should_checkpoint():
             return None
-        source_batch, target_batch = dataset[:] if self.use_full_eval else get_random_batch(dataset, self.batch_size)
-        
-        return self.validate(source_batch, target_batch)
-    
-    def test(self, dataset):
-        source_batch, target_batch = dataset[:]
-        return self.validate(source_batch, target_batch)
+        random_batch = get_random_batch(dataset, min(len(dataset), self.eval_batch_size))
+        return self._test([random_batch])
 
-    def validate(self, source_batch, target_batch):
-            # Assuming convert_to_device is a function that handles device placement
-        source_batch, target_batch = convert_to_device(source_batch, target_batch, self.device)
+    def test(self, dataset, batch_size=None):
+        if dataset is None:
+            return None              
+        if batch_size is None:
+            batch_size = self.eval_batch_size
+        dataloader = get_test_loader(dataset, min(len(dataset), batch_size))
+        return self._test(dataloader)
         
-        source_batch, target_batch, padding_mask = generate_padding_mask(source_batch, target_batch)
+    def _test(self, dataloader):
+        all_inferred_batches = []
+        all_target_batches = []
+
+        for source_batch, target_batch in dataloader:
+            source_batch, target_batch = convert_to_device(source_batch, target_batch, self.device)
+            source_batch, target_batch, padding_mask = generate_padding_mask(source_batch, target_batch)
+            
+            inferred_batch = self.core_ccnet.infer(source_batch, padding_mask)
+
+            if self.use_gpt:
+                inferred_batch, target_batch = extract_last_elements_with_mask(inferred_batch, target_batch, padding_mask)
+                
+            all_inferred_batches.append(inferred_batch)
+            all_target_batches.append(target_batch)
+
+        all_inferred_batches = torch.cat(all_inferred_batches, dim=0)
+        all_target_batches = torch.cat(all_target_batches, dim=0)
         
-        inferred_trajectory = self.core_ccnet.infer(source_batch, padding_mask)
-        
-        test_results = calculate_test_results(inferred_trajectory, target_batch, padding_mask, self.task_type, num_classes=self.label_size)
-        
-        return test_results
+        final_results = calculate_test_results(all_inferred_batches, all_target_batches, self.task_type, num_classes=self.label_size)
+        return final_results
     
     def should_end_training(self, epoch):
         return self.helper.iters > self.max_iters or epoch > self.num_epoch
