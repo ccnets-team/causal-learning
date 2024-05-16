@@ -26,7 +26,7 @@ from tools.tensor_utils import convert_to_device, get_random_batch
 from framework.ccnet.cooperative_network import CooperativeNetwork
 from framework.ccnet.cooperative_encoding_network import CooperativeEncodingNetwork
 from tools.setting.ml_config import configure_core_model, configure_encoder_model
-from tools.tensor_utils import generate_padding_mask, extract_last_elements_with_mask
+from tools.tensor_utils import generate_padding_mask, select_elements_for_testing
 import torch
 
 DEFAULT_PRINT_INTERVAL = 50
@@ -160,7 +160,7 @@ class TrainerHub:
             inferred_batch = self.core_ccnet.infer(source_batch, padding_mask, use_encoder = False)
 
             if self.use_gpt and padding_mask is not None:
-                inferred_batch, target_batch = extract_last_elements_with_mask(inferred_batch, target_batch, padding_mask)
+                inferred_batch, target_batch = select_elements_for_testing(inferred_batch, target_batch, padding_mask, task_type=self.task_type, num_classes=self.label_size)
                 
             all_inferred_batches.append(inferred_batch)
             all_target_batches.append(target_batch)
