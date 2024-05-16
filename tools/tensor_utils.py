@@ -4,6 +4,7 @@ COPYRIGHT (c) 2022. CCNets. All Rights reserved.
 import torch
 import random
 from torch.nn.utils.rnn import pad_sequence
+from collections import Counter
 
 def adjust_tensor_dim(tensor, target_dim = 3):
     if tensor is None:
@@ -52,7 +53,7 @@ def generate_padding_mask(source_data, target_data, padding_values = [0, -1]):
 
     return source_data, target_data, padding_mask
 
-def extract_last_elements_with_mask(src, dst, padding_mask):
+def select_elements_for_testing(src, dst, padding_mask, task_type =None, num_classes=None):
     """
     Extracts the last elements of src and dst sequences using the padding mask.
 
@@ -90,7 +91,6 @@ def extract_last_elements_with_mask(src, dst, padding_mask):
     selected_src = selected_src[valid_indices]
     selected_dst = selected_dst[valid_indices]
     return selected_src, selected_dst
-
 
 def get_random_batch(dataset, batch_size):
     num_batches = len(dataset) // batch_size
