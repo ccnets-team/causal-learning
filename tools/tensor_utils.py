@@ -109,7 +109,7 @@ def aggregate_test_elements(valid_seqs, task_type, num_classes=None):
             votes = torch.stack([majority_voting(valid_seq[:, j], weights) for j in range(num_classes)])
             aggregated_list.append(votes)
         elif task_type == 'regression':
-            avg_value = (valid_seq * weights.unsqueeze(-1)).sum(dim=0) / weights.sum()
+            avg_value = (valid_seq * weights.to(valid_seq.device).unsqueeze(-1)).sum(dim=0) / weights.sum()
             aggregated_list.append(avg_value)
 
     aggregated_list = torch.stack(aggregated_list).to(valid_seqs[0].device)
