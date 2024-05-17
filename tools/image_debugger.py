@@ -105,9 +105,9 @@ class ImageDebugger:
 
         # Prepare to draw on the image
         draw = ImageDraw.Draw(img)
+        font = ImageFont.load_default()  # Load default font
 
         if self.use_core:
-            font = ImageFont.load_default()  # Load default font
             if self.dataset_name == 'celebA':
 
                 # Define labels and their positions
