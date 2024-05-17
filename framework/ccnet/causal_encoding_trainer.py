@@ -18,7 +18,7 @@ class CausalEncodingTrainer(TrainerBase):
     Trainer for the Causal Encoding Network, handling the training process across
     the network's components: Explainer, Reasoner, and Producer.
     """
-    def __init__(self, encoder: Encoder, training_params, optimization_params):
+    def __init__(self, encoder: Encoder, training_params, algorithm_params, optimization_params):
         """
         Initialize the trainer with an encoder network, training parameters, and optimization settings.
 
@@ -27,12 +27,12 @@ class CausalEncodingTrainer(TrainerBase):
         - training_params: Dictionary containing parameters specific to training (e.g., batch size, epochs).
         - optimization_params: Dictionary containing parameters specific to optimization (e.g., learning rate).
         """        
-        TrainerBase.__init__(self, encoder.networks, training_params, optimization_params)
+        TrainerBase.__init__(self, encoder.networks, training_params, algorithm_params, optimization_params)
         self.explainer, self.reasoner, self.producer = self.networks        
         self.network_names = encoder.network_names
         self.layer_norm = torch.nn.LayerNorm(encoder.stoch_size, elementwise_affine=False).to(encoder.device)
 
-    def train_models(self, input_observation, padding_mask=None):
+    def train_models(self, observation, padding_mask=None):
         """
         Train the models using input observations. Generates multiple interpretations and compares them.
 
@@ -43,6 +43,8 @@ class CausalEncodingTrainer(TrainerBase):
         - metrics: Dictionary containing tracked metrics (losses and errors).
         """
         self.set_train(train=True)
+        
+        input_observation = self.prepare_input_state(observation)
 
         ################################  Forward Pass  ########################################
         # Generate explanations and features.
@@ -64,14 +66,14 @@ class CausalEncodingTrainer(TrainerBase):
 
         ################################  Path Costs  ###########################################
         cost_ds = self.cost_fn(cs_generated_observation, ss_generated_observation)
-        cost_sc = self.cost_fn(sc_generated_observation, input_observation)
+        cost_sc = self.cost_fn(sc_generated_observation, observation)
         cost_sd = self.cost_fn(sc_generated_observation, ss_generated_observation)
-        cost_cs = self.cost_fn(cs_generated_observation, input_observation)
+        cost_cs = self.cost_fn(cs_generated_observation, observation)
 
         ################################  Causal Losses  ########################################
         recognition_loss = self.loss_fn(cost_ds, cost_sc, padding_mask)
         generation_loss = self.loss_fn(cost_sd, cost_cs, padding_mask)
-        reconstruction_loss = self.loss_fn(cc_generated_observation, input_observation, padding_mask)
+        reconstruction_loss = self.loss_fn(cc_generated_observation, observation, padding_mask)
 
         ################################  Model Errors  #########################################
         explainer_error = self.error_fn(recognition_loss + generation_loss, reconstruction_loss, padding_mask)

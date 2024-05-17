@@ -45,7 +45,8 @@ class TrainerHub:
         self.use_wandb = use_wandb
         training_params = ml_params.training
         self.batch_size = training_params.batch_size
-        self.eval_batch_size = 10 * training_params.batch_size
+        self.eval_batch_size = 4 * training_params.batch_size
+        self.test_batch_size = 10 * training_params.batch_size
         self.num_epoch = training_params.num_epoch
         self.max_iters = training_params.max_iters
 
@@ -65,29 +66,28 @@ class TrainerHub:
             wandb_end()
 
     def setup_models(self, ml_params):
-        training_params, model_params, optimization_params = ml_params
-        
+        training_params, algorithm_params, model_params, optimization_params = ml_params
         if self.use_encoder:
-            self.setup_encoder(model_params, training_params, optimization_params)
+            self.setup_encoder(model_params, training_params, algorithm_params, optimization_params)
         
         if self.use_core:
-            self.setup_core_network(model_params, training_params, optimization_params)
+            self.setup_core_network(model_params, training_params, algorithm_params, optimization_params)
 
-    def setup_encoder(self, model_params, training_params, optimization_params):
+    def setup_encoder(self, model_params, training_params, algorithm_params, optimization_params):
 
         model_networks, network_params = configure_encoder_model(self.data_config, model_params.encoder_model, model_params.encoder_config)
         
         self.encoder_ccnet = CooperativeEncodingNetwork(model_networks, network_params, self.device)
-        self.encoder_trainer = CausalEncodingTrainer(self.encoder_ccnet, training_params, optimization_params)
+        self.encoder_trainer = CausalEncodingTrainer(self.encoder_ccnet, training_params, algorithm_params, optimization_params)
 
-    def setup_core_network(self, model_params, training_params, optimization_params):    
+    def setup_core_network(self, model_params, training_params, algorithm_params, optimization_params):    
         self.label_size = self.data_config.label_size
         self.task_type = self.data_config.task_type
         
         model_networks, network_params = configure_core_model(self.data_config, model_params.core_model, model_params.core_config)
             
         self.core_ccnet = CooperativeNetwork(model_networks, network_params, self.task_type, self.device, encoder=self.encoder_ccnet)
-        self.core_trainer = CausalTrainer(self.core_ccnet, training_params, optimization_params)
+        self.core_trainer = CausalTrainer(self.core_ccnet, training_params, algorithm_params, optimization_params)
 
     def train_iteration(self, iters, source_batch, target_batch):
         set_random_seed(iters)
@@ -142,7 +142,7 @@ class TrainerHub:
         if dataset is None:
             return None              
         if batch_size is None:
-            batch_size = self.eval_batch_size
+            batch_size = self.test_batch_size
         dataloader = get_test_loader(dataset, min(len(dataset), batch_size))
         return self._test(dataloader)
         

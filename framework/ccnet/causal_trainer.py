@@ -14,8 +14,8 @@ from framework.ccnet.cooperative_network import CooperativeNetwork
 from framework.train.trainer_base import TrainerBase
 
 class CausalTrainer(TrainerBase):
-    def __init__(self, ccnet: CooperativeNetwork, training_params, optimization_params):
-        TrainerBase.__init__(self, ccnet.networks, training_params, optimization_params)
+    def __init__(self, ccnet: CooperativeNetwork, training_params, algorithm_params, optimization_params):
+        TrainerBase.__init__(self, ccnet.networks, training_params, algorithm_params, optimization_params)
         self.explainer, self.reasoner, self.producer = self.networks  
         self.network_names = ccnet.network_names
         self.use_gpt = ccnet.use_gpt
@@ -23,9 +23,12 @@ class CausalTrainer(TrainerBase):
     def train_models(self, state, label, padding_mask=None):
         # Set the models to training mode and perform the forward pass.
         self.set_train(train=True)
+        
+        input_state = self.prepare_input_state(state)
+        
         ################################  Forward Pass  ################################################
-        explain = self.explainer(state, padding_mask)
-        inferred_label = self.reasoner(state, explain, padding_mask)
+        explain = self.explainer(input_state, padding_mask)
+        inferred_label = self.reasoner(input_state, explain, padding_mask)
         
         # reset random seed for internal noise factor
         self.reset_seed()
