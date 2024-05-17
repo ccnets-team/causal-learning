@@ -37,7 +37,7 @@ def calculate_test_results(inferred_y, target_y, task_type = None, num_classes=N
             inferred_y = torch.argmax(inferred_y, dim=-1)
             target_y = torch.argmax(target_y, dim=-1)  # Assuming one-hot encoding of target
         elif task_type == "ordinal_regression":
-            inferred_y = torch.round(inferred_y).int()
+            inferred_y = torch.round(inferred_y).int().clamp(0, num_classes - 1)
             target_y = torch.round(target_y).int()
 
         inferred_y = inferred_y.flatten()
