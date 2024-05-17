@@ -52,7 +52,10 @@ def calculate_test_results(inferred_y, target_y, task_type = None , num_classes=
         accuracy = accuracy_score(target_y.numpy().reshape(-1), inferred_y.numpy().reshape(-1), normalize=True)
         metrics['accuracy'] = accuracy
 
-    elif task_type == 'regression':
+    elif task_type in ["regression", "ordinal_regression"]:
+        if task_type == "ordinal_regression":
+            inferred_y = torch.round(inferred_y)
+            
         mse = torch.mean((target_y - inferred_y) ** 2)
         mae = torch.mean(torch.abs(target_y - inferred_y))
         ss_total = torch.sum((target_y - torch.mean(target_y)) ** 2)

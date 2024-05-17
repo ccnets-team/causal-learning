@@ -52,7 +52,7 @@ def determine_activation_by_task_type(task_type):
         return 'sigmoid'
     elif task_type == "multi_label_classification":
         return 'sigmoid'  # Multiple independent binary classifications
-    elif task_type == "regression":
+    elif task_type in ["binary_classification", "multi_label_classification"]:
         return 'linear'  # Typically no activation function (i.e., linear) is used for regression outputs
     else:
         raise ValueError(f"Invalid task type: {task_type}")
@@ -78,7 +78,7 @@ def generate_condition_data(label_shape, task_type, device, enable_discrete_cond
     elif task_type in ["binary_classification", "multi_label_classification"]:
         # Generate binary labels and convert to float
         condition_data = (torch.sigmoid(logits) > 0.5)
-    elif task_type == "regression":
+    elif task_type in ["regression", "ordinal_regression"]:
         # Directly use continuous values for regression
         condition_data = logits
     else:
@@ -107,7 +107,7 @@ def generate_condition_data(label_shape, task_type, device):
         condition_data = torch.softmax(logits, dim=-1)
     elif task_type in ["binary_classification", "multi_label_classification"]:
         condition_data = torch.rand(label_shape).to(device)
-    elif task_type == "regression":
+    elif task_type in ["regression", "ordinal_regression"]:
         # For regression tasks, always use continuous values
         condition_data = torch.randn(label_shape).to(device)
     else:
