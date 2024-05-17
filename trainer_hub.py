@@ -160,7 +160,7 @@ class TrainerHub:
             inferred_batch = self.core_ccnet.infer(source_batch, padding_mask, use_encoder = False)
 
             if self.use_gpt and padding_mask is not None:
-                inferred_batch, target_batch = select_elements_for_testing(inferred_batch, target_batch, padding_mask, task_type=self.task_type, num_classes=self.label_size)
+                inferred_batch, target_batch = select_elements_for_testing(inferred_batch, target_batch, padding_mask)
                 
             all_inferred_batches.append(inferred_batch)
             all_target_batches.append(target_batch)
