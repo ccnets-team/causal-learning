@@ -53,6 +53,10 @@ class TrainingParameters:
     batch_size: int = 64
 
 @dataclass
+class AlgorithmParameters:
+    enable_diffusion : bool = False
+
+@dataclass
 class ModelParameters:
     """
     Comprehensive parameters defining core and encoding model configurations.
@@ -103,33 +107,36 @@ class OptimizationParameters:
 class MLParameters:
     def __init__(self, 
                  training: TrainingParameters = None,
+                 algorithm: AlgorithmParameters = None,
                  model: ModelParameters = None,
                  optimization: OptimizationParameters = None,
                  **kwargs):
         # Use kwargs to set up initial parameters, categorizing them for each parameter class
         training_kwargs = {k: v for k, v in kwargs.items() if k in TrainingParameters.__annotations__}
+        algorithm_kwargs = {k: v for k, v in kwargs.items() if k in AlgorithmParameters.__annotations__}
         model_kwargs = {k: v for k, v in kwargs.items() if k in ModelParameters.__annotations__}
         optimization_kwargs = {k: v for k, v in kwargs.items() if k in OptimizationParameters.__annotations__}
 
         # Initialize ML parameters with filtered kwargs
         self.training = TrainingParameters(**training_kwargs) if training is None else training
+        self.algorithm = AlgorithmParameters(**algorithm_kwargs) if algorithm is None else algorithm
         self.model = ModelParameters(**model_kwargs) if model is None else model
         self.optimization = OptimizationParameters(**optimization_kwargs) if optimization is None else optimization
 
     def __getattr__(self, name):
         # Check if the attribute is part of any of the parameter classes
-        for param in [self.training, self.model, self.optimization]:
+        for param in [self.training, self.algorithm, self.model, self.optimization]:
             if hasattr(param, name):
                 return getattr(param, name)
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
     def __setattr__(self, name, value):
         # Set attribute if it's one of MLParameters' direct attributes
-        if name in ["training", "model", "optimization", "selected_indices"]:
+        if name in ["training", "algorithm", "model", "optimization"]:
             super().__setattr__(name, value)
         else:
             # Set attribute in one of the parameter classes
-            for param in [self.training, self.model, self.optimization]:
+            for param in [self.training, self.algorithm, self.model, self.optimization]:
                 if hasattr(param, name):
                     setattr(param, name, value)
                     return
@@ -137,4 +144,4 @@ class MLParameters:
             super().__setattr__(name, value)
 
     def __iter__(self):
-        yield from [self.training, self.model, self.optimization]
+        yield from [self.training, self.algorithm, self.model, self.optimization]

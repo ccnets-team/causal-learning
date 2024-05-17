@@ -12,7 +12,7 @@ import torch
 
 # Base class for trainers
 class TrainerBase(OptimizationManager):
-    def __init__(self, networks, training_params, optimization_params):
+    def __init__(self, networks, training_params, algorithm_params, optimization_params):
         self.train_iter = 0
         max_iters = training_params.max_iters
         learning_params = [
@@ -25,6 +25,21 @@ class TrainerBase(OptimizationManager):
         ]
         OptimizationManager.__init__(self, networks, learning_params, max_iters)
         self.networks = networks
+        self.initial_lr = optimization_params.learning_rate
+        
+        self.enable_diffusion = algorithm_params.enable_diffusion
+        self.initial_diffusion_strength = 0.1 if self.enable_diffusion else None
+
+    def prepare_input_state(self, state):
+        if self.enable_diffusion:
+            # Calculate the current decay factor
+            decay_rate = self.get_lr()/self.initial_lr
+            diffusion_strength = max(self.initial_diffusion_strength * decay_rate, 0)  # Ensure it doesn't go negative
+            noise = torch.randn_like(state) * diffusion_strength
+            input_state = state + noise
+        else:
+            input_state = state
+        return input_state
 
     def set_train(self, train: bool):
         for network in self.networks:
