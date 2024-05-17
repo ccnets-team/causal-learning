@@ -134,6 +134,7 @@ models
 *.pth
 demo/
 images/*
+examples/*
 
 images
 data

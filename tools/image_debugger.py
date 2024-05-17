@@ -5,6 +5,7 @@ import io
 import base64
 from IPython.display import display, clear_output, Image, HTML
 from PIL import Image as PILImage, ImageDraw, ImageFont
+import os
 
 class ImageDebugger:
     def __init__(self, image_ccnet, data_config, device, use_core=False):
@@ -19,6 +20,17 @@ class ImageDebugger:
 
         # Set maximum display width
         self.max_display_size = 800
+        self.use_save_image = False
+        self.debug_iter = 0
+        if self.use_save_image:
+            image_save_path = self.dataset_name
+            if not os.path.exists(image_save_path):
+                os.makedirs(image_save_path)  # Create the directory if it does not exist
+            self.image_save_path = image_save_path
+            self.save_image_interval = 10
+        else:
+            self.save_image_interval = None
+            self.image_save_path = None
 
     def _load_images_and_labels(self, dataset, indices):
         images = []
@@ -95,8 +107,8 @@ class ImageDebugger:
         draw = ImageDraw.Draw(img)
 
         if self.use_core:
+            font = ImageFont.load_default()  # Load default font
             if self.dataset_name == 'celebA':
-                font = ImageFont.load_default()  # Load default font
 
                 # Define labels and their positions
                 labels = ["Female, No-smile", "Male, No-smile", "Female, Smile", "Male, Smile"]
@@ -118,7 +130,6 @@ class ImageDebugger:
                     draw.text(position, label, font=font, fill=(0, 0, 0))  # Black color for text
                     
             elif self.dataset_name == 'celebA_ukiyoe':
-                font = ImageFont.load_default()  # Load default font
 
                 # Define labels and their positions
                 labels = ["Male photo", "Female photo", "Old painting", "Old painting"]
@@ -128,8 +139,7 @@ class ImageDebugger:
                 for label, position in zip(labels, positions):
                     draw.text(position, label, font=font, fill=(0, 0, 0))  # Black color for text      
             elif self.dataset_name == 'celebA_animal':
-                font = ImageFont.load_default()  # Load default font
-
+                font = ImageFont.truetype("arial.ttf", 16)  # Adjust the font and size as needed
                 # Define labels and their positions
                 labels = ["Man", "Woman", "Dog", "Cat"]
                 positions = [(self.n_img_w//4, self.n_img_h//2 + self.n_img_h* (i + 1)) for i in range(len(labels))]  # Adjust positions as needed
@@ -138,7 +148,6 @@ class ImageDebugger:
                 for label, position in zip(labels, positions):
                     draw.text(position, label, font=font, fill=(0, 0, 0))  # Black color for text                          
         else:
-            font = ImageFont.load_default()  # Load default font
             # Assume 'labels' list contains only one label for simplicity here
             labels = ["Explain from the right \n Feature from below"]
             # Calculate positions based on the image dimensions
@@ -153,5 +162,11 @@ class ImageDebugger:
             data_uri = base64.b64encode(output.getvalue()).decode('utf-8')
             img_tag = f'<img src="data:image/png;base64,{data_uri}" style="width: {self.max_display_size}px; height: {self.max_display_size}px;" />'  # Adjust width as necessary
             display(HTML(img_tag))
-            
+
+        if self.use_save_image and self.debug_iter % self.save_image_interval == 0:
+            filename = os.path.join(self.image_save_path, f'image_{self.debug_iter}.png')  # Construct the full file path
+            img.save(filename, format='PNG')  # Save as PNG
+
+        self.debug_iter += 1
+
         return img
