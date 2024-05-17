@@ -48,11 +48,9 @@ def determine_activation_by_task_type(task_type):
     """
     if task_type == "multi_class_classification":
         return 'softmax'
-    elif task_type == "binary_classification":
-        return 'sigmoid'
-    elif task_type == "multi_label_classification":
-        return 'sigmoid'  # Multiple independent binary classifications
     elif task_type in ["binary_classification", "multi_label_classification"]:
+        return 'sigmoid'  # Multiple independent binary classifications
+    elif task_type in ["regression", "ordinal_regression"]:
         return 'linear'  # Typically no activation function (i.e., linear) is used for regression outputs
     else:
         raise ValueError(f"Invalid task type: {task_type}")
