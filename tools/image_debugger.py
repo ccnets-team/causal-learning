@@ -27,7 +27,7 @@ class ImageDebugger:
             if not os.path.exists(image_save_path):
                 os.makedirs(image_save_path)  # Create the directory if it does not exist
             self.image_save_path = image_save_path
-            self.save_image_interval = 10
+            self.save_image_interval = 1
         else:
             self.save_image_interval = None
             self.image_save_path = None
