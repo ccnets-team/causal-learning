@@ -70,12 +70,16 @@ def select_elements_for_testing(src, dst, padding_mask):
     
     # Calculate the cumulative sum along the sequence dimension (reverse order)
     last_indices = padding_mask.size(1) - 1 - padding_mask.flip(dims=[1]).argmax(dim=1)
+    not_fully_padded = padding_mask.any(dim=1)
 
     # Gather the last elements using the indices
     batch_size = src.size(0)
     
     selected_src = src[torch.arange(batch_size, device=src.device), last_indices, :].unsqueeze(1)
     selected_dst = dst[torch.arange(batch_size, device=src.device), last_indices, :].unsqueeze(1)
+    
+    selected_src = selected_src[not_fully_padded]
+    selected_dst = selected_dst[not_fully_padded]
     return selected_src, selected_dst
 
 def get_random_batch(dataset, batch_size):
