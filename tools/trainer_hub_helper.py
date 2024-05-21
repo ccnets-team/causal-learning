@@ -53,14 +53,16 @@ class TrainerHubHelper:
         self.core_metrics = MetricsTracker()
         self.encoder_metrics = MetricsTracker() 
         
-        if self.use_image:
+        self.use_image_debugger = data_config.show_image_indices is not None
+        
+        if self.use_image_debugger:
             image_ccnet = self.core_ccnet if self.use_core else self.encoder_ccnet 
             self.image_debugger = ImageDebugger(image_ccnet, self.data_config, self.device, use_core = self.use_core)
         
     def initialize_train(self, dataset):
         # self.sum_losses, self.sum_errors = None, None
         self.iters, self.cnt_checkpoints, self.cnt_print = 0, 0, 0
-        if self.use_image:
+        if self.use_image_debugger:
             self.image_debugger.initialize_(dataset)
 
     def should_save_model(self):
@@ -159,7 +161,7 @@ class TrainerHubHelper:
         self.cnt_checkpoints += 1
 
     def update_image(self):
-        if self.use_image:
+        if self.use_image_debugger:
             # Update and display images when image data is enabled
             self.image_debugger.update_images()
             image_display = self.image_debugger.display_image()

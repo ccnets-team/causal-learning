@@ -51,7 +51,7 @@ class DataConfig:
         self.label_size = label_size
         self.explain_size = explain_size
         self.state_size = state_size
-        self.show_image_indices = show_image_indices or []
+        self.show_image_indices = show_image_indices
 
     def __repr__(self):
         return (f"DataConfig(dataset_name={self.dataset_name}, task_type={self.task_type}, "
