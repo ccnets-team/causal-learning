@@ -24,7 +24,7 @@ class TrainerHubHelper:
         self.device = device
         
         self.use_print = use_print
-        self.tensorboard = SummaryWriter(log_dir=get_log_name('./logs'))
+        self.tensorboard = SummaryWriter(log_dir=get_log_name('../logs'))
         self.data_config = data_config
         if use_wandb:
             wandb_init(data_config, ml_params)
@@ -75,7 +75,7 @@ class TrainerHubHelper:
         if self.pivot_time is None:
             self.pivot_time = time.time()
 
-    def setup_directories(self, base_path = './'):
+    def setup_directories(self, base_path = '../'):
         set_model_path = os.path.join(base_path, "models")
         set_temp_path = os.path.join(base_path, "models/temp")
         set_log_path = os.path.join(base_path, "logs")
