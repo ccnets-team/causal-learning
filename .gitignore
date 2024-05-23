@@ -146,3 +146,7 @@ wandb
 *.jpeg
 *.gif
 *.bmp
+
+# Ignore pickle and parquet files
+*.pkl
+*.parquet
