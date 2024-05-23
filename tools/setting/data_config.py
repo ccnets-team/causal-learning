@@ -24,6 +24,9 @@ class DataConfig:
                             multi-dimensional regression outcomes.
             - 'ordinal_regression': Typically 1, used for tasks where the target is ordinal,
                                     classified into ordered categories.
+            - 'compositional_regression': Corresponds to the number of components in the composition
+                                          (using techniques ensuring the outputs sum to 1, 
+                                          such as softmax or log-ratio transformations).
         show_image_indices (list, optional): A list of indices specifying which images to display
                                              for visual inspection or debugging purposes. Defaults to None.
     
@@ -39,8 +42,8 @@ class DataConfig:
     """
     def __init__(self, dataset_name: str, task_type: str, obs_shape: list, label_size: int = None,
                  explain_size: int = None, state_size: int = None, show_image_indices: list = None):
-        valid_task_types = ['binary_classification', 'multi_class_classification',
-                            'multi_label_classification', 'regression', 'ordinal_regression',
+        valid_task_types = ['binary_classification', 'multi_class_classification','multi_label_classification', 
+                            'regression', 'ordinal_regression', 'compositional_regression',
                             'encoding', 'augmentation', 'generation', 'reconstruction']
         if task_type not in valid_task_types:
             raise ValueError(f"Invalid task type '{task_type}'. Valid options are {valid_task_types}")
