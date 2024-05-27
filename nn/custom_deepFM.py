@@ -34,10 +34,6 @@ class ContinuousDeepFM(nn.Module):
         self.num_features = d_model
         self.embed_dim = int(math.sqrt(d_model)) 
 
-        # Initialize 2D parameters for continuous features
-        self.first_order_weights = nn.Parameter(torch.randn(d_model, d_model))
-        self.bias = nn.Parameter(torch.zeros((d_model,)))
-
         # Second-order weights
         self.second_order_weights = nn.Parameter(torch.randn(d_model, d_model))  # Adjusted
 
@@ -53,9 +49,6 @@ class ContinuousDeepFM(nn.Module):
         self.mlp = nn.Sequential(*layers)
 
     def forward(self, x):
-        # First-order term computations
-        first_order = torch.matmul(x, self.first_order_weights) + self.bias
-
         # Second-order term computations
         interactions = x.unsqueeze(-1) * x.unsqueeze(-2)  # Creating pairwise feature interactions
         interactions = torch.matmul(interactions, self.second_order_weights)
@@ -68,5 +61,5 @@ class ContinuousDeepFM(nn.Module):
         deep_component = self.mlp(feature_interactions)
 
         # Output layer: Combine all three components
-        result = first_order + second_order + deep_component
+        result = second_order + deep_component
         return result
