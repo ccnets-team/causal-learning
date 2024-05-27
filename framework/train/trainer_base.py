@@ -32,7 +32,7 @@ class TrainerBase(OptimizationManager):
         self.task_type = task_type
         self.noise_diffuser = NoiseDiffuser(device = device) if self.enable_diffusion else None
 
-    def prepare_data(self, x, y):
+    def prepare_data(self, x, y = None):
         if self.enable_diffusion:
             input_data, target_data, input_y = self.noise_diffuser.diffuse(x, y, self.task_type)
         else:

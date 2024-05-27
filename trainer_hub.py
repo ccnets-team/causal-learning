@@ -56,10 +56,10 @@ class TrainerHub:
         
         self.core_ccnet = None
         self.core_trainer = None        
+        self.task_type = self.data_config.task_type
         
         self.setup_models(ml_params)
         
-        self.task_type = self.data_config.task_type
         self.helper = TrainerHubHelper(self, data_config, ml_params, device, use_print, use_wandb, print_interval)
 
     def __exit__(self):

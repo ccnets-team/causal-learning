@@ -44,7 +44,7 @@ class CausalEncodingTrainer(TrainerBase):
         """
         self.set_train(train=True)
         
-        input_observation, target_observation = self.prepare_data(observation)
+        input_observation, target_observation, _ = self.prepare_data(observation)
 
         ################################  Forward Pass  ########################################
         # Generate explanations and features.
