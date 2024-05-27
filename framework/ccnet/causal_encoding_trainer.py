@@ -66,9 +66,9 @@ class CausalEncodingTrainer(TrainerBase):
 
         ################################  Path Costs  ###########################################
         cost_ds = self.cost_fn(cs_generated_observation, ss_generated_observation)
-        cost_sc = self.cost_fn(sc_generated_observation, observation)
+        cost_sc = self.cost_fn(sc_generated_observation, target_observation)
         cost_sd = self.cost_fn(sc_generated_observation, ss_generated_observation)
-        cost_cs = self.cost_fn(cs_generated_observation, observation)
+        cost_cs = self.cost_fn(cs_generated_observation, target_observation)
 
         ################################  Causal Losses  ########################################
         recognition_loss = self.loss_fn(cost_ds, cost_sc, padding_mask)
