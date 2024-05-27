@@ -5,18 +5,19 @@
 '''
 
 import torch.nn as nn
-from nn.utils.init import init_weights, create_layer
-from nn.utils.init import ContinuousFeatureJointLayer
+from nn.utils.init import init_weights
+from nn.utils.layers import create_layer
+from nn.utils.joint_layer import JointLayer
+from tools.setting.ml_config import modify_network_params
 
 class Explainer(nn.Module):
     """
-    The Explainer module is designed to process inputs and make explanations based on the input data,
+    The Explainer module processes inputs and makes explanations based on the input data,
     whether it's tabular or image data. It adjusts its behavior based on the input type.
 
     Attributes:
         use_image (bool): Determines if the input data is image data based on the shape of the input.
         input_embedding_layer (nn.Module): Transforms continuous input features into an embedded space.
-        relu (nn.Module): A ReLU activation layer to introduce non-linearity.
         final_layer (nn.Module): Final transformation layer to produce the desired output size.
         net (nn.Module): The main neural network module that processes the embedded or raw input.
     """
@@ -28,32 +29,23 @@ class Explainer(nn.Module):
         Parameters:
             net (callable): A callable that returns an nn.Module when passed network_params.
             network_params (object): Parameters specific to the neural network being used.
-            input_shape (tuple): The shape of the input data.
-            output_size (int): The size of the output tensor after final transformation.
             act_fn (str): The activation function name to use in the final layer (default 'none').
         """
         super(Explainer, self).__init__()
         
-        input_shape, d_model, output_size = network_params.obs_shape, network_params.d_model, network_params.z_dim
-        
-        # Check if the input is image data based on the dimensionality
-        self.use_image = len(input_shape) != 1
-        
-        # For non-image, tabular data:
-        if not self.use_image:
-            input_size = input_shape[-1]  # Size of the last dimension of the input
-            # Embedding layer for continuous features
-            self.input_embedding_layer = ContinuousFeatureJointLayer(d_model, input_size)
+        explainer_params = modify_network_params(network_params, None)
+        input_shape, d_model, output_size = (explainer_params.obs_shape, 
+                                             explainer_params.d_model, 
+                                             explainer_params.z_dim)
 
-        # Initialize the main network module
-        self.net = net(network_params)
-                    
-        # Activation layer
-        self.relu = nn.ReLU(inplace=True)
-        # Final layer to adjust to the required output size, with specified activation function
-        self.final_layer = create_layer(d_model, output_size, act_fn=act_fn) 
-        
-        # Apply initial weights
+        self.use_image = len(input_shape) != 1
+
+        if not self.use_image:
+            self.input_embedding_layer = JointLayer(d_model, input_shape)
+
+        self.net = net(explainer_params)
+        self.final_layer = create_layer(d_model, output_size, first_act_fn='relu', last_act_fn=act_fn)
+                
         self.apply(init_weights)
 
     def forward(self, x, padding_mask=None):
@@ -67,12 +59,12 @@ class Explainer(nn.Module):
         Returns:
             Tensor: The output tensor after processing through the network.
         """
+        
         if self.use_image:
             e = self.net(x)
         else:
             x = self.input_embedding_layer(x)
-            e = self.net(x) if padding_mask is None else self.net(x, padding_mask = padding_mask)
+            e = self.net(x) if padding_mask is None else self.net(x, padding_mask=padding_mask)
 
-        e = self.relu(e)
         e = self.final_layer(e)
         return e

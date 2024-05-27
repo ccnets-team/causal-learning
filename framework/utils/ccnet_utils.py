@@ -114,3 +114,6 @@ def generate_condition_data(label_shape, task_type, device):
 
     # Ensure the condition data is in float dtype unless explicitly discrete
     return condition_data.float()
+
+def extend_obs_shape_channel(obs_shape):
+    return [obs_shape[0] + 1] + list(obs_shape[1:])

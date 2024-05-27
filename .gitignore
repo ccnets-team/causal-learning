@@ -150,3 +150,6 @@ wandb
 # Ignore pickle and parquet files
 *.pkl
 *.parquet
+
+# Ignore any file ending with test.py
+*test.py
