@@ -27,7 +27,7 @@ class CausalEncodingTrainer(TrainerBase):
         - training_params: Dictionary containing parameters specific to training (e.g., batch size, epochs).
         - optimization_params: Dictionary containing parameters specific to optimization (e.g., learning rate).
         """        
-        TrainerBase.__init__(self, encoder.networks, training_params, algorithm_params, optimization_params)
+        TrainerBase.__init__(self, encoder.networks, training_params, algorithm_params, optimization_params, encoder.device)
         self.explainer, self.reasoner, self.producer = self.networks        
         self.network_names = encoder.network_names
         self.layer_norm = torch.nn.LayerNorm(encoder.stoch_size, elementwise_affine=False).to(encoder.device)

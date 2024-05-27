@@ -16,7 +16,7 @@ from framework.train.trainer_base import TrainerBase
 
 class CausalTrainer(TrainerBase):
     def __init__(self, ccnet: CooperativeNetwork, training_params, algorithm_params, optimization_params):
-        TrainerBase.__init__(self, ccnet.networks, training_params, algorithm_params, optimization_params)
+        TrainerBase.__init__(self, ccnet.networks, training_params, algorithm_params, optimization_params, ccnet.device)
         self.explainer, self.reasoner, self.producer = self.networks  
         self.network_names = ccnet.network_names
         self.use_gpt = ccnet.use_gpt

@@ -13,7 +13,7 @@ import torch
 
 # Base class for trainers
 class TrainerBase(OptimizationManager):
-    def __init__(self, networks, training_params, algorithm_params, optimization_params):
+    def __init__(self, networks, training_params, algorithm_params, optimization_params, device):
         self.train_iter = 0
         self.max_iters = training_params.max_iters
         learning_params = [
@@ -28,16 +28,18 @@ class TrainerBase(OptimizationManager):
         self.networks = networks
         self.initial_lr = optimization_params.learning_rate
         self.enable_diffusion = algorithm_params.enable_diffusion
-        self.diffusion_trainer = NoiseDiffuser() if self.enable_diffusion else None
+        self.device = device
+        self.noise_diffuser = NoiseDiffuser(device = device) if self.enable_diffusion else None
 
-    def prepare_data(self, state):
+    def prepare_data(self, data):
         if self.enable_diffusion:
-            t = torch.randint(0, self.diffusion_trainer.T - 1, (1,)).item()  # Randomly sample timestep
-            input_state, target_state = self.diffusion_trainer.diffuse(state, t)
+            batch_size = data.size(0)
+            t = torch.randint(0, self.noise_diffuser.T, (batch_size,), device=self.device)  # Randomly sample timestep for each example in the batch
+            input_data, target_data = self.noise_diffuser.diffuse(data, t)
         else:
-            input_state = state
-            target_state = state
-        return input_state, target_state
+            input_data = data
+            target_data = data
+        return input_data, target_data
 
     def set_train(self, train: bool):
         for network in self.networks:
