@@ -3,8 +3,9 @@ import torch
 import torchvision.utils as vutils
 import io
 import base64
-from IPython.display import display, clear_output, Image, HTML
+from IPython.display import display, clear_output, HTML
 from PIL import Image as PILImage, ImageDraw, ImageFont
+from tools.utils.image_utils import text_on_image, load_images_and_labels, prepare_canvas, place_image_on_canvas
 import os
 
 class ImageDebugger:
@@ -32,37 +33,12 @@ class ImageDebugger:
             self.save_image_interval = None
             self.image_save_path = None
 
-    def _load_images_and_labels(self, dataset, indices):
-        images = []
-        labels = [] if self.use_core else None
-        
-        for idx in indices:
-            img = dataset[idx][0].unsqueeze(0)
-            images.append(img)
-            
-            if self.use_core:
-                lbl = dataset[idx][1].unsqueeze(0).type(torch.float)
-                labels.append(lbl)
-        
-        if self.use_core:
-            return torch.cat(images).to(self.device), torch.cat(labels).to(self.device)
-        else:
-            return torch.cat(images).to(self.device), None
-
     def initialize_(self, dataset):
-        self.debug_images, self.debug_labels = self._load_images_and_labels(dataset, self.show_image_indices)
-        self.m_canvas = np.ones((self.n_img_h * (self.num_images + 1), self.n_img_w * (self.num_images + 1), 3), dtype=np.uint8) * 255
+        self.debug_images, self.debug_labels = load_images_and_labels(dataset, self.show_image_indices, self.device, self.use_core)
+        self.m_canvas = prepare_canvas(self.n_img_h, self.n_img_w, self.num_images)
 
         for i, image in enumerate(self.debug_images):
-            img = image.unsqueeze(0).cpu()
-            img = vutils.make_grid(img, padding=0, normalize=True)
-            img = np.transpose(img.numpy(), (1, 2, 0))
-            if self.n_img_ch == 1:
-                img = np.stack([img[:, :, 0]] * 3, axis=-1)  # Convert grayscale to RGB by repeating the channel
-            image_values = (img * 255).astype(np.uint8)
-            self.m_canvas[:self.n_img_h, self.n_img_w * (i + 1):self.n_img_w * (i + 2)] = image_values
-            if not self.use_core:
-                self.m_canvas[self.n_img_h * (i + 1):self.n_img_h * (i + 2), :self.n_img_w] = image_values
+            self.m_canvas = place_image_on_canvas(image, self.m_canvas, self.n_img_h, self.n_img_w, i, self.n_img_ch, self.use_core)
 
     def update_images(self):
         with torch.no_grad():
@@ -85,16 +61,16 @@ class ImageDebugger:
                     generated_images = self.image_ccnet.decode(generated_code).cpu()
                 if self.n_img_ch == 1:
                     generated_images = generated_images.repeat_interleave(3, dim=1)
-                img_array = vutils.make_grid(generated_images, nrow = self.num_images, padding=0, normalize=True).numpy()
+                img_array = vutils.make_grid(generated_images, nrow=self.num_images, padding=0, normalize=True).numpy()
                 img_array = np.transpose(img_array, (1, 2, 0))
                 # Correcting indices for placing images
                 target_row_start = self.n_img_h * (i + 1)
                 target_row_end = self.n_img_h * (i + 2)
-                target_col_start = self.n_img_w * (1)
+                target_col_start = self.n_img_w * 1
                 target_col_end = self.n_img_w * (self.num_images + 1)
 
                 # Insert into canvas
-                self.m_canvas[target_row_start:target_row_end, target_col_start:target_col_end] =  (img_array * 255).astype(np.uint8)
+                self.m_canvas[target_row_start:target_row_end, target_col_start:target_col_end] = (img_array * 255).astype(np.uint8)
 
     def display_image(self):
         """Display the image using IPython's display module with HTML for better control over image size and appearance."""
@@ -107,54 +83,8 @@ class ImageDebugger:
         draw = ImageDraw.Draw(img)
         font = ImageFont.load_default()  # Load default font
 
-        if self.use_core:
-            if self.dataset_name == 'celebA':
-
-                # Define labels and their positions
-                labels = ["Female, No-smile", "Male, No-smile", "Female, Smile", "Male, Smile"]
-                positions = [(self.n_img_w//4, self.n_img_h//2 + self.n_img_h* (i + 1)) for i in range(len(labels))]  # Adjust positions as needed
-
-                # Draw text on the image
-                for label, position in zip(labels, positions):
-                    draw.text(position, label, font=font, fill=(0, 0, 0))  # Black color for text
-            elif self.dataset_name == 'mnist':
-                # Load a specific font with a defined size
-                font = ImageFont.truetype("arial.ttf", 12)  # Adjust the font and size as needed
-
-                # Define labels and their positions
-                labels = ["style", "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
-                positions = [(self.n_img_w//8, self.n_img_h//4 + self.n_img_h* i) for i in range(len(labels))]  # Adjust positions as needed
-
-                # Draw text on the image
-                for label, position in zip(labels, positions):
-                    draw.text(position, label, font=font, fill=(0, 0, 0))  # Black color for text
-                    
-            elif self.dataset_name == 'celebA_ukiyoe':
-
-                # Define labels and their positions
-                labels = ["Male photo", "Female photo", "Old painting", "Old painting"]
-                positions = [(self.n_img_w//4, self.n_img_h//2 + self.n_img_h* (i + 1)) for i in range(len(labels))]  # Adjust positions as needed
-
-                # Draw text on the image
-                for label, position in zip(labels, positions):
-                    draw.text(position, label, font=font, fill=(0, 0, 0))  # Black color for text      
-            elif self.dataset_name == 'celebA_animal':
-                font = ImageFont.truetype("arial.ttf", 16)  # Adjust the font and size as needed
-                # Define labels and their positions
-                labels = ["Man", "Woman", "Dog", "Cat"]
-                positions = [(self.n_img_w//4, self.n_img_h//2 + self.n_img_h* (i + 1)) for i in range(len(labels))]  # Adjust positions as needed
-
-                # Draw text on the image
-                for label, position in zip(labels, positions):
-                    draw.text(position, label, font=font, fill=(0, 0, 0))  # Black color for text                          
-        else:
-            # Assume 'labels' list contains only one label for simplicity here
-            labels = ["Explain from the right \n Feature from below"]
-            # Calculate positions based on the image dimensions
-            positions = [(self.n_img_w // 8, self.n_img_h // 2 + self.n_img_h * i) for i in range(len(labels))]
-            # Draw the text on the image
-            for label, position in zip(labels, positions):
-                draw.text(position, label, font=font, fill="black")
+        # Add text to the image
+        text_on_image(draw, font, self.n_img_w, self.n_img_h, self.dataset_name, self.use_core)
 
         # Save the image to a byte buffer to then display it using HTML
         with io.BytesIO() as output:
