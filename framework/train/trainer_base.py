@@ -8,6 +8,7 @@ COPYRIGHT (c) 2022. CCNets. All Rights reserved.
 
 from nn.utils.init import set_random_seed
 from framework.train.manager.optimization_manager import OptimizationManager
+from framework.utils.diffusion_utils import NoiseDiffuser
 import torch
 
 # Base class for trainers
@@ -26,19 +27,17 @@ class TrainerBase(OptimizationManager):
         OptimizationManager.__init__(self, networks, learning_params, self.max_iters)
         self.networks = networks
         self.initial_lr = optimization_params.learning_rate
-        
         self.enable_diffusion = algorithm_params.enable_diffusion
-        self.init_diffusion_rate = 1.0
-    def prepare_input_state(self, state):
+        self.diffusion_trainer = NoiseDiffuser() if self.enable_diffusion else None
+
+    def prepare_data(self, state):
         if self.enable_diffusion:
-            # Calculate the current decay factor
-            decay_rate = self.init_diffusion_rate*(1 - min(1, self.train_iter/self.max_iters))
-            diffusion_strength = max(decay_rate, 0)  # Ensure it doesn't go negative
-            noise = torch.randn_like(state) * diffusion_strength
-            input_state = state + noise
+            t = torch.randint(0, self.diffusion_trainer.T - 1, (1,)).item()  # Randomly sample timestep
+            input_state, target_state = self.diffusion_trainer.diffuse(state, t)
         else:
             input_state = state
-        return input_state
+            target_state = state
+        return input_state, target_state
 
     def set_train(self, train: bool):
         for network in self.networks:

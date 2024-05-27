@@ -9,6 +9,7 @@
 
     COPYRIGHT (c) 2022. CCNets. All Rights reserved.
 '''
+
 from tools.metric_tracker import create_causal_training_metrics
 from framework.ccnet.cooperative_network import CooperativeNetwork
 from framework.train.trainer_base import TrainerBase
@@ -24,7 +25,7 @@ class CausalTrainer(TrainerBase):
         # Set the models to training mode and perform the forward pass.
         self.set_train(train=True)
         
-        input_state = self.prepare_input_state(state)
+        input_state, target_state = self.prepare_data(state)
         
         ################################  Forward Pass  ################################################
         explain = self.explainer(input_state, padding_mask)
@@ -41,8 +42,8 @@ class CausalTrainer(TrainerBase):
         ################################  Prediction Losses  ###########################################
         # Calculate prediction losses for inference, generation, and reconstruction.
         inference_loss = self.loss_fn(reconstructed_state, generated_state, padding_mask)
-        generation_loss = self.loss_fn(generated_state, state, padding_mask)
-        reconstruction_loss = self.loss_fn(reconstructed_state, state, padding_mask)
+        generation_loss = self.loss_fn(generated_state, target_state, padding_mask)
+        reconstruction_loss = self.loss_fn(reconstructed_state, target_state, padding_mask)
 
         ################################  Model Losses  ################################################
         # Calculate model errors based on the losses.
