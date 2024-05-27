@@ -8,12 +8,12 @@ COPYRIGHT (c) 2022. CCNets. All Rights reserved.
 
 from nn.utils.init import set_random_seed
 from framework.train.manager.optimization_manager import OptimizationManager
-from framework.utils.diffusion_utils import NoiseDiffuser
+from framework.diffusion.noise_diffuser import NoiseDiffuser
 import torch
 
 # Base class for trainers
 class TrainerBase(OptimizationManager):
-    def __init__(self, networks, training_params, algorithm_params, optimization_params, device):
+    def __init__(self, networks, training_params, algorithm_params, optimization_params, task_type, device):
         self.train_iter = 0
         self.max_iters = training_params.max_iters
         learning_params = [
@@ -29,17 +29,15 @@ class TrainerBase(OptimizationManager):
         self.initial_lr = optimization_params.learning_rate
         self.enable_diffusion = algorithm_params.enable_diffusion
         self.device = device
+        self.task_type = task_type
         self.noise_diffuser = NoiseDiffuser(device = device) if self.enable_diffusion else None
 
-    def prepare_data(self, data):
+    def prepare_data(self, x, y):
         if self.enable_diffusion:
-            batch_size = data.size(0)
-            t = torch.randint(0, self.noise_diffuser.T, (batch_size,), device=self.device)  # Randomly sample timestep for each example in the batch
-            input_data, target_data = self.noise_diffuser.diffuse(data, t)
+            input_data, target_data, input_y = self.noise_diffuser.diffuse(x, y, self.task_type)
         else:
-            input_data = data
-            target_data = data
-        return input_data, target_data
+            input_data = x; target_data = x; input_y = y
+        return input_data, target_data, input_y
 
     def set_train(self, train: bool):
         for network in self.networks:
