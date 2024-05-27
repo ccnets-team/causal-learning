@@ -43,13 +43,13 @@ class NoiseDiffuser:
         beta_t = self.betas[t].view(batch_size, *([1] * num_dims)).to(device)
 
         noise_t = torch.normal(0, 1, state.shape, device=device)
-        input_state = torch.sqrt(alpha_t) * state + torch.sqrt(beta_t) * noise_t
+        target_state = torch.sqrt(alpha_t) * state + torch.sqrt(beta_t) * noise_t
         
         # Prepare the next timestep
         next_t = torch.clamp(t + 1, max=self.T - 1)
         alpha_t_plus_1 = self.alpha_cumprod[next_t].view(batch_size, *([1] * num_dims)).to(device)
         beta_t_plus_1 = self.betas[next_t].view(batch_size, *([1] * num_dims)).to(device)
         noise_t_plus_1 = torch.normal(0, 1, state.shape, device=device)
-        target_state = torch.sqrt(alpha_t_plus_1) * state + torch.sqrt(beta_t_plus_1) * noise_t_plus_1
+        input_state = torch.sqrt(alpha_t_plus_1) * state + torch.sqrt(beta_t_plus_1) * noise_t_plus_1
 
         return input_state, target_state
