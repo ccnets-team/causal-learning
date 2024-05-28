@@ -1,27 +1,27 @@
-from tools.setting.ml_params import RESNET_COOPERATIVE_NETWORK, RESNET18_COOPERATIVE_NETWORK, RESNET34_COOPERATIVE_NETWORK, RESNET50_COOPERATIVE_NETWORK
-from tools.setting.ml_params import STYLEGAN_COOPERATIVE_NETWORK, GPT_COOPERATIVE_NETWORK, DEEPFM_COOPERATIVE_NETWORK, MLP_COOPERATIVE_NETWORK, TABNET_COOPERATIVE_NETWORK
+from tools.setting.ml_params import GPT_COOPERATIVE_NETWORK
+from tools.setting.ml_params import MLP_COOPERATIVE_NETWORK, TABNET_COOPERATIVE_NETWORK
+from tools.setting.ml_params import RESNET18_COOPERATIVE_NETWORK, RESNET34_COOPERATIVE_NETWORK, RESNET50_COOPERATIVE_NETWORK
+from tools.setting.ml_params import STYLEGAN_COOPERATIVE_NETWORK
 from copy import deepcopy
 
 def configure_model(model_name, params, obs_shape, condition_dim, z_dim):
     cooperative_network = None
-    if model_name == 'stylegan':
-        cooperative_network = STYLEGAN_COOPERATIVE_NETWORK
+    if  model_name == 'gpt':
+        cooperative_network = GPT_COOPERATIVE_NETWORK
+    elif model_name == 'mlp':
+        cooperative_network = MLP_COOPERATIVE_NETWORK
+    elif model_name == 'tabnet':
+        cooperative_network = TABNET_COOPERATIVE_NETWORK
     elif model_name == 'resnet':
-        cooperative_network = RESNET_COOPERATIVE_NETWORK
+        cooperative_network = RESNET18_COOPERATIVE_NETWORK
     elif model_name == 'resnet18':
         cooperative_network = RESNET18_COOPERATIVE_NETWORK
     elif model_name == 'resnet34':
         cooperative_network = RESNET34_COOPERATIVE_NETWORK
     elif model_name == 'resnet50':
         cooperative_network = RESNET50_COOPERATIVE_NETWORK
-    elif model_name == 'gpt':
-        cooperative_network = GPT_COOPERATIVE_NETWORK
-    elif model_name == 'deepfm':
-        cooperative_network = DEEPFM_COOPERATIVE_NETWORK
-    elif model_name == 'mlp':
-        cooperative_network = MLP_COOPERATIVE_NETWORK
-    elif model_name == 'tabnet':
-        cooperative_network = TABNET_COOPERATIVE_NETWORK
+    elif model_name == 'stylegan':
+        cooperative_network = STYLEGAN_COOPERATIVE_NETWORK
     else:
         raise ValueError(f"Model name '{model_name}' is not supported.")
         
