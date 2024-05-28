@@ -16,10 +16,10 @@ def print_iter(epoch, num_epoch, iters, len_dataloader, et):
     print('[%d/%d][%d/%d][Time %.2f]'
         % (epoch, num_epoch, iters, len_dataloader, et))
 
-def print_trainer(trainer_name, metrics):
+def print_trainer(trainer_type, trainer_name, metrics):
     losses = metrics.losses
     errors = metrics.errors
-    print("Trainer: ", trainer_name)
+    print(trainer_type + ": ", "Three " + trainer_name)
     print('Inf: %.4f\tGen: %.4f\tRec: %.4f\tE: %.4f\tR: %.4f\tP: %.4f'
         % (losses['inference_loss'], losses['generation_loss'], losses['reconstruction_loss'], errors['explainer_error'], errors['reasoner_error'], errors['producer_error']))
 

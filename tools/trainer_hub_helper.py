@@ -206,11 +206,13 @@ class TrainerHubHelper:
             print_lr(self.encoder_trainer.optimizers)
         print('--------------------Training Metrics--------------------')
         if self.use_encoder and avg_encoder_metric is not None:
-            encoder_ccnet_name = "encoder " + "three " + self.parent.encoder_ccnet.model_name + "s" 
-            print_trainer(encoder_ccnet_name, avg_encoder_metric)
+            encoder_ccnet_type = "Cooperative Network(encoder)" 
+            encoder_model_name = self.parent.encoder_ccnet.model_name.capitalize()
+            print_trainer(encoder_ccnet_type, encoder_model_name, avg_encoder_metric)
         if self.use_core and avg_core_metric is not None:
-            core_ccnet_name = "core " + "three " + self.parent.core_ccnet.model_name + "s" 
-            print_trainer(core_ccnet_name, avg_core_metric)
+            core_ccnet_type = "Cooperative Network(core)" 
+            core_model_name = self.parent.core_ccnet.model_name.capitalize()
+            print_trainer(core_ccnet_type, core_model_name, avg_core_metric)
 
     def reset_metrics(self):
         """resets metrics trackers."""
