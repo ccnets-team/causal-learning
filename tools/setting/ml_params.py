@@ -3,6 +3,7 @@ from nn.custom_style_gan import Discriminator, Generator
 from nn.custom_resnet import ResNet_basic, transpose_ResNet_basic
 from nn.custom_deepFM import ContinuousDeepFM
 from nn.mlp import MLP
+from nn.tabnet import TabNet
 from nn.custom_super_net import SuperNet
 from dataclasses import dataclass, field
 
@@ -11,6 +12,7 @@ RESNET_COOPERATIVE_NETWORK = [ResNet_basic, ResNet_basic, transpose_ResNet_basic
 STYLEGAN_COOPERATIVE_NETWORK = [Discriminator, Discriminator, Generator]
 DEEPFM_COOPERATIVE_NETWORK = [ContinuousDeepFM, ContinuousDeepFM, SuperNet]
 MLP_COOPERATIVE_NETWORK = [MLP, MLP, MLP]
+TABNET_COOPERATIVE_NETWORK = [TabNet, TabNet, TabNet]
 
 @dataclass
 class ModelConfig:
