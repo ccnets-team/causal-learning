@@ -2,7 +2,7 @@ from nn.gpt import GPT
 from nn.custom_style_gan import Discriminator, Generator
 from nn.custom_resnet import ResNet_basic, transpose_ResNet_basic
 from nn.resnet import ResNet18, ResNet34, ResNet50
-from nn.transpose_resnet import TransposeResNet18, TransposeResNet34, TransposeResNet50
+from nn.transpose_resnet import TransposeResnet
 from nn.custom_deepFM import ContinuousDeepFM
 from nn.mlp import MLP
 from nn.tabnet import TabNet
@@ -12,9 +12,9 @@ from dataclasses import dataclass, field
 GPT_COOPERATIVE_NETWORK = [GPT, GPT, GPT]
 RESNET_COOPERATIVE_NETWORK = [ResNet_basic, ResNet_basic, transpose_ResNet_basic]
 
-RESNET18_COOPERATIVE_NETWORK = [ResNet18, ResNet18, TransposeResNet18]
-RESNET34_COOPERATIVE_NETWORK = [ResNet34, ResNet34, TransposeResNet34]
-RESNET50_COOPERATIVE_NETWORK = [ResNet50, ResNet50, TransposeResNet50]
+RESNET18_COOPERATIVE_NETWORK = [ResNet18, ResNet18, TransposeResnet]
+RESNET34_COOPERATIVE_NETWORK = [ResNet34, ResNet34, TransposeResnet]
+RESNET50_COOPERATIVE_NETWORK = [ResNet50, ResNet50, TransposeResnet]
 
 STYLEGAN_COOPERATIVE_NETWORK = [Discriminator, Discriminator, Generator]
 DEEPFM_COOPERATIVE_NETWORK = [ContinuousDeepFM, ContinuousDeepFM, SuperNet]

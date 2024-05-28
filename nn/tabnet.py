@@ -1,15 +1,16 @@
-# Check and import pytorch_tabnet if installed, else show an error message
-try:
-    from pytorch_tabnet.tab_network import TabNetEncoder as TabNetwork
-except ImportError:
-    print("Error: pytorch-tabnet library is not installed. Please install it using 'pip install pytorch-tabnet'.")
-    raise
 
 import torch
 import torch.nn as nn
 
 class TabNet(nn.Module):
     def __init__(self, network_params):
+        # Check and import pytorch_tabnet if installed, else show an error message
+        try:
+            from pytorch_tabnet.tab_network import TabNetEncoder as TabNetwork
+        except ImportError:
+            print("Error: pytorch-tabnet library is not installed. Please install it using 'pip install pytorch-tabnet'.")
+            raise
+        
         super(TabNet, self).__init__()
         d_model = network_params.d_model
         num_layers = network_params.num_layers
