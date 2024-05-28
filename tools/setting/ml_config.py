@@ -24,9 +24,11 @@ def configure_model(model_name, params, obs_shape, condition_dim, z_dim):
 
 def configure_encoder_model(data_config, model_name, model_params):
     obs_shape = data_config.obs_shape
-    stoch_size, det_size = max(model_params.d_model//2, 1), max(model_params.d_model//2, 1)
     if data_config.state_size is None:
+        stoch_size, det_size = max(model_params.d_model//2, 1), max(model_params.d_model//2, 1)
         data_config.state_size = stoch_size + det_size
+    else:
+        stoch_size, det_size = data_config.state_size//2, data_config.state_size - data_config.state_size//2
     return configure_model(model_name, model_params, obs_shape, condition_dim=stoch_size, z_dim=det_size)
     
 def configure_core_model(data_config, model_name, model_params):
