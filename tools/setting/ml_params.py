@@ -1,16 +1,16 @@
 from nn.gpt import GPT
 from nn.custom_style_gan import Discriminator, Generator
 from nn.custom_resnet import ResNet_basic, transpose_ResNet_basic
-from nn.custom_resnet import ResNet_bottle_neck, transpose_ResNet_bottle_neck
 from nn.custom_deepFM import ContinuousDeepFM
+from nn.mlp import MLP
 from nn.custom_super_net import SuperNet
 from dataclasses import dataclass, field
 
 GPT_COOPERATIVE_NETWORK = [GPT, GPT, GPT]
 RESNET_COOPERATIVE_NETWORK = [ResNet_basic, ResNet_basic, transpose_ResNet_basic]
-RESNET_BOTTLE_NECK_COOPERATIVE_NETWORK = [ResNet_bottle_neck, ResNet_bottle_neck, transpose_ResNet_bottle_neck]
 STYLEGAN_COOPERATIVE_NETWORK = [Discriminator, Discriminator, Generator]
 DEEPFM_COOPERATIVE_NETWORK = [ContinuousDeepFM, ContinuousDeepFM, SuperNet]
+MLP_COOPERATIVE_NETWORK = [MLP, MLP, MLP]
 
 @dataclass
 class ModelConfig:

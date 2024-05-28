@@ -181,9 +181,3 @@ def ResNet_basic(network_params):
 
 def transpose_ResNet_basic(network_params):
     return ResNet(network_params, BasicBlock, transpose = True)
-
-def ResNet_bottle_neck(network_params):
-    return ResNet(network_params, Bottleneck, transpose = False)
-
-def transpose_ResNet_bottle_neck(network_params):
-    return ResNet(network_params, Bottleneck, transpose = True)
