@@ -20,10 +20,13 @@ def set_random_seed(seed_val):
 def init_weights(module):
     """
     Applies Xavier uniform initialization to certain layers in a module and its submodules,
-    excluding ContinuousFeatureEmbeddingLayer where parameters are directly set.
+    excluding modules where parameters are directly set if the variable name includes "pretrained".
     Args:
         module (nn.Module): The module to initialize.
     """
+    if 'pretrained' in module._get_name().lower():
+        return
+
     if isinstance(module, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
         nn.init.xavier_uniform_(module.weight)
         if module.bias is not None:
