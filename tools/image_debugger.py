@@ -46,9 +46,7 @@ class ImageDebugger:
                 explains = self.image_ccnet.explain(self.debug_images)
                 inferred_labels = self.image_ccnet.reason(self.debug_images, explains)
             else:
-                image_code = self.image_ccnet.encode(self.debug_images)
-                recognized_features = image_code[:, :self.image_ccnet.stoch_size].clone().detach()
-                explains = image_code[:, self.image_ccnet.stoch_size:].clone().detach()
+                recognized_features, explains = self.image_ccnet.decompose(self.debug_images)
 
             # Assuming `self.n_img_h` and `self.n_img_w` are the correct dimensions for each image
             for i in range(self.num_images):

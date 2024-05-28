@@ -69,7 +69,26 @@ class CooperativeEncodingNetwork:
             reconstructed_data = self.producer(stochastic_variables, deterministic_variables, padding_mask)
             self.__set_train(True)
         return reconstructed_data
-    
+
+    def decompose(self, input_data: torch.Tensor, padding_mask = None) -> torch.Tensor:
+        """
+        Decomposes the input data into deterministic and stochastic variables using the explainer and reasoner models.
+
+        Parameters:
+        - input_data: A tensor representing the input data.
+        - padding_mask: An optional mask tensor for padding variable lengths (default: None).
+
+        Returns:
+        - stochastic_variables: A tensor representing the stochastic variables.
+        - deterministic_variables: A tensor representing the deterministic variables.
+        """
+        with torch.no_grad():
+            self.__set_train(False)
+            deterministic_variables = self.explainer(input_data, padding_mask)
+            stochastic_variables = self.reasoner(input_data, deterministic_variables, padding_mask)
+            self.__set_train(True)
+        return stochastic_variables, deterministic_variables
+        
     def synthesize(self, input_data: torch.Tensor, padding_mask=None, output_multiplier: int = None) -> torch.Tensor:
         """
         Synthesizes new data by cross-matching stochastic and deterministic variables from the encoded data,
