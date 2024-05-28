@@ -73,7 +73,7 @@ class CausalEncodingTrainer(TrainerBase):
         ################################  Causal Losses  ########################################
         recognition_loss = self.loss_fn(cost_ds, cost_sc, padding_mask)
         generation_loss = self.loss_fn(cost_sd, cost_cs, padding_mask)
-        reconstruction_loss = self.loss_fn(cc_generated_observation, observation, padding_mask)
+        reconstruction_loss = self.loss_fn(cc_generated_observation, target_observation, padding_mask)
 
         ################################  Model Errors  #########################################
         explainer_error = self.error_fn(recognition_loss + generation_loss, reconstruction_loss, padding_mask)
