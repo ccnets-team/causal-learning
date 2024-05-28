@@ -44,6 +44,8 @@ class CooperativeEncodingNetwork:
         Returns:
         - encoded_data: A concatenated tensor of encoded deterministic and stochastic variables.
         """
+        input_data = input_data.to(self.device)
+        
         with torch.no_grad():
             self.__set_train(False)
             deterministic_variables = self.explainer(input_data, padding_mask)
