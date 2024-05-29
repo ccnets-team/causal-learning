@@ -17,7 +17,7 @@ from tools.setting.ml_params import MLParameters
 from tools.setting.data_config import DataConfig
 from torch.utils.data import Dataset
 
-from tools.loader import get_data_loader, get_test_loader
+from tools.loader import get_data_loader, get_test_loader, load_trainer
 from nn.utils.init import set_random_seed
 from tools.wandb_logger import wandb_end
 from tools.report import calculate_test_results
@@ -26,7 +26,7 @@ from tools.tensor_utils import convert_to_device, get_random_batch
 from framework.ccnet.cooperative_network import CooperativeNetwork
 from framework.ccnet.cooperative_encoding_network import CooperativeEncodingNetwork
 from tools.setting.ml_config import configure_core_model, configure_encoder_model
-from tools.tensor_utils import generate_padding_mask, select_elements_for_testing
+from tools.tensor_utils import generate_padding_mask, select_elements_for_testing, convert_to_one_hot
 import torch
 
 DEFAULT_PRINT_INTERVAL = 50
@@ -57,6 +57,7 @@ class TrainerHub:
         self.core_ccnet = None
         self.core_trainer = None        
         self.task_type = self.data_config.task_type
+        self.label_size = self.data_config.label_size
         
         self.setup_models(ml_params)
         
@@ -65,7 +66,13 @@ class TrainerHub:
     def __exit__(self):
         if self.use_wandb:
             wandb_end()
-
+    
+    def load_trainer(self, core_model = True):
+        if core_model:
+            load_trainer(self.helper.model_path, self.core_trainer)
+        else:
+            load_trainer(self.helper.model_path, self.encoder_trainer)
+            
     def setup_models(self, ml_params):
         training_params, algorithm_params, model_params, optimization_params = ml_params
         if self.use_encoder:
@@ -82,7 +89,6 @@ class TrainerHub:
         self.encoder_trainer = CausalEncodingTrainer(self.encoder_ccnet, training_params, algorithm_params, optimization_params, self.task_type)
 
     def setup_core_network(self, model_params, training_params, algorithm_params, optimization_params):    
-        self.label_size = self.data_config.label_size
         
         model_networks, network_params = configure_core_model(self.data_config, model_params.core_model, model_params.core_config)
             
@@ -95,6 +101,7 @@ class TrainerHub:
         
         # Prepare batches by moving them to the appropriate device.
         source_batch, target_batch = convert_to_device(source_batch, target_batch, device=self.device)
+        target_batch = convert_to_one_hot(target_batch, label_size=self.label_size, task_type=self.task_type)
         
         source_batch, target_batch, padding_mask = generate_padding_mask(source_batch, target_batch)
         
@@ -152,6 +159,7 @@ class TrainerHub:
 
         for source_batch, target_batch in dataloader:
             source_batch, target_batch = convert_to_device(source_batch, target_batch, self.device)
+            target_batch = convert_to_one_hot(target_batch, label_size=self.label_size, task_type=self.task_type)
             
             source_batch, target_batch = self.helper.encode_inputs(source_batch, target_batch)
             

@@ -31,9 +31,7 @@ def calculate_test_results(inferred_y, target_y, task_type = None, num_classes=N
     target_y = target_y.cpu()
 
     if task_type in ['binary_classification', 'multi_class_classification', 'ordinal_regression']:
-        if task_type == 'binary_classification':
-            inferred_y = (inferred_y > 0.5).float()
-        elif task_type == 'multi_class_classification':
+        if task_type == 'binary_classification' or task_type == 'multi_class_classification':
             inferred_y = torch.argmax(inferred_y, dim=-1)
             target_y = torch.argmax(target_y, dim=-1)  # Assuming one-hot encoding of target
         elif task_type == "ordinal_regression":

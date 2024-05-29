@@ -93,7 +93,11 @@ class CausalTrainer(TrainerBase):
                 return discrepancy.view(discrepancy.size(0), -1).mean(dim=1, keepdim=True)
         
     def error_fn(self, predict, target, padding_mask=None):
-        discrepancy = (predict - target.detach()).abs()
+
+        if self.error_function == 'mse':
+            discrepancy = (predict - target.detach()).square()
+        else:
+            discrepancy = (predict - target.detach()).abs()
         
         # Compute the mean error, considering only the non-padded data
         if padding_mask is not None:

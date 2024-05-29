@@ -46,9 +46,9 @@ def determine_activation_by_task_type(task_type):
     Raises:
     - ValueError: If an unsupported task type is provided.
     """
-    if task_type in ["multi_class_classification", "compositional_regression"]:
+    if task_type in ["binary_classification", "multi_class_classification", "compositional_regression"]: # binary classification is one-hot encoded
         return 'softmax'
-    elif task_type in ["binary_classification", "multi_label_classification"]:
+    elif task_type in ["multi_label_classification"]:
         return 'sigmoid'  # Multiple independent binary classifications
     elif task_type in ["regression", "ordinal_regression"]:
         return 'linear'  # Typically no activation function (i.e., linear) is used for regression outputs
@@ -69,11 +69,11 @@ def generate_condition_data(label_shape, task_type, device, enable_discrete_cond
     - Tensor: A tensor of condition data appropriate for the specified task type, all in float dtype.
     """
     logits = torch.randn(label_shape).to(device)
-    if task_type in ["multi_class_classification", "compositional_regression"]:
+    if task_type in ["binary_classification", "multi_class_classification", "compositional_regression"]: # binary classification is one-hot encoded
         # Generate indices and convert to one-hot encoding to maintain dimensionality
         class_indices = torch.argmax(logits, dim=-1)
         condition_data = F.one_hot(class_indices, num_classes=logits.shape[-1])
-    elif task_type in ["binary_classification", "multi_label_classification"]:
+    elif task_type in ["multi_label_classification"]:
         # Generate binary labels and convert to float
         condition_data = (torch.sigmoid(logits) > 0.5)
     elif task_type in ["regression", "ordinal_regression"]:
@@ -99,12 +99,15 @@ def generate_condition_data(label_shape, task_type, device):
     Returns:
     - Tensor: A tensor of condition data appropriate for the specified task type, all in float dtype.
     """
-    if task_type in ["multi_class_classification", "compositional_regression"]:
+    if task_type in ["binary_classification", "multi_class_classification", "compositional_regression"]: # binary classification is one-hot encoded
         logits = torch.randn(label_shape).to(device)
         # Use softmax to simulate probabilities across classes
         condition_data = torch.softmax(logits, dim=-1)
-    elif task_type in ["binary_classification", "multi_label_classification"]:
+        # Pick one in the form of one-hot encoding
+        condition_data = torch.zeros_like(condition_data).scatter_(-1, torch.argmax(condition_data, dim=-1, keepdim=True), 1)
+    elif task_type in ["multi_label_classification"]:
         condition_data = torch.rand(label_shape).to(device)
+        condition_data = (condition_data > 0.5).float()
     elif task_type in ["regression", "ordinal_regression"]:
         # For regression tasks, always use continuous values
         condition_data = torch.randn(label_shape).to(device)

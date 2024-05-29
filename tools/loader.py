@@ -7,19 +7,16 @@ def save_model(model_path, model_name, model, opt_models, scheduler_models):
     torch.save(opt_models.state_dict(),os.path.join(model_path, 'opt_' + model_name + '.pth'))
     torch.save(scheduler_models.state_dict(),os.path.join(model_path, 'sch_' + model_name + '.pth'))
 
-def load_model(model_path, model_name, model, opt_models, scheduler_models):
-    for idx, it in enumerate(model):
-        if it is not None:
-            it.load_state_dict(torch.load(model_path + model_name[idx] + '.pth', map_location="cuda:0"))
+def load_model(model_path, model_name, model, opt_model, scheduler_model):
+    if model is not None:
+        model.load_state_dict(torch.load(model_path + model_name + '.pth', map_location="cuda:0"))
     
-    for idx, opt in enumerate(opt_models):
-        if opt is not None:
-            opt.load_state_dict(torch.load(model_path + 'opt_'+ model_name[idx] + '.pth', map_location="cuda:0"))
-            opt.param_groups[0]['capturable'] = True
+    if opt_model is not None:
+        opt_model.load_state_dict(torch.load(model_path +  'opt_'+ model_name + '.pth', map_location="cuda:0"))
+        opt_model.param_groups[0]['capturable'] = True
 
-    for idx, sch in enumerate(scheduler_models):
-        if sch is not None:
-            sch.load_state_dict(torch.load(model_path + 'sch_'+ model_name[idx] + '.pth', map_location="cuda:0"))
+    if scheduler_model is not None:
+        scheduler_model.load_state_dict(torch.load(model_path + 'sch_'+ model_name + '.pth', map_location="cuda:0"))
 
 def save_dataset(trainset, testset, path):
     if not os.path.isdir(path):
@@ -69,4 +66,18 @@ def save_trainer(model_path, trainer):
     # Iterate over each model component set and save
     for model_name, network, optimizer, scheduler in zip(network_names, networks, optimizers, schedulers):
         save_model(model_path, model_name, network, optimizer, scheduler)
+
+def load_trainer(model_path, trainer):
+    # Lists of components to be loadd for GPT
+    network_names = trainer.network_names
+    networks = trainer.networks
+    optimizers = trainer.optimizers
+    schedulers = trainer.schedulers
+    
+    # Ensure all lists are synchronized in length
+    assert len(network_names) == len(networks) == len(optimizers) == len(schedulers), "model component lists must be of the same length"
+    
+    # Iterate over each model component set and load
+    for model_name, network, optimizer, scheduler in zip(network_names, networks, optimizers, schedulers):
+        load_model(model_path + '/', model_name, network, optimizer, scheduler)
     

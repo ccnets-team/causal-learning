@@ -60,6 +60,7 @@ class TrainingParameters:
 @dataclass
 class AlgorithmParameters:
     enable_diffusion : bool = False
+    error_function : str = 'mse'
 
 @dataclass
 class ModelParameters:
