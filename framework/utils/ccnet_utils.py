@@ -103,8 +103,11 @@ def generate_condition_data(label_shape, task_type, device):
         logits = torch.randn(label_shape).to(device)
         # Use softmax to simulate probabilities across classes
         condition_data = torch.softmax(logits, dim=-1)
+        # Pick one in the form of one-hot encoding
+        condition_data = torch.zeros_like(condition_data).scatter_(-1, torch.argmax(condition_data, dim=-1, keepdim=True), 1)
     elif task_type in ["multi_label_classification"]:
         condition_data = torch.rand(label_shape).to(device)
+        condition_data = (condition_data > 0.5).float()
     elif task_type in ["regression", "ordinal_regression"]:
         # For regression tasks, always use continuous values
         condition_data = torch.randn(label_shape).to(device)
