@@ -17,7 +17,7 @@ from tools.setting.ml_params import MLParameters
 from tools.setting.data_config import DataConfig
 from torch.utils.data import Dataset
 
-from tools.loader import get_data_loader, get_test_loader
+from tools.loader import get_data_loader, get_test_loader, load_trainer
 from nn.utils.init import set_random_seed
 from tools.wandb_logger import wandb_end
 from tools.report import calculate_test_results
@@ -65,7 +65,13 @@ class TrainerHub:
     def __exit__(self):
         if self.use_wandb:
             wandb_end()
-
+    
+    def load_trainer(self, core_model = True):
+        if core_model:
+            load_trainer(self.helper.model_path, self.core_trainer)
+        else:
+            load_trainer(self.helper.model_path, self.encoder_trainer)
+            
     def setup_models(self, ml_params):
         training_params, algorithm_params, model_params, optimization_params = ml_params
         if self.use_encoder:

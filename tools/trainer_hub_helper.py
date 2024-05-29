@@ -84,7 +84,7 @@ class TrainerHubHelper:
             os.makedirs(path, exist_ok=True)
 
         return set_model_path, set_temp_path, set_log_path
-            
+        
     def determine_save_path(self):
         """Determine the file path for saving models based on the current count."""
         return self.model_path if self.cnt_print % 2 == 0 else self.temp_path
