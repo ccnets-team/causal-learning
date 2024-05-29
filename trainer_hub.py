@@ -57,6 +57,7 @@ class TrainerHub:
         self.core_ccnet = None
         self.core_trainer = None        
         self.task_type = self.data_config.task_type
+        self.label_size = self.data_config.label_size
         
         self.setup_models(ml_params)
         
@@ -89,7 +90,6 @@ class TrainerHub:
 
     def setup_core_network(self, model_params, training_params, algorithm_params, optimization_params):    
         
-        self.label_size = self.data_config.label_size
         model_networks, network_params = configure_core_model(self.data_config, model_params.core_model, model_params.core_config)
             
         self.core_ccnet = CooperativeNetwork(model_networks, network_params, self.task_type, self.device, encoder=self.encoder_ccnet)
