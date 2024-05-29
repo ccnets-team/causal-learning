@@ -44,7 +44,9 @@ def configure_core_model(data_config, model_name, model_params):
     obs_shape = data_config.obs_shape if data_config.state_size is None else [data_config.state_size]
     if data_config.task_type == 'ordinal_regression':
         label_size = 1
-    else:        
+    elif data_config.task_type == 'binary_classification':        
+        label_size = 2
+    else:
         label_size = data_config.label_size
     explain_size = max(model_params.d_model//2, 1) if data_config.explain_size is None else data_config.explain_size
     return configure_model(model_name, model_params, obs_shape, condition_dim=label_size, z_dim=explain_size)

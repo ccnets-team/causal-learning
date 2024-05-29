@@ -107,3 +107,12 @@ def encode_inputs(encoder, observation, labels):
     with torch.no_grad():
         encoded_obseartion = observation if encoder is None else encoder.encode(observation)
     return encoded_obseartion, labels
+
+def convert_to_one_hot(target_batch, label_size, task_type):
+    if task_type == 'binary_classification':
+        if target_batch.shape[-1] != 2:
+            target_batch = torch.nn.functional.one_hot(target_batch.long(), num_classes=2).float().squeeze(-2)
+    elif task_type == 'multi_class_classification':
+        if target_batch.shape[-1] != label_size:
+            target_batch = torch.nn.functional.one_hot(target_batch.long(), num_classes=label_size).float().squeeze(-2)
+    return target_batch
