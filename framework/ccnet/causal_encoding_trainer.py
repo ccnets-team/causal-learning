@@ -139,7 +139,10 @@ class CausalEncodingTrainer(TrainerBase):
         Returns:
         - cooperative_error: Absolute error calculated as the absolute difference between prediction and target.
         """        
-        cooperative_error = (predict - target.detach()).abs()
+        if self.error_function == 'mse':
+            cooperative_error = (predict - target.detach()).square()
+        else:
+            cooperative_error = (predict - target.detach()).abs()
         return cooperative_error
 
     def update_step(self):

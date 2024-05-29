@@ -28,6 +28,8 @@ class TrainerBase(OptimizationManager):
         self.networks = networks
         self.initial_lr = optimization_params.learning_rate
         self.enable_diffusion = algorithm_params.enable_diffusion
+        self.error_function = algorithm_params.error_function
+        
         self.device = device
         self.task_type = task_type
         self.noise_diffuser = NoiseDiffuser(device = device) if self.enable_diffusion else None
