@@ -11,6 +11,7 @@ Author:
 
 import os
 from datetime import datetime
+from typing import Optional, Dict
 from tools.report import *
 
 METRICS_CATEGORY_MAP = {
@@ -49,21 +50,52 @@ def log_data(logger, step, scalar_logs=None, metrics=None):
                     log_name = f"{mapped_category_name}/{new_metric_name}"
                     logger.add_scalar(log_name, metric_value, step)
 
-def log_train_data(tensorboard, iters, metrics = None):
-    if metrics is None:
-        return
-    
-    losses, errors = metrics.losses, metrics.errors
-    
-    if losses is not None:
-        tensorboard.add_scalar("Train/inference_loss", losses["inference_loss"], iters)
-        tensorboard.add_scalar("Train/generation_loss", losses["generation_loss"], iters)
-        tensorboard.add_scalar("Train/reconstruction_loss", losses["reconstruction_loss"], iters)
-    if errors is not None:
-        tensorboard.add_scalar("Train/explainer_error", errors["explainer_error"], iters)
-        tensorboard.add_scalar("Train/reasoner_error", errors["reasoner_error"], iters)
-        tensorboard.add_scalar("Train/producer_error", errors["producer_error"], iters)
-    tensorboard.flush()
+
+def prepare_metrics_data(metric_data: Optional[Dict]):
+    """
+    Prepare structured metrics data for logging.
+
+    Args:
+    metric_data : Metrics data from the training process.
+
+    Returns:
+    Structured metrics dictionary with separate keys for losses and errors.
+    """
+    if metric_data is not None:
+        losses = dict(metric_data.losses.data)
+        errors = dict(metric_data.errors.data)
+
+        return {
+            'losses': losses,
+            'errors': errors,
+        }
+    return {}
+
+def tensorboard_log_train_metrics(tensorboard, iteration: int, core_metric: Optional[Dict], encoder_metric: Optional[Dict]):
+    """
+    Log training metrics for core and encoder types to TensorBoard.
+
+    Args:
+    tensorboard : The TensorBoard logger.
+    iteration : The current training iteration.
+    core_metric : Core trainer specific metric data.
+    encoder_metric : Encoder trainer specific metric data.
+    """
+    # Prepare metric data
+    core_metrics = prepare_metrics_data(core_metric)
+    encoder_metrics = prepare_metrics_data(encoder_metric)
+
+    # Logging helper function
+    def log_metrics(metrics, trainer_type):
+        for key, values in metrics.items():
+            for metric_name, metric_value in values.items():
+                tensorboard.add_scalar(f"Train/{trainer_type}/{metric_name}", metric_value, iteration)
+
+    # Log metrics for core and encoder
+    log_metrics(core_metrics, 'Core')
+    log_metrics(encoder_metrics, 'Encoder')
+
+    tensorboard.flush()  # Ensure all metrics are written out
 
 def log_test_results(tensorboard, iters, results):
     """

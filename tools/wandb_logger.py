@@ -104,7 +104,7 @@ def _wandb_log_data(metrics, log_data = None, iters = None):
         return
     wandb.log(log_data, step=iters)  # Log all data including the metrics
 
-def wandb_log_train_data(time_cost, lr, core_metric=None, encoder_metric=None, images=None):
+def wandb_log_train_metrics(time_cost, lr, core_metric=None, encoder_metric=None, images=None):
     # Define step_logs as a dictionary with relevant key-value pairs
     
     if core_metric is not None:
@@ -112,8 +112,8 @@ def wandb_log_train_data(time_cost, lr, core_metric=None, encoder_metric=None, i
         gpt_ccnet_errors = dict(core_metric.errors.data)
         
         core_metric = {
-        'GPT/losses': gpt_ccnet_losses,
-        'GPT/errors': gpt_ccnet_errors,
+        'Core/losses': gpt_ccnet_losses,
+        'Core/errors': gpt_ccnet_errors,
         }
     else:
         core_metric = {
