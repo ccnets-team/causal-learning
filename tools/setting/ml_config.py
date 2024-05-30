@@ -40,7 +40,7 @@ def configure_encoder_model(data_config, model_name, model_params):
         stoch_size, det_size = data_config.state_size//2, data_config.state_size - data_config.state_size//2
     return configure_model(model_name, model_params, obs_shape, condition_dim=stoch_size, z_dim=det_size)
     
-def configure_core_model(data_config, model_name, model_params):
+def configure_ccnet_model(data_config, model_name, model_params):
     obs_shape = data_config.obs_shape if data_config.state_size is None else [data_config.state_size]
     if data_config.task_type == 'ordinal_regression':
         label_size = 1
