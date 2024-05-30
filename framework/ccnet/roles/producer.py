@@ -52,7 +52,7 @@ class Producer(nn.Module):
             self.final_layer = create_layer(d_model, output_shape, first_act_fn='relu', last_act_fn=act_fn)
 
         # Apply initial weights
-        self.apply(init_weights, reset_pretrained)
+        self.apply(lambda module: init_weights(module, reset_pretrained))
 
     def forward(self, labels, explains, padding_mask=None):
         """

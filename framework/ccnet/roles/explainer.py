@@ -46,7 +46,7 @@ class Explainer(nn.Module):
         self.net = net(explainer_params)
         self.final_layer = create_layer(d_model, output_size, first_act_fn='relu', last_act_fn=act_fn)
                 
-        self.apply(init_weights, reset_pretrained)
+        self.apply(lambda module: init_weights(module, reset_pretrained))
 
     def forward(self, x, padding_mask=None):
         """
