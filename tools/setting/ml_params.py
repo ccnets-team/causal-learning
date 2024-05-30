@@ -61,7 +61,7 @@ class TrainingParameters:
 class AlgorithmParameters:
     enable_diffusion : bool = False
     reset_pretrained : bool = False
-    error_function : str = 'mae'
+    error_function : str = 'mse'
 
 @dataclass
 class ModelParameters:
