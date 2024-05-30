@@ -71,7 +71,7 @@ def prepare_metrics_data(metric_data: Optional[Dict]):
         }
     return {}
 
-def tensorboard_log_train_metrics(tensorboard, iteration: int, core_metric: Optional[Dict], encoder_metric: Optional[Dict]):
+def tensorboard_log_train_metrics(tensorboard, iteration: int, ccnet_metric: Optional[Dict], encoder_metric: Optional[Dict]):
     """
     Log training metrics for core and encoder types to TensorBoard.
 
@@ -82,7 +82,7 @@ def tensorboard_log_train_metrics(tensorboard, iteration: int, core_metric: Opti
     encoder_metric : Encoder trainer specific metric data.
     """
     # Prepare metric data
-    core_metrics = prepare_metrics_data(core_metric)
+    ccnet_metrics = prepare_metrics_data(ccnet_metric)
     encoder_metrics = prepare_metrics_data(encoder_metric)
 
     # Logging helper function
@@ -92,7 +92,7 @@ def tensorboard_log_train_metrics(tensorboard, iteration: int, core_metric: Opti
                 tensorboard.add_scalar(f"Train/{trainer_type}/{metric_name}", metric_value, iteration)
 
     # Log metrics for core and encoder
-    log_metrics(core_metrics, 'Core')
+    log_metrics(ccnet_metrics, 'CCNet')
     log_metrics(encoder_metrics, 'Encoder')
 
     tensorboard.flush()  # Ensure all metrics are written out

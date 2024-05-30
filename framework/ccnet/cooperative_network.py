@@ -106,7 +106,7 @@ class CooperativeNetwork:
             self.__set_train(True)
         return explanation
 
-    def infer(self, input_data, padding_mask = None, use_encoder = True):
+    def infer(self, input_data, padding_mask = None):
         """
         Infers output from input data using the explainer and reasoner models without updating them.
 
@@ -118,7 +118,7 @@ class CooperativeNetwork:
         """
         with torch.no_grad():
             self.__set_train(False)
-            encoded_input = self.encode(input_data, padding_mask) if use_encoder else input_data
+            encoded_input = self.encode(input_data, padding_mask)
             if self.use_gpt:
                 original_dim = len(encoded_input.shape)
                 encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)

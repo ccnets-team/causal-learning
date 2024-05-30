@@ -9,10 +9,10 @@ from tools.utils.image_utils import text_on_image, load_images_and_labels, prepa
 import os
 
 class ImageDebugger:
-    def __init__(self, image_ccnet, data_config, device, use_core=False):
+    def __init__(self, image_ccnet, data_config, device, use_ccnet=False):
         self.device = device
         self.image_ccnet = image_ccnet
-        self.use_core = use_core
+        self.use_ccnet = use_ccnet
         self.show_image_indices = data_config.show_image_indices
         self.label_size = data_config.label_size
         self.n_img_ch, self.n_img_h, self.n_img_w = data_config.obs_shape
@@ -34,15 +34,15 @@ class ImageDebugger:
             self.image_save_path = None
 
     def initialize_(self, dataset):
-        self.debug_images, self.debug_labels = load_images_and_labels(dataset, self.show_image_indices, self.device, self.use_core)
+        self.debug_images, self.debug_labels = load_images_and_labels(dataset, self.show_image_indices, self.device, self.use_ccnet)
         self.m_canvas = prepare_canvas(self.n_img_h, self.n_img_w, self.num_images)
 
         for i, image in enumerate(self.debug_images):
-            self.m_canvas = place_image_on_canvas(image, self.m_canvas, self.n_img_h, self.n_img_w, i, self.n_img_ch, self.use_core)
+            self.m_canvas = place_image_on_canvas(image, self.m_canvas, self.n_img_h, self.n_img_w, i, self.n_img_ch, self.use_ccnet)
 
     def update_images(self):
         with torch.no_grad():
-            if self.use_core:
+            if self.use_ccnet:
                 explains = self.image_ccnet.explain(self.debug_images)
                 inferred_labels = self.image_ccnet.reason(self.debug_images, explains)
             else:
@@ -50,7 +50,7 @@ class ImageDebugger:
 
             # Assuming `self.n_img_h` and `self.n_img_w` are the correct dimensions for each image
             for i in range(self.num_images):
-                if self.use_core:
+                if self.use_ccnet:
                     selected_features = self.debug_labels[i:i + 1, :].expand_as(inferred_labels)
                     generated_images = self.image_ccnet.produce(selected_features, explains).cpu()
                 else:
@@ -82,7 +82,7 @@ class ImageDebugger:
         font = ImageFont.load_default()  # Load default font
 
         # Add text to the image
-        text_on_image(draw, font, self.n_img_w, self.n_img_h, self.dataset_name, self.use_core)
+        text_on_image(draw, font, self.n_img_w, self.n_img_h, self.dataset_name, self.use_ccnet)
 
         # Save the image to a byte buffer to then display it using HTML
         with io.BytesIO() as output:

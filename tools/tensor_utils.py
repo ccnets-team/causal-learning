@@ -23,6 +23,32 @@ def adjust_tensor_dim(tensor, target_dim = 3):
                 tensor = tensor.squeeze(0)  # Squeeze dimension at index 1 if it's 1
     return tensor
 
+def manage_batch_dimensions(use_gpt, source_batch, target_batch, padding_mask = None):
+    """
+    Prepares batch data by adjusting tensor dimensions for processing.
+
+    Parameters:
+    - source_batch (Tensor): The source batch tensor.
+    - target_batch (Tensor): The target batch tensor.
+    - padding_mask (Tensor, optional): The padding mask tensor.
+
+    Returns:
+    - state_trajectory (Tensor): The prepared source batch tensor.
+    - target_trajectory (Tensor): The prepared target batch tensor.
+    - padding_mask (Tensor, optional): The prepared padding mask tensor.
+    """
+            
+    if use_gpt:
+        # Adjust tensor dimensions for causal processing
+        state_trajectory = adjust_tensor_dim(source_batch, target_dim=3)  # off when it's img data set
+        target_trajectory = adjust_tensor_dim(target_batch, target_dim=3)  # off when it's img data set
+        padding_mask = adjust_tensor_dim(padding_mask, target_dim=3)  # off when it's img data set
+    else:
+        state_trajectory = source_batch
+        target_trajectory = target_batch
+    
+    return state_trajectory, target_trajectory, padding_mask
+
 def generate_padding_mask(source_data, target_data, padding_values = [0, -1]):
     """
     Generate a padding mask for the source data where padding values are masked and apply it.
@@ -53,7 +79,31 @@ def generate_padding_mask(source_data, target_data, padding_values = [0, -1]):
 
     return source_data, target_data, padding_mask
 
-def select_elements_for_testing(src, dst, padding_mask):
+def prepare_batches(source_batch, target_batch, label_size, task_type, device):
+    """
+    Prepares batches by moving them to the appropriate device, converting target batch to one-hot encoding,
+    and generating a padding mask.
+
+    Parameters:
+    - source_batch (Tensor): The source batch tensor.
+    - target_batch (Tensor): The target batch tensor.
+    - label_size (int): The size of the labels for one-hot encoding.
+    - task_type (str): The type of task for one-hot encoding.
+    - device (torch.device): The device to move the batches to.
+
+    Returns:
+    - source_batch (Tensor): The source batch tensor on the appropriate device.
+    - target_batch (Tensor): The one-hot encoded target batch tensor on the appropriate device.
+    - padding_mask (Tensor): The generated padding mask tensor.
+    """
+    # Prepare batches by moving them to the appropriate device.
+    source_batch, target_batch = convert_to_device(source_batch, target_batch, device=device)
+    target_batch = convert_to_one_hot(target_batch, label_size=label_size, task_type=task_type)
+    source_batch, target_batch, padding_mask = generate_padding_mask(source_batch, target_batch)
+
+    return source_batch, target_batch, padding_mask
+
+def select_last_sequence_elements(src, dst, padding_mask):
     """
     Extracts the last elements of src and dst sequences using the padding mask.
 
