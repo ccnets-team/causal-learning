@@ -22,7 +22,7 @@ class Explainer(nn.Module):
         net (nn.Module): The main neural network module that processes the embedded or raw input.
     """
 
-    def __init__(self, net, network_params, act_fn='none'):
+    def __init__(self, net, network_params, reset_pretrained, act_fn='none'):
         """
         Initializes the Explainer module with the specified network architecture and parameters.
 
@@ -46,7 +46,7 @@ class Explainer(nn.Module):
         self.net = net(explainer_params)
         self.final_layer = create_layer(d_model, output_size, first_act_fn='relu', last_act_fn=act_fn)
                 
-        self.apply(init_weights)
+        self.apply(init_weights, reset_pretrained)
 
     def forward(self, x, padding_mask=None):
         """

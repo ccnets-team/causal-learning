@@ -13,7 +13,7 @@ from framework.utils.ccnet_utils import determine_activation_by_task_type, gener
 import torch.nn.functional as F
 
 class CooperativeNetwork:
-    def __init__(self, model_networks, network_params, task_type, device, encoder = None):
+    def __init__(self, model_networks, network_params, algorithm_params, task_type, device, encoder = None):
         """
         Initializes the Cooperative Network with specified model parameters and computational device.
 
@@ -38,9 +38,10 @@ class CooperativeNetwork:
         network_names = ["explainer", "reasoner", "producer"]
         self.model_name = model_name
         self.network_names = [f"{model_name}_{name}" for name in network_names]
-        self.explainer =  Explainer(model_networks[0], network_params, act_fn="layer_norm").to(device)
-        self.reasoner =  Reasoner(model_networks[1], network_params, act_fn=task_act_fn).to(device)
-        self.producer =  Producer(model_networks[2], network_params, act_fn="none").to(device)
+        reset_pretrained = algorithm_params.reset_pretrained
+        self.explainer =  Explainer(model_networks[0], network_params, reset_pretrained, act_fn="layer_norm").to(device)
+        self.reasoner =  Reasoner(model_networks[1], network_params, reset_pretrained, act_fn=task_act_fn).to(device)
+        self.producer =  Producer(model_networks[2], network_params, reset_pretrained, act_fn="none").to(device)
         self.networks = [self.explainer, self.reasoner, self.producer]
         
         self.explain_size = network_params.z_dim

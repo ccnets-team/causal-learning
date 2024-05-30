@@ -22,7 +22,7 @@ class Producer(nn.Module):
         final_layer (nn.Module): The final transformation layer to produce the desired output size.
     """
 
-    def __init__(self, net, network_params, act_fn='none'):
+    def __init__(self, net, network_params, reset_pretrained, act_fn='none'):
         """
         Initializes the Producer module with network architecture and parameters.
 
@@ -52,7 +52,7 @@ class Producer(nn.Module):
             self.final_layer = create_layer(d_model, output_shape, first_act_fn='relu', last_act_fn=act_fn)
 
         # Apply initial weights
-        self.apply(init_weights)
+        self.apply(init_weights, reset_pretrained)
 
     def forward(self, labels, explains, padding_mask=None):
         """

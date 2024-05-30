@@ -28,7 +28,7 @@ class Reasoner(nn.Module):
         final_layer (nn.Module): The final transformation layer to produce the desired output.
     """
 
-    def __init__(self, net, network_params, act_fn='none'):
+    def __init__(self, net, network_params, reset_pretrained, act_fn='none'):
         """
         Initializes the Reasoner module with network architecture and parameters.
 
@@ -58,7 +58,7 @@ class Reasoner(nn.Module):
 
         self.net = net(reasoner_params)
         self.final_layer = create_layer(d_model, output_size, first_act_fn='relu', last_act_fn=act_fn)
-        self.apply(init_weights)
+        self.apply(init_weights, reset_pretrained = reset_pretrained)
     
     def forward(self, obs, e, padding_mask=None):
         """
