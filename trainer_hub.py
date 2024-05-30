@@ -85,14 +85,14 @@ class TrainerHub:
 
         model_networks, network_params = configure_encoder_model(self.data_config, model_params.encoder_model, model_params.encoder_config)
         
-        self.encoder_ccnet = CooperativeEncodingNetwork(model_networks, network_params, self.device)
+        self.encoder_ccnet = CooperativeEncodingNetwork(model_networks, network_params, algorithm_params, self.device)
         self.encoder_trainer = CausalEncodingTrainer(self.encoder_ccnet, training_params, algorithm_params, optimization_params, self.task_type)
 
     def setup_core_network(self, model_params, training_params, algorithm_params, optimization_params):    
         
         model_networks, network_params = configure_core_model(self.data_config, model_params.core_model, model_params.core_config)
             
-        self.core_ccnet = CooperativeNetwork(model_networks, network_params, self.task_type, self.device, encoder=self.encoder_ccnet)
+        self.core_ccnet = CooperativeNetwork(model_networks, network_params, algorithm_params, self.task_type, self.device, encoder=self.encoder_ccnet)
         self.core_trainer = CausalTrainer(self.core_ccnet, training_params, algorithm_params, optimization_params, self.task_type)
 
     def train_iteration(self, iters, source_batch, target_batch):

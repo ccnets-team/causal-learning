@@ -17,14 +17,15 @@ def set_random_seed(seed_val):
     torch.backends.cudnn.benchmark = False
     return
 
-def init_weights(module):
+def init_weights(module, reset_pretrained = False):
     """
     Applies Xavier uniform initialization to certain layers in a module and its submodules,
     excluding modules where parameters are directly set if the variable name includes "pretrained".
     Args:
         module (nn.Module): The module to initialize.
+        reset_pretrained (bool): Whether to reset initialization for modules with "pretrained" in their names.
     """
-    if 'pretrained' in module._get_name().lower():
+    if not reset_pretrained and 'pretrained' in module._get_name().lower():
         return
 
     if isinstance(module, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
@@ -38,4 +39,4 @@ def init_weights(module):
             
     # Apply recursively to child submodules regardless of the parent's type
     for child in module.children():
-        init_weights(child)
+        init_weights(child, reset_pretrained)

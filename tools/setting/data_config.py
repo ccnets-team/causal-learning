@@ -1,50 +1,45 @@
 class DataConfig:
     """
-    Configuration class for datasets used in various machine learning tasks, including
-    classification schemes and regression models. This class supports configuring data
-    specific to different tasks like image recognition, sentiment analysis, and more.
+    Configuration class for managing dataset parameters in various machine learning tasks,
+    facilitating the adjustment of network architectures based on the task type and data characteristics.
+    This configuration impacts the final layer and function adaptations within the models, especially
+    in neural network settings that focus on tasks like image recognition, text processing, or structured data analysis.
 
     Attributes:
-        dataset_name (str): Name of the dataset, such as 'CelebA' or 'MNIST', indicating
-                            which dataset is being configured.
-        task_type (str): Specifies the type of machine learning task. Valid options are:
-                         'binary_classification', 'multi_class_classification',
-                         'multi_label_classification', 'regression', 'ordinal_regression',
-                         'encoding', 'augmentation', 'generation', 'reconstruction'.
-                         Each type corresponds to a different modeling approach or objective.
-        obs_shape (list): Dimensions of the observations (data inputs), commonly used
-                          to specify the shape of images, typically as [channels, height, width].
-        label_size (int): Defines the size of the output space needed for the task:
-            - 'binary_classification': 1 (binary outcome using a sigmoid activation).
-            - 'multi_class_classification': Corresponds to the number of distinct classes
-                                           (using softmax for multi-class output).
-            - 'multi_label_classification': Corresponds to the number of labels for multi-label
-                                            binary outcomes (using multiple sigmoid activations).
-            - 'regression': Typically 1 for a single continuous target, can be more for
-                            multi-dimensional regression outcomes.
-            - 'ordinal_regression': Typically 1, used for tasks where the target is ordinal,
-                                    classified into ordered categories.
-            - 'compositional_regression': Corresponds to the number of components in the composition
-                                          (using techniques ensuring the outputs sum to 1, 
-                                          such as softmax or log-ratio transformations).
-        show_image_indices (list, optional): A list of indices specifying which images to display
-                                             for visual inspection or debugging purposes. Defaults to None.
-    
+        dataset_name (str): Specifies the dataset, such as 'CelebA' or 'MNIST'.
+        task_type (str): Determines the neural model configuration. Supported types include:
+                         'binary_classification', 'multi_class_classification', 'multi_label_classification',
+                         'regression', 'ordinal_regression', 'compositional_regression', 'encoding', 'generation'.
+                         'Encoding' and 'generation' generally apply when no labels are provided, primarily in encoder models.
+        obs_shape (list): Defines the input dimensions appropriate for the data type:
+                        - For image data, this is typically specified as [channels, height, width].
+                        - For tabular data, specify the number of features as [num_features].
+                        Note: While sequence data inherently includes a sequence dimension, do not include this in the `obs_shape`. 
+                        Sequence dimensions can vary per batch; hence, the API internally handles the sequence dimension 
+                        to accommodate batch-specific variations.
+        label_size (int): Specifies the output dimension necessary for the model, varying by task:
+                          - Binary outputs use 1 for binary classification.
+                          - Multiclass outputs match the number of classes.
+                          - Regression tasks typically use 1 but may be higher for multi-dimensional targets.
+        explain_size (int, optional): Dimensionality of the latent space from the explainer network, essential for 
+                                      generating compressed, efficient explanations during inference and data generation.
+                                      Defaults to half of `d_model` if not set.
+        state_size (int, optional): Total dimensionality for the internal state of the encoder network, calculated as the 
+                                    sum of half the `d_model` from both the explainer and reasoner if not explicitly defined.
+                                    This replaces traditional input shapes when both encoder and core models are utilized, 
+                                    directing encoded state data as input to the core model.
+        show_image_indices (list, optional): Indices of images to be displayed for debugging or visualization purposes.
+
     Methods:
-        __init__(self, dataset_name, task_type, obs_shape, label_size=None, explain_size=None,
-                 state_size=None, show_image_indices=None):
-            Initializes a new instance of the DataConfig class. Validates the task type and sets up
-            the configuration with the provided values.
-        
-        __repr__(self):
-            Provides a string representation of the DataConfig instance, which is helpful for debugging
-            and logging the configuration details.
+        __init__(self, dataset_name, task_type, obs_shape, label_size=None, explain_size=None, state_size=None, show_image_indices=None):
+            Initializes the DataConfig with the specified dataset characteristics.
+            Raises an error if an unsupported task type is specified.
     """
     def __init__(self, dataset_name: str, task_type: str, obs_shape: list, label_size: int = None,
                  explain_size: int = None, state_size: int = None, show_image_indices: list = None):
         valid_task_types = ['binary_classification', 'multi_class_classification','multi_label_classification', 
                             'regression', 'ordinal_regression', 'compositional_regression',
-                            'encoding', 'augmentation', 'generation', 'reconstruction']
+                            'encoding', 'generation']
         if task_type not in valid_task_types:
             raise ValueError(f"Invalid task type '{task_type}'. Valid options are {valid_task_types}")
         

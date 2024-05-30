@@ -3,9 +3,9 @@ import wandb
 import numpy as np
 from tools.wandb_logger import wandb_init 
 from tools.loader import save_trainer
-from tools.logger import log_train_data, log_test_results
+from tools.logger import tensorboard_log_train_metrics, log_test_results
 from tools.print import print_iter, print_lr, print_trainer, print_test_results
-from tools.wandb_logger import wandb_log_train_data, wandb_log_eval_data
+from tools.wandb_logger import wandb_log_train_metrics, wandb_log_eval_data
 from tools.image_debugger import ImageDebugger
 from tools.logger import get_log_name
 import os
@@ -189,11 +189,11 @@ class TrainerHubHelper:
         if self.use_print:
             self.print_checkpoint_info(time_cost, epoch_idx, iter_idx, len_dataloader, avg_core_metric, avg_encoder_metric)
 
-        log_train_data(self.tensorboard, self.iters, avg_core_metric)
+        tensorboard_log_train_metrics(self.tensorboard, self.iters, core_metric=avg_core_metric, encoder_metric=avg_encoder_metric)
         """Logs training data to Weights & Biases if enabled."""
         if self.use_wandb:
             lr = self.core_trainer.get_lr() 
-            wandb_log_train_data(time_cost, lr=lr, core_metric=avg_core_metric, encoder_metric=avg_encoder_metric, images=wb_image)
+            wandb_log_train_metrics(time_cost, lr=lr, core_metric=avg_core_metric, encoder_metric=avg_encoder_metric, images=wb_image)
 
     def print_checkpoint_info(self, time_cost, epoch_idx, iter_idx, len_dataloader, avg_core_metric = None, avg_encoder_metric = None):
         """Prints formatted information about the current checkpoint."""
