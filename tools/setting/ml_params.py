@@ -69,26 +69,26 @@ class ModelParameters:
     Comprehensive parameters defining core and encoding model configurations.
     
     Attributes:
-        core_model (str): Identifier for the core model. A value of 'none' indicates no core model is used.
-        encoder_model (str): Identifier for the encoder model. A value of 'none' indicates no encoder model is used.
-        core_config (ModelConfig or None): Configuration object for the core model, if applicable.
+        ccnet_network (str): Identifier for the core model. A value of 'none' indicates no core model is used.
+        encoder_network (str): Identifier for the encoder model. A value of 'none' indicates no encoder model is used.
+        ccnet_config (ModelConfig or None): Configuration object for the core model, if applicable.
         encoder_config (ModelConfig or None): Configuration object for the encoder model, if applicable.
     """
-    core_model: str = 'gpt'
-    encoder_model: str = 'resnet'
-    core_config: ModelConfig = field(init=False)
+    ccnet_network: str = 'gpt'
+    encoder_network: str = 'resnet'
+    ccnet_config: ModelConfig = field(init=False)
     encoder_config: ModelConfig = field(init=False)
 
     def __post_init__(self):
-        # Conditionally initialize the core_config
-        if self.core_model.lower() != 'none':
-            self.core_config = ModelConfig(model_name=self.core_model)
+        # Conditionally initialize the ccnet_config
+        if self.ccnet_network.lower() != 'none':
+            self.ccnet_config = ModelConfig(model_name=self.ccnet_network)
         else:
-            self.core_config = None  # Properly handle 'none' to avoid creating a config
+            self.ccnet_config = None  # Properly handle 'none' to avoid creating a config
 
         # Conditionally initialize the encoder_config
-        if self.encoder_model.lower() != 'none':
-            self.encoder_config = ModelConfig(model_name=self.encoder_model)
+        if self.encoder_network.lower() != 'none':
+            self.encoder_config = ModelConfig(model_name=self.encoder_network)
         else:
             self.encoder_config = None  # Properly handle 'none' to avoid creating a config
 

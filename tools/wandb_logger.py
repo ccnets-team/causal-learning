@@ -47,9 +47,9 @@ def wandb_init(data_config, ml_params):
     wandb.login()
     
     data_config_dict = convert_to_dict(data_config)
-    ml_params_core_config, ml_params_encoder_config = convert_to_dict(ml_params.model.core_config),convert_to_dict(ml_params.model.encoder_config)
+    ml_params_ccnet_config, ml_params_encoder_config = convert_to_dict(ml_params.model.ccnet_config),convert_to_dict(ml_params.model.encoder_config)
     ml_params_dict = convert_to_dict(ml_params)
-    ml_params_dict['model']['core_config'] = ml_params_core_config
+    ml_params_dict['model']['ccnet_config'] = ml_params_ccnet_config
     ml_params_dict['model']['encoder_config'] = ml_params_encoder_config
     
     data_config_dict = {k: v for k, v in data_config_dict.items() if isinstance(v, (int, float, str, bool))}

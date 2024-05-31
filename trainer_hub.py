@@ -24,7 +24,7 @@ from tools.report import calculate_test_results
 
 from framework.ccnet.cooperative_network import CooperativeNetwork
 from framework.ccnet.cooperative_encoding_network import CooperativeEncodingNetwork
-from tools.setting.ml_config import configure_ccnet_model, configure_encoder_model
+from tools.setting.ml_config import configure_ccnet_network, configure_encoder_network
 from tools.tensor_utils import select_last_sequence_elements, manage_batch_dimensions, prepare_batches, get_random_batch
 import torch
 
@@ -47,9 +47,9 @@ class TrainerHub:
         self.helper = TrainerHubHelper(self, data_config, ml_params, device, use_print, use_wandb, print_interval)
 
     def initialize_usage_flags(self, ml_params):
-        self.use_ccnet = ml_params.core_model != 'none'
-        self.use_gpt = ml_params.core_model == 'gpt'
-        self.use_encoder = ml_params.encoder_model != 'none'
+        self.use_ccnet = ml_params.ccnet_network != 'none'
+        self.use_gpt = ml_params.ccnet_network == 'gpt'
+        self.use_encoder = ml_params.encoder_network != 'none'
         
     def initialize_training_params(self, ml_params):
         training_params = ml_params.training
@@ -70,8 +70,8 @@ class TrainerHub:
         if self.use_wandb:
             wandb_end()
     
-    def load_trainer(self, core_model = True):
-        if core_model:
+    def load_trainer(self, ccnet_network = True):
+        if ccnet_network:
             load_trainer(self.helper.model_path, self.ccnet_trainer)
         else:
             load_trainer(self.helper.model_path, self.encoder_trainer)
@@ -79,12 +79,12 @@ class TrainerHub:
     def setup_models(self, ml_params):
         training_params, algorithm_params, model_params, optimization_params = ml_params
         if self.use_encoder:
-            model_networks, network_params = configure_encoder_model(self.data_config, model_params.encoder_model, model_params.encoder_config)
+            model_networks, network_params = configure_encoder_network(self.data_config, model_params.encoder_network, model_params.encoder_config)
             self.encoder = CooperativeEncodingNetwork(model_networks, network_params, algorithm_params, self.device)
             self.encoder_trainer = CausalEncodingTrainer(self.encoder, training_params, algorithm_params, optimization_params, self.task_type)
         
         if self.use_ccnet:
-            model_networks, network_params = configure_ccnet_model(self.data_config, model_params.core_model, model_params.core_config)
+            model_networks, network_params = configure_ccnet_network(self.data_config, model_params.ccnet_network, model_params.ccnet_config)
             self.ccnet = CooperativeNetwork(model_networks, network_params, algorithm_params, self.task_type, self.device, encoder=self.encoder)
             self.ccnet_trainer = CausalTrainer(self.ccnet, training_params, algorithm_params, optimization_params, self.task_type)
 

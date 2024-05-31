@@ -165,9 +165,9 @@ class TrainerHubHelper:
             print_lr(encoder_trainer.optimizers)
         print('--------------------Training Metrics--------------------')
         if self.use_encoder and avg_encoder_metric is not None:
-            encoder_model_type = "Cooperative Network(encoder)" 
-            encoder_model_name = encoder.model_name.capitalize()
-            print_trainer(encoder_model_type, encoder_model_name, avg_encoder_metric)
+            encoder_network_type = "Cooperative Network(encoder)" 
+            encoder_network_name = encoder.model_name.capitalize()
+            print_trainer(encoder_network_type, encoder_network_name, avg_encoder_metric)
         if self.use_ccnet and avg_ccnet_metric is not None:
             ccnet_type = "Cooperative Network(core)" 
             ccnet_name = ccnet.model_name.capitalize()
