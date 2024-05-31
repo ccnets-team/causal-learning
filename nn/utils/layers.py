@@ -24,7 +24,7 @@ def get_activation_function(activation_function, feature_size=None):
     else:
         raise ValueError(f"Unsupported activation function: {activation_function}")
 
-def create_layer(input_size, output_size, first_act_fn="none", last_act_fn="none"):
+def create_layer(input_size, output_size, first_act_fn="none", last_act_fn="none", embedding=False):
     """
     Creates a PyTorch layer with specified input and output sizes, including optional activation functions.
 
@@ -44,7 +44,10 @@ def create_layer(input_size, output_size, first_act_fn="none", last_act_fn="none
     first_activation_layer = get_activation_function(first_act_fn, _input_size)
     if not isinstance(first_activation_layer, nn.Identity):  # Add activation layer if it's not Identity
         layers.append(first_activation_layer)
-    layers.append(nn.Linear(_input_size, _output_size))
+    if embedding:
+        layers.append(EmbeddingLayer(_input_size, _output_size))
+    else:
+        layers.append(nn.Linear(_input_size, _output_size))
     last_activation_layer = get_activation_function(last_act_fn, _output_size)
     if not isinstance(last_activation_layer, nn.Identity):  # Add activation layer if it's not Identity
         layers.append(last_activation_layer)
