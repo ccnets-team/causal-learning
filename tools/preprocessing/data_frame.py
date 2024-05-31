@@ -40,16 +40,50 @@ def to_indices(df: pd.DataFrame, *columns: Optional[Union[List[str], pd.Index, s
 def remove_columns(df: pd.DataFrame, 
                    drop_columns: pd.Index,
                    exclude_columns: pd.Index = None) -> pd.DataFrame:
+    """
+    Removes specified columns from the DataFrame and drops rows with NaN values.
     
-    df_clean = df.copy()
+    Parameters:
+    df (pd.DataFrame): The input DataFrame.
+    drop_columns (pd.Index): The columns to drop from the DataFrame.
+    exclude_columns (pd.Index, optional): Columns to exclude from dropping.
+
+    Returns:
+    pd.DataFrame: The cleaned DataFrame with specified columns removed and NaN values dropped.
+    """
+    if exclude_columns is not None:
+        drop_columns = drop_columns.difference(exclude_columns)
+    
     if not drop_columns.empty:
-        if exclude_columns is not None:
-            drop_columns = drop_columns.difference(exclude_columns)
-        df_clean = df.drop(columns=drop_columns)
+        df = df.drop(columns=drop_columns)
 
     df_clean = df.dropna(axis=0).reset_index(drop=True)
     
     return df_clean
+
+def binary_categorical_columns(df: pd.DataFrame, exclude_columns: pd.Index = None) -> Tuple[pd.DataFrame, dict]:
+    # Identify string-type columns
+    str_columns = df.select_dtypes(include=['object']).columns
+    if exclude_columns is not None:
+        str_columns = str_columns.difference(exclude_columns)
+
+    # Lists to hold names of columns that will be converted
+    binary_list = []
+
+    # Process string-type columns based on the number of unique values
+    for col in str_columns:
+        unique_values = df[col].nunique()
+        print(f"Column '{col}' has {unique_values} unique values.")
+        if unique_values == 2:
+            # Mark columns with exactly 2 unique values for binary conversion
+            binary_list.append(col)
+    
+    # Binary encoding for columns with exactly 2 unique values
+    for col in binary_list:
+        df[col] = pd.get_dummies(df[col], drop_first=True).astype(float)
+
+    encoded_columns = to_indices(df, binary_list)
+    return df, encoded_columns
 
 def encode_categorical_columns(df: pd.DataFrame, exclude_columns: pd.Index = None) -> Tuple[pd.DataFrame, dict]:
     # Identify string-type columns
@@ -187,7 +221,9 @@ def process_df(df: pd.DataFrame,
     encoded_columns = pd.Index([])
     if use_encoding:
         df, encoded_columns = encode_categorical_columns(df)
-    
+    else:
+        df, encoded_columns = binary_categorical_columns(df)
+        
     non_scale_columns = one_hot_columns.union(encoded_columns).union(exclude_scale_columns)
     df, scaler_description = scale_columns(df, original_columns, minmax_columns, standard_columns, robust_columns, exclude_columns=non_scale_columns)
     
@@ -204,6 +240,7 @@ def process_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> Tuple[pd.Da
 
     target_columns, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns, exclude_scale_columns = \
         to_indices(df, target_columns, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns, exclude_scale_columns)
+    
     
     target_df = df[target_columns]
     df.drop(columns=target_columns, inplace=True)
