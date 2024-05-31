@@ -50,11 +50,11 @@ class OptimizationManager:
             raise ValueError(f"Unknown scheduler type: {scheduler_type}")
 
     def get_lr(self):
-        # Sum all the current learning rates from self.current_lr
-        tot_lr = sum(self.current_lrs)
-        # Calculate the average learning rate; use max to avoid division by zero
-        avg_lr = tot_lr / max(len(self.current_lrs), 1)
-        return avg_lr
+        # Get the first learning rate from each parameter group in each optimizer
+        current_lrs = [optimizer.param_groups[0]['lr'] for optimizer in self.optimizers]
+        # Take only the first learning rate from the list of optimizers
+        first_lr = current_lrs[0] if current_lrs else 0.0
+        return first_lr
     
     def clip_gradients(self):
         for idx, net in enumerate(self.__networks):
