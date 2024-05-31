@@ -114,7 +114,10 @@ def process_df(df: pd.DataFrame,
     
     # First, drop unwanted columns using the new function
     df = remove_columns(df, drop_columns)
-    df = pd.get_dummies(df, columns=one_hot_columns, drop_first=False).astype(float)
+
+    if not one_hot_columns.empty:
+        df = pd.get_dummies(df, columns=one_hot_columns, drop_first=False).astype(float)
+
     df, encoded_columns = encode_categorical_columns(df)
     
     non_scale_columns = one_hot_columns.union(encoded_columns)
@@ -124,11 +127,11 @@ def process_df(df: pd.DataFrame,
 
 def process_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> pd.DataFrame:
     
-    drop_columns = kwargs.get('drop_columns')
-    one_hot_columns = kwargs.get('one_hot_columns')
-    minmax_columns = kwargs.get('minmax_columns')
-    standard_columns = kwargs.get('standard_columns')
-    robust_columns = kwargs.get('robust_columns')
+    drop_columns = kwargs.get('drop_columns', pd.Index([]))
+    one_hot_columns = kwargs.get('one_hot_columns', pd.Index([]))
+    minmax_columns = kwargs.get('minmax_columns', pd.Index([]))
+    standard_columns = kwargs.get('standard_columns', pd.Index([]))
+    robust_columns = kwargs.get('robust_columns', pd.Index([]))
 
     target_columns, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns = \
         to_indices(df, target_columns, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns)
@@ -136,14 +139,25 @@ def process_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> pd.DataFram
     target_df = df[target_columns]
     df.drop(columns=target_columns, inplace=True)
     
-    ###################### Data Preprocessing ##################
+    ################## Data Preprocessing #####################
     df = process_df(df, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns)
     df[:] = df[:].astype(float)
 
-    ##################### Target Preprocessing #################
+    ################## Target Preprocessing ###################
     target_df = process_df(target_df, pd.Index([]), pd.Index([]), minmax_columns, standard_columns, robust_columns)
+
+    # Calculate the number of features and classes
+    num_features = df.shape[1]
+    num_classes = target_df.shape[1]
 
     # Concatenate target columns to the end
     df = pd.concat([df, target_df], axis=1)   
 
-    return df
+    ##################### Description ##########################
+    
+
+    description = {}
+    description['num_features'] = num_features
+    description['num_classes'] = num_classes
+    
+    return df, description
