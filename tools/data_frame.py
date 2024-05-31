@@ -74,27 +74,21 @@ def scale_columns(df: pd.DataFrame,
                   robust_columns: pd.Index,
                   exclude_columns: pd.Index) -> pd.DataFrame:
     # Initialize scalers
-    if not minmax_columns.empty:
+    valid_minmax_columns = minmax_columns.difference(exclude_columns)
+    if not valid_minmax_columns.empty:
         minmax_scaler = MinMaxScaler()
-        valid_minmax_columns = minmax_columns.difference(exclude_columns)
         df[valid_minmax_columns] = minmax_scaler.fit_transform(df[valid_minmax_columns])
 
-    if not standard_columns.empty:
+    valid_standard_columns = standard_columns.difference(exclude_columns.union(minmax_columns))
+    if not valid_standard_columns.empty:
         standard_scaler = StandardScaler()
-        valid_standard_columns = standard_columns.difference(exclude_columns.union(minmax_columns))
         df[valid_standard_columns] = standard_scaler.fit_transform(df[valid_standard_columns])
 
-    if not robust_columns.empty:
+    valid_robust_columns = robust_columns.difference(exclude_columns.union(minmax_columns).union(standard_columns))
+    if not valid_robust_columns.empty:
         robust_scaler = RobustScaler()
-        valid_robust_columns = robust_columns.difference(exclude_columns.union(minmax_columns).union(standard_columns))
         df[valid_robust_columns] = robust_scaler.fit_transform(df[valid_robust_columns])
 
-    # Identify columns that haven't been converted and are not target columns
-    all_used_columns = exclude_columns.union(minmax_columns).union(standard_columns).union(robust_columns)
-    unchanged_columns = df.columns.difference(all_used_columns)
-   
-    # Inline float conversion
-    df[unchanged_columns] = df[unchanged_columns].astype(float)
     return df
 
 def process_dataframe(df: pd.DataFrame, 
@@ -111,6 +105,9 @@ def process_dataframe(df: pd.DataFrame,
     # First, drop unwanted columns using the new function
     df = remove_columns(df, drop_columns, exclude_columns=target_columns)
     
+    ############################################################
+    ###################### Data Preprocessing ##################
+    ############################################################
     # One-hot encoding for columns with more than 2 unique values
     df = pd.get_dummies(df, columns=one_hot_columns.difference(target_columns), drop_first=False).astype(float)
 
@@ -121,7 +118,15 @@ def process_dataframe(df: pd.DataFrame,
     non_scale_columns = target_columns.union(one_hot_columns).union(encoded_columns)
     
     df = scale_columns(df, minmax_columns, standard_columns, robust_columns, exclude_columns=non_scale_columns)
-    
+
+    ############################################################
+    ############################################################
+    ############################################################
+
+
+    ############################################################
+    ##################### Target Preprocessing #################
+    ############################################################
     # Move target columns to the end
     target_data = df[target_columns]
     df.drop(columns=target_columns, inplace=True)
@@ -129,8 +134,17 @@ def process_dataframe(df: pd.DataFrame,
     
     data_columns = df.columns.difference(target_columns)
     # Encode categorical columns
-    df, _ = encode_categorical_columns(df, exclude_columns=data_columns)
+    df, encoded_columns = encode_categorical_columns(df, exclude_columns=data_columns)
 
-    df = scale_columns(df, minmax_columns, standard_columns, robust_columns, exclude_columns=data_columns)
+    # Create a set of columns
+    non_scale_columns = data_columns.union(one_hot_columns).union(encoded_columns)
+    
+    df = scale_columns(df, minmax_columns, standard_columns, robust_columns, exclude_columns=non_scale_columns)
+    
+    ############################################################
+    ############################################################
+    ############################################################
 
+    df[data_columns] = df[data_columns].astype(float)
+    
     return df
