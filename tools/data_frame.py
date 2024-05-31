@@ -25,19 +25,19 @@ def to_indices(df: pd.DataFrame, *columns: Optional[Union[List[str], pd.Index, s
     return tuple(convert_to_index(col) for col in columns)
 
 def remove_columns(df: pd.DataFrame, 
-                   target_columns: pd.Index, 
-                   drop_columns: pd.Index) -> pd.DataFrame:
+                   drop_columns: pd.Index,
+                   exclude_columns: pd.Index) -> pd.DataFrame:
     if not drop_columns.empty:
-        valid_drop_columns = drop_columns.difference(target_columns)
+        valid_drop_columns = drop_columns.difference(exclude_columns)
         df = df.drop(columns=valid_drop_columns)
 
     # Check for missing values and drop them
     df = df.dropna(axis=0).reset_index(drop=True)
     return df
 
-def encode_categorical_columns(df: pd.DataFrame) -> Tuple[pd.DataFrame, dict]:
+def encode_categorical_columns(df: pd.DataFrame, exclude_columns: pd.Index = None) -> Tuple[pd.DataFrame, dict]:
     # Identify string-type columns
-    str_columns = df.select_dtypes(include=['object']).columns
+    str_columns = df.select_dtypes(include=['object']).columns.difference(exclude_columns)
 
     # Lists to hold names of columns that will be converted
     binary_list = []
@@ -69,28 +69,28 @@ def encode_categorical_columns(df: pd.DataFrame) -> Tuple[pd.DataFrame, dict]:
     return df, encoded_columns
 
 def scale_columns(df: pd.DataFrame, 
-                  non_scale_columns: pd.Index, 
                   minmax_columns: pd.Index, 
                   standard_columns: pd.Index, 
-                  robust_columns: pd.Index) -> pd.DataFrame:
+                  robust_columns: pd.Index,
+                  exclude_columns: pd.Index) -> pd.DataFrame:
     # Initialize scalers
     if not minmax_columns.empty:
         minmax_scaler = MinMaxScaler()
-        valid_minmax_columns = minmax_columns.difference(non_scale_columns)
+        valid_minmax_columns = minmax_columns.difference(exclude_columns)
         df[valid_minmax_columns] = minmax_scaler.fit_transform(df[valid_minmax_columns])
 
     if not standard_columns.empty:
         standard_scaler = StandardScaler()
-        valid_standard_columns = standard_columns.difference(non_scale_columns.union(minmax_columns))
+        valid_standard_columns = standard_columns.difference(exclude_columns.union(minmax_columns))
         df[valid_standard_columns] = standard_scaler.fit_transform(df[valid_standard_columns])
 
     if not robust_columns.empty:
         robust_scaler = RobustScaler()
-        valid_robust_columns = robust_columns.difference(non_scale_columns.union(minmax_columns).union(standard_columns))
+        valid_robust_columns = robust_columns.difference(exclude_columns.union(minmax_columns).union(standard_columns))
         df[valid_robust_columns] = robust_scaler.fit_transform(df[valid_robust_columns])
 
     # Identify columns that haven't been converted and are not target columns
-    all_used_columns = non_scale_columns.union(minmax_columns).union(standard_columns).union(robust_columns)
+    all_used_columns = exclude_columns.union(minmax_columns).union(standard_columns).union(robust_columns)
     unchanged_columns = df.columns.difference(all_used_columns)
    
     # Inline float conversion
@@ -109,22 +109,28 @@ def process_dataframe(df: pd.DataFrame,
         to_indices(df, target_columns, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns)
     
     # First, drop unwanted columns using the new function
-    df = remove_columns(df, target_columns, drop_columns)
+    df = remove_columns(df, drop_columns, exclude_columns=target_columns)
     
     # One-hot encoding for columns with more than 2 unique values
-    df = pd.get_dummies(df, columns=one_hot_columns, drop_first=False).astype(float)
+    df = pd.get_dummies(df, columns=one_hot_columns.difference(target_columns), drop_first=False).astype(float)
 
     # Encode categorical columns
-    df, encoded_columns = encode_categorical_columns(df)
+    df, encoded_columns = encode_categorical_columns(df, exclude_columns=target_columns)
  
     # Create a set of columns
-    non_scale_columns = one_hot_columns.union(encoded_columns)
+    non_scale_columns = target_columns.union(one_hot_columns).union(encoded_columns)
     
-    df = scale_columns(df, non_scale_columns, minmax_columns, standard_columns, robust_columns)
+    df = scale_columns(df, minmax_columns, standard_columns, robust_columns, exclude_columns=non_scale_columns)
     
     # Move target columns to the end
     target_data = df[target_columns]
     df.drop(columns=target_columns, inplace=True)
     df = pd.concat([df, target_data], axis=1)   
+    
+    data_columns = df.columns.difference(target_columns)
+    # Encode categorical columns
+    df, _ = encode_categorical_columns(df, exclude_columns=data_columns)
+
+    df = scale_columns(df, minmax_columns, standard_columns, robust_columns, exclude_columns=data_columns)
 
     return df
