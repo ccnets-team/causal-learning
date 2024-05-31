@@ -45,13 +45,8 @@ def remove_columns(df: pd.DataFrame,
             drop_columns = drop_columns.difference(exclude_columns)
         df = df.drop(columns=drop_columns)
 
-    if not df.dropna().empty:
-        print("before", df.isnull().sum())
-    # Check for missing values and drop them
-    df[:] = df[:].dropna(axis=0).reset_index(drop=True)
-    if not df.dropna().empty:
-        print("after", df.isnull().sum())
-
+    df.dropna(axis=0).reset_index(drop=True, inplace=True)
+    
     return df
 
 def encode_categorical_columns(df: pd.DataFrame, exclude_columns: pd.Index = None) -> Tuple[pd.DataFrame, dict]:
@@ -89,71 +84,83 @@ def encode_categorical_columns(df: pd.DataFrame, exclude_columns: pd.Index = Non
     encoded_columns = to_indices(df, binary_list + one_hot_list)
     return df, encoded_columns
 
-def auto_determine_scaler(data, skew_threshold=0.5, outlier_threshold=1.5):
+def auto_determine_scaler(data, std_threshold=1.0, outlier_threshold=1.5):
     """
-    Determines whether to use None, StandardScaler, or RobustScaler based on the data.
+    Determines whether to use MinMaxScaler, StandardScaler, or RobustScaler based on the data.
+    
     Parameters:
     data (pd.Series or np.ndarray): The input data to be analyzed.
-    skew_threshold (float): The threshold for skewness to determine normal distribution.
+    std_threshold (float): The threshold for standard deviation to determine if standard scaling is needed.
     outlier_threshold (float): The threshold for the IQR method to detect outliers.
+    
     Returns:
-    str: 'None', 'Standard', or 'Robust' indicating which scaler to use.
+    str: 'minmax', 'standard', or 'robust' indicating which scaler to use.
     """
     if isinstance(data, pd.Series):
         data = data.values
-    elif isinstance(data, pd.DataFrame):
-        raise ValueError("Input should be a single column of data as pd.Series or np.ndarray")
-    # Calculate skewness
-    data_skewness = skew(data)
+    elif not isinstance(data, (np.ndarray, list)):
+        raise ValueError("Input should be a single column of data as pd.Series, np.ndarray, or list")
+    
+    # Calculate standard deviation
+    data_std = np.std(data)
+    
     # Calculate Q1 (25th percentile) and Q3 (75th percentile)
     Q1 = np.percentile(data, 25)
     Q3 = np.percentile(data, 75)
+    
     # Calculate IQR (Interquartile Range)
     IQR = Q3 - Q1
+    
     # Detect outliers using the IQR method
     lower_bound = Q1 - (outlier_threshold * IQR)
     upper_bound = Q3 + (outlier_threshold * IQR)
     outliers = (data < lower_bound) | (data > upper_bound)
     has_outliers = np.any(outliers)
+    
     # Determine the scaler
     if has_outliers:
-        return 'Robust'
-    elif abs(data_skewness) < skew_threshold:
-        return 'Standard'
+        return 'robust'
+    elif data_std > std_threshold:
+        return 'standard'
     else:
-        return 'None'
+        return 'minmax'
     
 def scale_columns(df: pd.DataFrame, 
                   minmax_columns: pd.Index, 
                   standard_columns: pd.Index, 
                   robust_columns: pd.Index,
-                  exclude_columns: pd.Index) -> pd.DataFrame:
+                  exclude_columns: pd.Index) -> Tuple[pd.DataFrame, dict]:
 
     scaler_dict = {
-        'MinMax': MinMaxScaler,
-        'Standard': StandardScaler,
-        'Robust': RobustScaler
+        'minmax': lambda: MinMaxScaler(feature_range=(-1, 1)),
+        'standard': StandardScaler,
+        'robust': RobustScaler
     }
-        
+    
+    df_scaled = df.copy()
+    scaler_description = {}
+
     for columns, scaler in zip([minmax_columns, standard_columns, robust_columns], 
-                               ['MinMax', 'Standard', 'Robust']):
+                               ['minmax', 'standard', 'robust']):
         valid_columns = columns.difference(exclude_columns)
         valid_columns = valid_columns.intersection(df.columns)
         if not valid_columns.empty:
-            # Remove missing columns
             scaler_instance = scaler_dict[scaler]()
-            df[valid_columns] = scaler_instance.fit_transform(df[valid_columns])
-            
+            df_scaled[valid_columns] = scaler_instance.fit_transform(df[valid_columns])
+            for col in valid_columns:
+                scaler_description[col] = scaler
+    
     # Determine and apply scalers for columns not in any predefined list
     remaining_columns = df.columns.difference(minmax_columns.union(standard_columns).union(robust_columns).union(exclude_columns))
-    
+
     for column in remaining_columns:
-        scaler_type = auto_determine_scaler(df[column])
-        if scaler_type != 'None':
+        scaler_type = auto_determine_scaler(df.loc[:, column])
+        if scaler_type != 'none':
             scaler_instance = scaler_dict[scaler_type]()
-            df[[column]] = scaler_instance.fit_transform(df[[column]])
-    
-    return df
+            df_scaled.loc[:, [column]] = scaler_instance.fit_transform(df.loc[:, [column]])
+            scaler_description[column] = scaler_type
+
+    return df_scaled, scaler_description
 
 def process_df(df: pd.DataFrame, 
                  drop_columns: pd.Index,
@@ -161,7 +168,7 @@ def process_df(df: pd.DataFrame,
                  minmax_columns: pd.Index,
                  standard_columns: pd.Index, 
                  robust_columns: pd.Index, 
-                 exclude_scale_columns: pd.Index) -> pd.DataFrame:
+                 exclude_scale_columns: pd.Index) -> Tuple[pd.DataFrame, dict]:
     
     # First, drop unwanted columns using the new function
     df = remove_columns(df, drop_columns)
@@ -172,11 +179,11 @@ def process_df(df: pd.DataFrame,
     df, encoded_columns = encode_categorical_columns(df)
     
     non_scale_columns = one_hot_columns.union(encoded_columns).union(exclude_scale_columns)
-    df = scale_columns(df, minmax_columns, standard_columns, robust_columns, exclude_columns=non_scale_columns)
+    df, scaler_description = scale_columns(df, minmax_columns, standard_columns, robust_columns, exclude_columns=non_scale_columns)
     
-    return df
+    return df, encoded_columns, scaler_description
     
-def process_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> pd.DataFrame:
+def process_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> Tuple[pd.DataFrame, dict]:
     
     drop_columns = kwargs.get('drop_columns', pd.Index([]))
     one_hot_columns = kwargs.get('one_hot_columns', pd.Index([]))
@@ -192,11 +199,12 @@ def process_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> pd.DataFram
     df.drop(columns=target_columns, inplace=True)
     
     ################## Data Preprocessing #####################
-    df = process_df(df, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns, exclude_scale_columns)
-    df[:] = df[:].astype(float)
+    df, encoded_columns, scaler_description = process_df(df, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns, exclude_scale_columns)
+    # Convert the entire DataFrame to float
+    df = df.astype(float)
 
     ################## Target Preprocessing ###################
-    target_df = process_df(target_df, pd.Index([]), pd.Index([]), minmax_columns, standard_columns, robust_columns, exclude_scale_columns)
+    target_df, target_encoded_columns, target_scaler_description = process_df(target_df, pd.Index([]), pd.Index([]), minmax_columns, standard_columns, robust_columns, exclude_scale_columns)
 
     # Calculate the number of features and classes
     num_features = df.shape[1]
@@ -207,9 +215,12 @@ def process_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> pd.DataFram
 
     ##################### Description ##########################
     
-
     description = {}
     description['num_features'] = num_features
     description['num_classes'] = num_classes
+    description['encoded_columns'] = encoded_columns
+    description['target_encoded_columns'] = target_encoded_columns
+    description['scalers'] = scaler_description
+    description['target_scalers'] = target_scaler_description
     
     return df, description
