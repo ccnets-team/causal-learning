@@ -57,7 +57,7 @@ def remove_columns(df: pd.DataFrame,
     if not drop_columns.empty:
         df = df.drop(columns=drop_columns)
 
-    df_clean = df.dropna(axis=0).reset_index(drop=True)
+    df_clean = df.dropna(axis=0).reset_index(drop=True).copy()
     
     return df_clean
 
@@ -210,9 +210,6 @@ def process_df(df: pd.DataFrame,
                  robust_columns: pd.Index, 
                  exclude_scale_columns: pd.Index, use_encoding = False) -> Tuple[pd.DataFrame, dict]:
     
-    # First, drop unwanted columns using the new function
-    df = remove_columns(df, drop_columns)
-    
     original_columns = df.columns
     
     if not one_hot_columns.empty:
@@ -240,8 +237,10 @@ def process_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> Tuple[pd.Da
 
     target_columns, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns, exclude_scale_columns = \
         to_indices(df, target_columns, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns, exclude_scale_columns)
-    
-    
+
+    # First, drop unwanted columns using the new function
+    df = remove_columns(df, drop_columns)
+        
     target_df = df[target_columns]
     df.drop(columns=target_columns, inplace=True)
     
