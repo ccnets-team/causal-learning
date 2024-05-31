@@ -235,10 +235,36 @@ def process_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> Tuple[pd.Da
     
     return df, description
 
+def preprocess_cyclical_columns(df: pd.DataFrame, columns: List[str]) -> pd.DataFrame:
+    """
+    Preprocesses specified cyclical columns in the DataFrame by applying sine and cosine transformations.
+
+    Parameters:
+    df (pd.DataFrame): The input DataFrame.
+    columns (List[str]): List of column names to be processed.
+
+    Returns:
+    pd.DataFrame: The DataFrame with the specified columns processed.
+    """
+    for col in columns:
+        if col not in df.columns:
+            raise ValueError(f"Column '{col}' not found in DataFrame.")
+        
+        min_val = df[col].min()
+        max_val = df[col].max()
+        range_val = max_val - min_val
+        
+        # Apply sine and cosine transformations
+        df[col + '_sin'] = np.sin(2 * np.pi * (df[col] - min_val) / range_val)
+        df[col + '_cos'] = np.cos(2 * np.pi * (df[col] - min_val) / range_val)
+        df.drop(col, axis=1, inplace=True)
+    
+    return df
+
 def preprocess_date_column(df: pd.DataFrame) -> pd.DataFrame:
     """
     Preprocesses the 'date' column in the DataFrame by converting it to the day of the year
-    and shifting it by half a year.
+    and applying sine and cosine transformations to capture its cyclical nature.
 
     Parameters:
     df (pd.DataFrame): The input DataFrame containing a 'date' column.
@@ -246,7 +272,6 @@ def preprocess_date_column(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
     pd.DataFrame: The DataFrame with the 'date' column processed.
     """
-    # Ensure the 'date' column is in datetime format
     if 'date' not in df.columns:
         raise ValueError("DataFrame must contain a 'date' column.")
     
@@ -254,35 +279,11 @@ def preprocess_date_column(df: pd.DataFrame) -> pd.DataFrame:
 
     # Convert date to day of the year
     df['day_of_year'] = df['date'].dt.dayofyear
-
-    # Shift the day by half a year
-    half_year_shift = 365 // 2
-    df['shifted_day'] = (df['day_of_year'] + half_year_shift) % 365
-
-    df.drop(['date'], axis=1, inplace=True)
     
-    return df
+    # Apply sine and cosine transformations
+    df['day_of_year_sin'] = np.sin(2 * np.pi * df['day_of_year'] / 365)
+    df['day_of_year_cos'] = np.cos(2 * np.pi * df['day_of_year'] / 365)
 
-def preprocess_rotational_column(df: pd.DataFrame, str_columns: List[str]) -> pd.DataFrame:
-    """
-    Preprocesses specified columns in the DataFrame by shifting their values by half
-    their range and wrapping around using a modulo operation.
-
-    Parameters:
-    df (pd.DataFrame): The input DataFrame.
-    str_columns (List[str]): List of column names to be processed.
-
-    Returns:
-    pd.DataFrame: The DataFrame with the specified columns processed.
-    """
-    columns = to_indices(df, str_columns)
-    for col in columns:
-        if col not in df.columns:
-            raise ValueError(f"Column '{col}' not found in DataFrame.")
-        
-        min_value = df[col].min()
-        max_value = df[col].max()
-        full_size = max_value - min_value
-        half_size = full_size / 2
-        df['shifted_' + col] = (df[col] + half_size) % full_size
+    df.drop(['date', 'day_of_year'], axis=1, inplace=True)
+    
     return df
