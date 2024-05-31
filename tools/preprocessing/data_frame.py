@@ -174,7 +174,7 @@ def process_df(df: pd.DataFrame,
                  minmax_columns: pd.Index,
                  standard_columns: pd.Index, 
                  robust_columns: pd.Index, 
-                 exclude_scale_columns: pd.Index) -> Tuple[pd.DataFrame, dict]:
+                 exclude_scale_columns: pd.Index, use_encoding = False) -> Tuple[pd.DataFrame, dict]:
     
     # First, drop unwanted columns using the new function
     df = remove_columns(df, drop_columns)
@@ -184,7 +184,9 @@ def process_df(df: pd.DataFrame,
     if not one_hot_columns.empty:
         df = pd.get_dummies(df, columns=one_hot_columns, drop_first=False).astype(float)
 
-    df, encoded_columns = encode_categorical_columns(df)
+    encoded_columns = pd.Index([])
+    if use_encoding:
+        df, encoded_columns = encode_categorical_columns(df)
     
     non_scale_columns = one_hot_columns.union(encoded_columns).union(exclude_scale_columns)
     df, scaler_description = scale_columns(df, original_columns, minmax_columns, standard_columns, robust_columns, exclude_columns=non_scale_columns)
@@ -207,12 +209,12 @@ def process_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> Tuple[pd.Da
     df.drop(columns=target_columns, inplace=True)
     
     ################## Data Preprocessing #####################
-    df, encoded_columns, scaler_description = process_df(df, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns, exclude_scale_columns)
+    df, encoded_columns, scaler_description = process_df(df, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns, exclude_scale_columns, use_encoding = True)
     # Convert the entire DataFrame to float
     df = df.astype(float)
 
     ################## Target Preprocessing ###################
-    target_df, target_encoded_columns, target_scaler_description = process_df(target_df, pd.Index([]), pd.Index([]), minmax_columns, standard_columns, robust_columns, exclude_scale_columns)
+    target_df, target_encoded_columns, target_scaler_description = process_df(target_df, pd.Index([]), pd.Index([]), minmax_columns, standard_columns, robust_columns, exclude_scale_columns, use_encoding = False)
 
     # Calculate the number of features and classes
     num_features = df.shape[1]
