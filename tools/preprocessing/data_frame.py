@@ -84,12 +84,13 @@ def encode_categorical_columns(df: pd.DataFrame, exclude_columns: pd.Index = Non
     encoded_columns = to_indices(df, binary_list + one_hot_list)
     return df, encoded_columns
 
-def auto_determine_scaler(data, std_threshold=1.0, outlier_threshold=1.5):
+def auto_determine_scaler(data, skew_threshold=0.5, std_threshold=1.0, outlier_threshold=1.5):
     """
     Determines whether to use MinMaxScaler, StandardScaler, or RobustScaler based on the data.
     
     Parameters:
     data (pd.Series or np.ndarray): The input data to be analyzed.
+    skew_threshold (float): The threshold for skewness to determine if standard scaling is needed.
     std_threshold (float): The threshold for standard deviation to determine if standard scaling is needed.
     outlier_threshold (float): The threshold for the IQR method to detect outliers.
     
@@ -100,6 +101,9 @@ def auto_determine_scaler(data, std_threshold=1.0, outlier_threshold=1.5):
         data = data.values
     elif not isinstance(data, (np.ndarray, list)):
         raise ValueError("Input should be a single column of data as pd.Series, np.ndarray, or list")
+    
+    # Calculate skewness
+    data_skewness = skew(data)
     
     # Calculate standard deviation
     data_std = np.std(data)
@@ -120,12 +124,13 @@ def auto_determine_scaler(data, std_threshold=1.0, outlier_threshold=1.5):
     # Determine the scaler
     if has_outliers:
         return 'robust'
-    elif data_std > std_threshold:
+    elif data_std > std_threshold and abs(data_skewness) > skew_threshold:
         return 'standard'
     else:
         return 'minmax'
     
 def scale_columns(df: pd.DataFrame, 
+                  original_columns: pd.Index, 
                   minmax_columns: pd.Index, 
                   standard_columns: pd.Index, 
                   robust_columns: pd.Index,
@@ -143,7 +148,6 @@ def scale_columns(df: pd.DataFrame,
     for columns, scaler in zip([minmax_columns, standard_columns, robust_columns], 
                                ['minmax', 'standard', 'robust']):
         valid_columns = columns.difference(exclude_columns)
-        valid_columns = valid_columns.intersection(df.columns)
         if not valid_columns.empty:
             scaler_instance = scaler_dict[scaler]()
             df_scaled[valid_columns] = scaler_instance.fit_transform(df[valid_columns])
@@ -151,7 +155,7 @@ def scale_columns(df: pd.DataFrame,
                 scaler_description[col] = scaler
     
     # Determine and apply scalers for columns not in any predefined list
-    remaining_columns = df.columns.difference(minmax_columns.union(standard_columns).union(robust_columns).union(exclude_columns))
+    remaining_columns = original_columns.difference(minmax_columns.union(standard_columns).union(robust_columns).union(exclude_columns))
 
     for column in remaining_columns:
         scaler_type = auto_determine_scaler(df.loc[:, column])
@@ -172,14 +176,16 @@ def process_df(df: pd.DataFrame,
     
     # First, drop unwanted columns using the new function
     df = remove_columns(df, drop_columns)
-
+    
+    original_columns = df.columns
+    
     if not one_hot_columns.empty:
         df = pd.get_dummies(df, columns=one_hot_columns, drop_first=False).astype(float)
 
     df, encoded_columns = encode_categorical_columns(df)
     
     non_scale_columns = one_hot_columns.union(encoded_columns).union(exclude_scale_columns)
-    df, scaler_description = scale_columns(df, minmax_columns, standard_columns, robust_columns, exclude_columns=non_scale_columns)
+    df, scaler_description = scale_columns(df, original_columns, minmax_columns, standard_columns, robust_columns, exclude_columns=non_scale_columns)
     
     return df, encoded_columns, scaler_description
     
@@ -224,3 +230,55 @@ def process_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> Tuple[pd.Da
     description['target_scalers'] = target_scaler_description
     
     return df, description
+
+def preprocess_date_column(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Preprocesses the 'date' column in the DataFrame by converting it to the day of the year
+    and shifting it by half a year.
+
+    Parameters:
+    df (pd.DataFrame): The input DataFrame containing a 'date' column.
+
+    Returns:
+    pd.DataFrame: The DataFrame with the 'date' column processed.
+    """
+    # Ensure the 'date' column is in datetime format
+    if 'date' not in df.columns:
+        raise ValueError("DataFrame must contain a 'date' column.")
+    
+    df['date'] = pd.to_datetime(df['date'], errors='coerce')
+
+    # Convert date to day of the year
+    df['day_of_year'] = df['date'].dt.dayofyear
+
+    # Shift the day by half a year
+    half_year_shift = 365 // 2
+    df['shifted_day'] = (df['day_of_year'] + half_year_shift) % 365
+
+    df.drop(['date'], axis=1, inplace=True)
+    
+    return df
+
+def preprocess_rotational_column(df: pd.DataFrame, str_columns: List[str]) -> pd.DataFrame:
+    """
+    Preprocesses specified columns in the DataFrame by shifting their values by half
+    their range and wrapping around using a modulo operation.
+
+    Parameters:
+    df (pd.DataFrame): The input DataFrame.
+    str_columns (List[str]): List of column names to be processed.
+
+    Returns:
+    pd.DataFrame: The DataFrame with the specified columns processed.
+    """
+    columns = to_indices(df, str_columns)
+    for col in columns:
+        if col not in df.columns:
+            raise ValueError(f"Column '{col}' not found in DataFrame.")
+        
+        min_value = df[col].min()
+        max_value = df[col].max()
+        full_size = max_value - min_value
+        half_size = full_size / 2
+        df['shifted_' + col] = (df[col] + half_size) % full_size
+    return df
