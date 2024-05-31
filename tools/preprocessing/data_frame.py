@@ -40,14 +40,16 @@ def to_indices(df: pd.DataFrame, *columns: Optional[Union[List[str], pd.Index, s
 def remove_columns(df: pd.DataFrame, 
                    drop_columns: pd.Index,
                    exclude_columns: pd.Index = None) -> pd.DataFrame:
+    
+    df_clean = df.copy()
     if not drop_columns.empty:
         if exclude_columns is not None:
             drop_columns = drop_columns.difference(exclude_columns)
-        df = df.drop(columns=drop_columns)
+        df_clean = df.drop(columns=drop_columns)
 
-    df.dropna(axis=0).reset_index(drop=True, inplace=True)
+    df_clean = df.dropna(axis=0).reset_index(drop=True)
     
-    return df
+    return df_clean
 
 def encode_categorical_columns(df: pd.DataFrame, exclude_columns: pd.Index = None) -> Tuple[pd.DataFrame, dict]:
     # Identify string-type columns
