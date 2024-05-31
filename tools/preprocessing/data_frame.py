@@ -43,8 +43,13 @@ def remove_columns(df: pd.DataFrame,
             drop_columns = drop_columns.difference(exclude_columns)
         df = df.drop(columns=drop_columns)
 
+    if not df.dropna().empty:
+        print("before", df.isnull().sum())
     # Check for missing values and drop them
-    df = df.dropna(axis=0).reset_index(drop=True)
+    df[:] = df[:].dropna(axis=0).reset_index(drop=True)
+    if not df.dropna().empty:
+        print("after", df.isnull().sum())
+
     return df
 
 def encode_categorical_columns(df: pd.DataFrame, exclude_columns: pd.Index = None) -> Tuple[pd.DataFrame, dict]:
