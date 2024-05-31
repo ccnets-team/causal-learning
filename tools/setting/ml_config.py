@@ -31,7 +31,7 @@ def configure_model(model_name, params, obs_shape, condition_dim, z_dim):
     params.z_dim = z_dim    
     return cooperative_network, params
 
-def configure_encoder_model(data_config, model_name, model_params):
+def configure_encoder_network(data_config, model_name, model_params):
     obs_shape = data_config.obs_shape
     if data_config.state_size is None:
         stoch_size, det_size = max(model_params.d_model//2, 1), max(model_params.d_model//2, 1)
@@ -40,7 +40,7 @@ def configure_encoder_model(data_config, model_name, model_params):
         stoch_size, det_size = data_config.state_size//2, data_config.state_size - data_config.state_size//2
     return configure_model(model_name, model_params, obs_shape, condition_dim=stoch_size, z_dim=det_size)
     
-def configure_ccnet_model(data_config, model_name, model_params):
+def configure_ccnet_network(data_config, model_name, model_params):
     obs_shape = data_config.obs_shape if data_config.state_size is None else [data_config.state_size]
     if data_config.task_type == 'ordinal_regression':
         label_size = 1

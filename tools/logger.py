@@ -114,6 +114,6 @@ def log_test_results(tensorboard, iters, results):
                 Specifies the type of label or metric used for evaluation.
     """
     if tensorboard is not None:
-        for label_type, metric in results.items():
-            tensorboard.add_scalar(f"{label_type}", metric, iters)
+        for metric_name, metric_value in results.items():
+            tensorboard.add_scalar(f"Test/{metric_name}", metric_value, iters)
         tensorboard.flush()

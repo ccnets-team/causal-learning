@@ -6,6 +6,7 @@ import torch
 import random
 import numpy as np
 from torch import nn
+from nn.utils.layers import EmbeddingLayer
     
 def set_random_seed(seed_val):
     random.seed(seed_val)
@@ -25,7 +26,7 @@ def init_weights(module, reset_pretrained = False):
         module (nn.Module): The module to initialize.
         reset_pretrained (bool): Whether to reset initialization for modules with "pretrained" in their names.
     """
-    if not reset_pretrained and 'pretrained' in module._get_name().lower():
+    if reset_pretrained and 'pretrained' in module._get_name().lower():
         return
 
     if isinstance(module, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
@@ -36,6 +37,9 @@ def init_weights(module, reset_pretrained = False):
         nn.init.xavier_uniform_(module.in_proj_weight)
         if module.in_proj_bias is not None:
             nn.init.zeros_(module.in_proj_bias)
+    elif isinstance(module, EmbeddingLayer):
+        nn.init.xavier_uniform_(module.weight)
+        nn.init.zeros_(module.bias)
             
     # Apply recursively to child submodules regardless of the parent's type
     for child in module.children():
