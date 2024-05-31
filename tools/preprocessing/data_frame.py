@@ -10,8 +10,10 @@ Author:
 '''
 
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler
+import numpy as np
 import pandas as pd
 from typing import Optional, List, Union, Tuple
+from scipy.stats import skew
 
 def to_indices(df: pd.DataFrame, *columns: Optional[Union[List[str], pd.Index, str]]) -> Tuple[pd.Index, ...]:
     """
@@ -87,6 +89,40 @@ def encode_categorical_columns(df: pd.DataFrame, exclude_columns: pd.Index = Non
     encoded_columns = to_indices(df, binary_list + one_hot_list)
     return df, encoded_columns
 
+def auto_determine_scaler(data, skew_threshold=0.5, outlier_threshold=1.5):
+    """
+    Determines whether to use None, StandardScaler, or RobustScaler based on the data.
+    Parameters:
+    data (pd.Series or np.ndarray): The input data to be analyzed.
+    skew_threshold (float): The threshold for skewness to determine normal distribution.
+    outlier_threshold (float): The threshold for the IQR method to detect outliers.
+    Returns:
+    str: 'None', 'Standard', or 'Robust' indicating which scaler to use.
+    """
+    if isinstance(data, pd.Series):
+        data = data.values
+    elif isinstance(data, pd.DataFrame):
+        raise ValueError("Input should be a single column of data as pd.Series or np.ndarray")
+    # Calculate skewness
+    data_skewness = skew(data)
+    # Calculate Q1 (25th percentile) and Q3 (75th percentile)
+    Q1 = np.percentile(data, 25)
+    Q3 = np.percentile(data, 75)
+    # Calculate IQR (Interquartile Range)
+    IQR = Q3 - Q1
+    # Detect outliers using the IQR method
+    lower_bound = Q1 - (outlier_threshold * IQR)
+    upper_bound = Q3 + (outlier_threshold * IQR)
+    outliers = (data < lower_bound) | (data > upper_bound)
+    has_outliers = np.any(outliers)
+    # Determine the scaler
+    if has_outliers:
+        return 'Robust'
+    elif abs(data_skewness) < skew_threshold:
+        return 'Standard'
+    else:
+        return 'None'
+    
 def scale_columns(df: pd.DataFrame, 
                   minmax_columns: pd.Index, 
                   standard_columns: pd.Index, 
@@ -107,6 +143,15 @@ def scale_columns(df: pd.DataFrame,
             # Remove missing columns
             scaler_instance = scaler_dict[scaler]()
             df[valid_columns] = scaler_instance.fit_transform(df[valid_columns])
+            
+    # Determine and apply scalers for columns not in any predefined list
+    remaining_columns = df.columns.difference(minmax_columns.union(standard_columns).union(robust_columns).union(exclude_columns))
+    
+    for column in remaining_columns:
+        scaler_type = auto_determine_scaler(df[column])
+        if scaler_type != 'None':
+            scaler_instance = scaler_dict[scaler_type]()
+            df[[column]] = scaler_instance.fit_transform(df[[column]])
     
     return df
 
@@ -115,7 +160,8 @@ def process_df(df: pd.DataFrame,
                  one_hot_columns: pd.Index,
                  minmax_columns: pd.Index,
                  standard_columns: pd.Index, 
-                 robust_columns: pd.Index) -> pd.DataFrame:
+                 robust_columns: pd.Index, 
+                 exclude_scale_columns: pd.Index) -> pd.DataFrame:
     
     # First, drop unwanted columns using the new function
     df = remove_columns(df, drop_columns)
@@ -125,11 +171,11 @@ def process_df(df: pd.DataFrame,
 
     df, encoded_columns = encode_categorical_columns(df)
     
-    non_scale_columns = one_hot_columns.union(encoded_columns)
+    non_scale_columns = one_hot_columns.union(encoded_columns).union(exclude_scale_columns)
     df = scale_columns(df, minmax_columns, standard_columns, robust_columns, exclude_columns=non_scale_columns)
     
     return df
-
+    
 def process_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> pd.DataFrame:
     
     drop_columns = kwargs.get('drop_columns', pd.Index([]))
@@ -137,19 +183,20 @@ def process_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> pd.DataFram
     minmax_columns = kwargs.get('minmax_columns', pd.Index([]))
     standard_columns = kwargs.get('standard_columns', pd.Index([]))
     robust_columns = kwargs.get('robust_columns', pd.Index([]))
+    exclude_scale_columns = kwargs.get('exclude_scale_columns', pd.Index([]))
 
-    target_columns, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns = \
-        to_indices(df, target_columns, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns)
+    target_columns, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns, exclude_scale_columns = \
+        to_indices(df, target_columns, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns, exclude_scale_columns)
     
     target_df = df[target_columns]
     df.drop(columns=target_columns, inplace=True)
     
     ################## Data Preprocessing #####################
-    df = process_df(df, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns)
+    df = process_df(df, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns, exclude_scale_columns)
     df[:] = df[:].astype(float)
 
     ################## Target Preprocessing ###################
-    target_df = process_df(target_df, pd.Index([]), pd.Index([]), minmax_columns, standard_columns, robust_columns)
+    target_df = process_df(target_df, pd.Index([]), pd.Index([]), minmax_columns, standard_columns, robust_columns, exclude_scale_columns)
 
     # Calculate the number of features and classes
     num_features = df.shape[1]
