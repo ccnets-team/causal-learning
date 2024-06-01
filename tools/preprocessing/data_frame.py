@@ -231,10 +231,7 @@ def calculate_num_classes(target_df: pd.DataFrame) -> int:
     
     for col in target_str_columns:
         unique_values = target_df[col].nunique()
-        if unique_values > 2:
-            num_classes += unique_values
-        else:
-            num_classes += 1
+        num_classes += unique_values
     return num_classes
 
     
