@@ -54,7 +54,7 @@ class TrainerHubHelper:
             self.ml_params.training.max_seq_len = dataset.max_seq_len
         
         if hasattr(dataset, 'min_seq_len'):
-            self.ml_params.training.max_seq_len = dataset.max_seq_len
+            self.ml_params.training.min_seq_len = dataset.min_seq_len
         
         if self.use_wandb:
             wandb_init(self.data_config, self.ml_params)
