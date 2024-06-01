@@ -24,11 +24,11 @@ from tools.report import calculate_test_results
 
 from framework.ccnet.cooperative_network import CooperativeNetwork
 from framework.ccnet.cooperative_encoding_network import CooperativeEncodingNetwork
-from tools.setting.ml_config import configure_ccnet_network, configure_encoder_network
+from tools.setting.ml_config import configure_ccnet_network, configure_encoder_network, _determine_max_iters_and_epoch
 from tools.tensor_utils import select_last_sequence_elements, manage_batch_dimensions, prepare_batches, get_random_batch
 import torch
 
-DEFAULT_PRINT_INTERVAL = 50
+DEFAULT_PRINT_INTERVAL = 100
 
 class TrainerHub:
     def __init__(self, ml_params: MLParameters, data_config: DataConfig, device, use_print=False, use_wandb=False, print_interval=DEFAULT_PRINT_INTERVAL):
@@ -36,7 +36,6 @@ class TrainerHub:
         self.device = device
         
         self.initialize_usage_flags(ml_params)
-        self.initialize_training_params(ml_params)
         self.initialize_models()
         
         self.task_type = self.data_config.task_type
@@ -52,6 +51,9 @@ class TrainerHub:
         self.use_encoder = ml_params.encoder_network != 'none'
         
     def initialize_training_params(self, ml_params):
+        
+        _determine_max_iters_and_epoch(ml_params)
+        
         training_params = ml_params.training
         batch_size = training_params.batch_size
         self.batch_size = batch_size
@@ -81,12 +83,12 @@ class TrainerHub:
         if self.use_encoder:
             model_networks, network_params = configure_encoder_network(self.data_config, model_params.encoder_network, model_params.encoder_config)
             self.encoder = CooperativeEncodingNetwork(model_networks, network_params, algorithm_params, self.device)
-            self.encoder_trainer = CausalEncodingTrainer(self.encoder, training_params, algorithm_params, optimization_params, self.task_type)
+            self.encoder_trainer = CausalEncodingTrainer(self.encoder, algorithm_params, optimization_params, self.task_type)
         
         if self.use_ccnet:
             model_networks, network_params = configure_ccnet_network(self.data_config, model_params.ccnet_network, model_params.ccnet_config)
             self.ccnet = CooperativeNetwork(model_networks, network_params, algorithm_params, self.task_type, self.device, encoder=self.encoder)
-            self.ccnet_trainer = CausalTrainer(self.ccnet, training_params, algorithm_params, optimization_params, self.task_type)
+            self.ccnet_trainer = CausalTrainer(self.ccnet, algorithm_params, optimization_params, self.task_type)
 
     def train_iteration(self, iters, source_batch, target_batch):
         set_random_seed(iters)
@@ -110,8 +112,6 @@ class TrainerHub:
         for epoch in tqdm_notebook(range(self.num_epoch), desc='Epochs', leave=False):
             dataloader = get_data_loader(trainset, min(len(trainset), self.batch_size))
 
-            if self.should_end_training(epoch = epoch):
-                break
             # show me the max length of the dataset
             for iters, (source_batch, target_batch) in enumerate(tqdm_notebook(dataloader, desc='Iterations', leave=False)):
                 core_metric, encoder_metric = self.train_iteration(iters, source_batch, target_batch)
@@ -160,6 +160,3 @@ class TrainerHub:
             encoded_obseartion = observation if self.encoder is None else self.encoder.encode(observation, padding_mask = padding_mask)
         return encoded_obseartion, labels
         
-    def should_end_training(self, epoch):
-        return self.helper.iters > self.max_iters or epoch > self.num_epoch
-    

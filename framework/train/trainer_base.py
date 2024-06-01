@@ -13,9 +13,8 @@ import torch
 
 # Base class for trainers
 class TrainerBase(OptimizationManager):
-    def __init__(self, networks, training_params, algorithm_params, optimization_params, task_type, device):
+    def __init__(self, networks, algorithm_params, optimization_params, task_type, device):
         self.train_iter = 0
-        self.max_iters = training_params.max_iters
         learning_params = [
             {'lr': optimization_params.learning_rate, 
              'decay_rate_100k': optimization_params.decay_rate_100k,
@@ -24,7 +23,7 @@ class TrainerBase(OptimizationManager):
              'max_grad_norm': optimization_params.max_grad_norm}
             for _ in networks
         ]
-        OptimizationManager.__init__(self, networks, learning_params, self.max_iters)
+        OptimizationManager.__init__(self, networks, learning_params)
         self.networks = networks
         self.initial_lr = optimization_params.learning_rate
         self.enable_diffusion = algorithm_params.enable_diffusion

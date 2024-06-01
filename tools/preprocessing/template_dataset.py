@@ -73,7 +73,7 @@ class TemplateDataset(BaseDataset):
         batch_indices = self.batch_indices[start_idx:end_idx]
 
         if self.use_seq:
-            window_sizes = np.random.randint(self.min_seq_len, self.max_seq_len, size=len(batch_indices))
+            window_sizes = np.random.randint(self.min_seq_len, self.max_seq_len + 1, size=len(batch_indices))
             end_indices = batch_indices + window_sizes
             end_indices = np.clip(end_indices, 0, self.dataset_length)  # Ensure indices are within bounds
 

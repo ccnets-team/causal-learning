@@ -21,7 +21,7 @@ TABNET_COOPERATIVE_NETWORK = [TabNet, TabNet, TabNet]
 class ModelConfig:
     model_name: str
     
-    num_layers: int = 6
+    num_layers: int = 5
     d_model: int = 256
     dropout: float = 0.05
     
@@ -48,21 +48,35 @@ class TrainingParameters:
         num_epoch (int): Number of training epochs. One epoch is a complete pass through the entire dataset.
         max_iters (int): Total number of iterations or updates to the model during training.
         batch_size (int): Number of samples to process in each batch during training.
+        max_seq_len (int): Maximum sequence length for training.
+        min_seq_len (int): Minimum sequence length for training.
         
     Note:
         Training will halt when either the total number of epochs ('num_epoch') or the total number of iterations
         ('max_iters') is reached, whichever comes first. This dual limit approach provides control over training duration and computational resources.
     """
     num_epoch: int = 100
-    max_iters: int = 1_000_000
+    max_iters: int = 100_000
     batch_size: int = 64
+    max_seq_len: int = None
+    min_seq_len: int = None
 
 @dataclass
 class AlgorithmParameters:
-    enable_diffusion : bool = False
-    reset_pretrained : bool = False
-    error_function : str = 'mse'
-
+    """
+    Parameters defining the algorithm configuration for machine learning models.
+    
+    Attributes:
+        enable_diffusion (bool): Flag to enable the diffusion model, which is combined with the NoiseDiffuser class.
+        reset_pretrained (bool): Determines if pretrained models are used for the ccnet network. At least one network in the ccnet uses a pretrained model.
+        error_function (str): Error function used for the cooperative network (ccnet) which includes explainer, reasoner, and producer networks.
+                              Two options are available: 'mae' (Mean Absolute Error) or 'mse' (Mean Squared Error).
+                              'mae' is good for general cases or outliers, while 'mse' is suitable for generation tasks.
+    """
+    enable_diffusion: bool = False
+    reset_pretrained: bool = False
+    error_function: str = 'mse'
+    
 @dataclass
 class ModelParameters:
     """
@@ -75,7 +89,7 @@ class ModelParameters:
         encoder_config (ModelConfig or None): Configuration object for the encoder model, if applicable.
     """
     ccnet_network: str = 'gpt'
-    encoder_network: str = 'resnet'
+    encoder_network: str = 'none'
     ccnet_config: ModelConfig = field(init=False)
     encoder_config: ModelConfig = field(init=False)
 
@@ -109,7 +123,6 @@ class OptimizationParameters:
     scheduler_type: str = 'exponential'
     clip_grad_range: tuple = field(default=None)
     max_grad_norm: float = 1.0
-
 
 class MLParameters:
     def __init__(self, 
