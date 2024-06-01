@@ -119,7 +119,7 @@ class OptimizationParameters:
         max_grad_norm (float): Maximum allowable L2 norm for gradients to prevent gradient explosion.
     """
     learning_rate: float = 2e-4
-    decay_rate_100k: float = 0.01
+    decay_rate_100k: float = 0.05
     scheduler_type: str = 'exponential'
     clip_grad_range: tuple = field(default=None)
     max_grad_norm: float = 1.0
