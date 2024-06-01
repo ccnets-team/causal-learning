@@ -42,13 +42,14 @@ class BaseDataset(torch.utils.data.Dataset):
         return self.dataset_length
 
 class TemplateDataset(BaseDataset):
-    def __init__(self, dataset_X, dataset_y, **kwargs):
+    def __init__(self, dataset_X, dataset_y, 
+                 min_seq_len = None, max_seq_len = None, input_wrapper = None, **kwargs):
         super().__init__(dataset_X, dataset_y)
        
-        self.max_seq_len = kwargs.get('max_seq_len', None)
-        self.min_seq_len = kwargs.get('min_seq_len', None)
         self.pre_batches = kwargs.get('pre_batches', NUM_PRE_BATCHES)
-        self.input_wrapper = kwargs.get('input_wrapper', None)
+        self.min_seq_len = min_seq_len
+        self.max_seq_len = max_seq_len
+        self.input_wrapper = input_wrapper
         
         self.use_seq = False
         if self.max_seq_len is not None or self.min_seq_len is not None:

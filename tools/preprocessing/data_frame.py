@@ -230,6 +230,33 @@ def calculate_num_classes(target_df: pd.DataFrame) -> int:
         num_classes += unique_values
     return num_classes
 
+def display_statistics(df: pd.DataFrame) -> None:
+    """
+    Displays basic statistics for the input DataFrame.
+    
+    Parameters:
+    df (pd.DataFrame): The input DataFrame to analyze.
+    """
+    
+    # Calculate statistics
+    min_values = df.min()
+    max_values = df.max()
+    mean_values = df.mean()
+    std_values = df.std()
+    null_counts = df.isnull().sum()
+
+    # Combine all statistics into a single DataFrame
+    stats_df = pd.DataFrame({
+        'Min': min_values,
+        'Max': max_values,
+        'Mean': mean_values,
+        'Std': std_values,
+        'Null Count': null_counts
+    })
+
+    # Display the result in a Jupyter Notebook
+    display(stats_df)  
+    
 def process_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> Tuple[pd.DataFrame, dict]:
     
     drop_columns = kwargs.get('drop_columns', pd.Index([]))
@@ -270,6 +297,8 @@ def process_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> Tuple[pd.Da
     description['target_encoded_columns'] = target_encoded_columns
     description['scalers'] = scaler_description
     
+    display_statistics(df)
+
     return df, description
 
 def preprocess_cyclical_columns(df: pd.DataFrame, columns: List[str]) -> pd.DataFrame:
