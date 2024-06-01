@@ -115,7 +115,7 @@ def encode_data_columns(df: pd.DataFrame, exclude_columns: pd.Index = None) -> T
     encoded_columns = to_indices(df, binary_list + one_hot_list)
     return df, encoded_columns
 
-def auto_determine_scaler(data, skew_threshold=0.5, std_threshold=1.0, outlier_threshold=1.5):
+def auto_determine_scaler(data, skew_threshold=0.5, std_threshold=2.0, outlier_threshold=1.5):
     """
     Determines whether to use MinMaxScaler, StandardScaler, or RobustScaler based on the data.
     
@@ -152,14 +152,21 @@ def auto_determine_scaler(data, skew_threshold=0.5, std_threshold=1.0, outlier_t
     outliers = (data < lower_bound) | (data > upper_bound)
     has_outliers = np.any(outliers)
     
-    # Determine the scaler
-    if has_outliers:
-        return 'robust'
-    elif data_std > std_threshold and abs(data_skewness) > skew_threshold:
-        return 'standard'
+    # # Determine the scaler
+    if abs(data_skewness) < skew_threshold:
+        if data_std > std_threshold:
+            return "minmax"
+        else:
+            return "none"
     else:
-        return 'minmax'
-    
+        if data_std > std_threshold:
+            if has_outliers:
+                return "robust"
+            else:
+                return "standard"
+        else:
+            return "none"
+            
 def scale_columns(df: pd.DataFrame, 
                   original_columns: pd.Index, 
                   minmax_columns: pd.Index, 
@@ -193,8 +200,11 @@ def scale_columns(df: pd.DataFrame,
         if scaler_type != 'none':
             scaler_instance = scaler_dict[scaler_type]()
             df_scaled.loc[:, [column]] = scaler_instance.fit_transform(df.loc[:, [column]])
-            scaler_description[column] = scaler_type
-
+        else:
+            # centering the data
+            df_scaled.loc[:, [column]] -= df.loc[:, [column]].mean()
+        scaler_description[column] = scaler_type
+            
     return df_scaled, scaler_description
 
 def process_df(df: pd.DataFrame, 
