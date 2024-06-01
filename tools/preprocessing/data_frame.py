@@ -115,18 +115,18 @@ def encode_data_columns(df: pd.DataFrame, exclude_columns: pd.Index = None) -> T
     encoded_columns = to_indices(df, binary_list + one_hot_list)
     return df, encoded_columns
 
-def auto_determine_scaler(data, skew_threshold=0.5, std_threshold=2.0, outlier_threshold=1.5):
+def auto_determine_scaler(data, skew_threshold=0.5, mean_threshold=2.0, outlier_threshold=1.5):
     """
-    Determines whether to use MinMaxScaler, StandardScaler, or RobustScaler based on the data.
+    Determines the appropriate scaler for data preprocessing based on the skewness, mean, and presence of outliers.
     
     Parameters:
     data (pd.Series or np.ndarray): The input data to be analyzed.
-    skew_threshold (float): The threshold for skewness to determine if standard scaling is needed.
-    std_threshold (float): The threshold for standard deviation to determine if standard scaling is needed.
-    outlier_threshold (float): The threshold for the IQR method to detect outliers.
+    skew_threshold (float): The threshold for skewness to determine the need for scaling.
+    mean_threshold (float): The threshold for the mean to determine the scaling method.
+    outlier_threshold (float): The multiplier used in the IQR method to detect outliers.
     
     Returns:
-    str: 'minmax', 'standard', or 'robust' indicating which scaler to use.
+    str: 'minmax', 'standard', 'robust', or 'none' indicating the recommended scaler.
     """
     if isinstance(data, pd.Series):
         data = data.values
@@ -135,9 +135,6 @@ def auto_determine_scaler(data, skew_threshold=0.5, std_threshold=2.0, outlier_t
     
     # Calculate skewness
     data_skewness = skew(data)
-    
-    # Calculate standard deviation
-    data_std = np.std(data)
     
     # Calculate Q1 (25th percentile) and Q3 (75th percentile)
     Q1 = np.percentile(data, 25)
@@ -152,14 +149,16 @@ def auto_determine_scaler(data, skew_threshold=0.5, std_threshold=2.0, outlier_t
     outliers = (data < lower_bound) | (data > upper_bound)
     has_outliers = np.any(outliers)
     
+    column_mean = np.abs(data).mean() 
+    
     # # Determine the scaler
     if abs(data_skewness) < skew_threshold:
-        if data_std > std_threshold:
+        if column_mean > mean_threshold:
             return "minmax"
         else:
             return "none"
     else:
-        if data_std > std_threshold:
+        if column_mean > mean_threshold:
             if has_outliers:
                 return "robust"
             else:
@@ -197,12 +196,15 @@ def scale_columns(df: pd.DataFrame,
 
     for column in remaining_columns:
         scaler_type = auto_determine_scaler(df.loc[:, column])
-        if scaler_type != 'none':
-            scaler_instance = scaler_dict[scaler_type]()
-            df_scaled.loc[:, [column]] = scaler_instance.fit_transform(df.loc[:, [column]])
-        else:
+        if scaler_type == 'none':
             # centering the data
             df_scaled.loc[:, [column]] -= df.loc[:, [column]].mean()
+        elif scaler_type == 'minmax':
+            column_mean = df[column].abs().mean() + 1e-8
+            df_scaled[column] = 2.0 * (df_scaled[column] / column_mean) - 1.0            
+        else:
+            scaler_instance = scaler_dict[scaler_type]()
+            df_scaled.loc[:, [column]] = scaler_instance.fit_transform(df.loc[:, [column]])
         scaler_description[column] = scaler_type
             
     return df_scaled, scaler_description
