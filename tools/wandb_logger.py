@@ -112,8 +112,8 @@ def wandb_log_train_metrics(time_cost, lr, ccnet_metric=None, encoder_metric=Non
         gpt_ccnet_errors = dict(ccnet_metric.errors.data)
         
         ccnet_metric = {
-        'Core/losses': gpt_ccnet_losses,
-        'Core/errors': gpt_ccnet_errors,
+        'CCNet/losses': gpt_ccnet_losses,
+        'CCNet/errors': gpt_ccnet_errors,
         }
     else:
         ccnet_metric = {
