@@ -202,18 +202,14 @@ def process_df(df: pd.DataFrame,
                  minmax_columns: pd.Index,
                  standard_columns: pd.Index, 
                  robust_columns: pd.Index, 
-                 exclude_scale_columns: pd.Index, label_encoding = False) -> Tuple[pd.DataFrame, dict]:
+                 exclude_scale_columns: pd.Index) -> Tuple[pd.DataFrame, dict]:
     
     original_columns = df.columns
     
     if not one_hot_columns.empty:
         df = pd.get_dummies(df, columns=one_hot_columns, drop_first=False).astype(float)
 
-    encoded_columns = pd.Index([])
-    if label_encoding:
-        df, encoded_columns = encode_label_columns(df)
-    else:
-        df, encoded_columns = encode_data_columns(df)
+    df, encoded_columns = encode_data_columns(df)
         
     non_scale_columns = one_hot_columns.union(encoded_columns).union(exclude_scale_columns)
     df, scaler_description = scale_columns(df, original_columns, minmax_columns, standard_columns, robust_columns, exclude_columns=non_scale_columns)
@@ -252,29 +248,27 @@ def process_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> Tuple[pd.Da
     target_df = df[target_columns]
     df.drop(columns=target_columns, inplace=True)
     
-    ################## Data Preprocessing #####################
-    df, encoded_columns, scaler_description = process_df(df, one_hot_columns, minmax_columns, standard_columns, robust_columns, exclude_scale_columns, label_encoding = False)
+    # Process the DataFrame excluding the target columns
+    df, encoded_columns, scaler_description = process_df(df, one_hot_columns, minmax_columns, standard_columns, robust_columns, exclude_scale_columns)
+
     # Convert the entire DataFrame to float
     df = df.astype(float)
-
-    num_classes = calculate_num_classes(target_df)
     num_features = df.shape[1]
-
-    ################## Target Preprocessing ###################
-    target_df, target_encoded_columns, target_scaler_description = process_df(target_df, pd.Index([]), minmax_columns, standard_columns, robust_columns, exclude_scale_columns, label_encoding = True)
+    num_classes = calculate_num_classes(target_df)
+    
+    # Process the target columns separately
+    target_df, target_encoded_columns = encode_label_columns(target_df)
 
     # Concatenate target columns to the end
     df = pd.concat([df, target_df], axis=1)   
 
     ##################### Description ##########################
-    
     description = {}
     description['num_features'] = num_features
     description['num_classes'] = num_classes
     description['encoded_columns'] = encoded_columns
     description['target_encoded_columns'] = target_encoded_columns
     description['scalers'] = scaler_description
-    description['target_scalers'] = target_scaler_description
     
     return df, description
 
