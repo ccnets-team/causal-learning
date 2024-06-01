@@ -234,7 +234,6 @@ def calculate_num_classes(target_df: pd.DataFrame) -> int:
         num_classes += unique_values
     return num_classes
 
-    
 def process_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> Tuple[pd.DataFrame, dict]:
     
     drop_columns = kwargs.get('drop_columns', pd.Index([]))
@@ -253,13 +252,13 @@ def process_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> Tuple[pd.Da
     target_df = df[target_columns]
     df.drop(columns=target_columns, inplace=True)
     
-    num_features = df.shape[1]
-    num_classes = calculate_num_classes(target_df)
-    
     ################## Data Preprocessing #####################
     df, encoded_columns, scaler_description = process_df(df, one_hot_columns, minmax_columns, standard_columns, robust_columns, exclude_scale_columns, label_encoding = False)
     # Convert the entire DataFrame to float
     df = df.astype(float)
+
+    num_classes = calculate_num_classes(target_df)
+    num_features = df.shape[1]
 
     ################## Target Preprocessing ###################
     target_df, target_encoded_columns, target_scaler_description = process_df(target_df, pd.Index([]), minmax_columns, standard_columns, robust_columns, exclude_scale_columns, label_encoding = True)
