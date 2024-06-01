@@ -28,7 +28,7 @@ from tools.setting.ml_config import configure_ccnet_network, configure_encoder_n
 from tools.tensor_utils import select_last_sequence_elements, manage_batch_dimensions, prepare_batches, get_random_batch
 import torch
 
-DEFAULT_PRINT_INTERVAL = 50
+DEFAULT_PRINT_INTERVAL = 100
 
 class TrainerHub:
     def __init__(self, ml_params: MLParameters, data_config: DataConfig, device, use_print=False, use_wandb=False, print_interval=DEFAULT_PRINT_INTERVAL):

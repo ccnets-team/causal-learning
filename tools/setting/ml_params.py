@@ -21,7 +21,7 @@ TABNET_COOPERATIVE_NETWORK = [TabNet, TabNet, TabNet]
 class ModelConfig:
     model_name: str
     
-    num_layers: int = 6
+    num_layers: int = 5
     d_model: int = 256
     dropout: float = 0.05
     
@@ -77,7 +77,7 @@ class ModelParameters:
         encoder_config (ModelConfig or None): Configuration object for the encoder model, if applicable.
     """
     ccnet_network: str = 'gpt'
-    encoder_network: str = 'resnet'
+    encoder_network: str = 'none'
     ccnet_config: ModelConfig = field(init=False)
     encoder_config: ModelConfig = field(init=False)
 
