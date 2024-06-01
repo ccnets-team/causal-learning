@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 from typing import Optional, List, Union, Tuple
 from scipy.stats import skew
+from sklearn.preprocessing import LabelEncoder
 
 def to_indices(df: pd.DataFrame, *columns: Optional[Union[List[str], pd.Index, str]]) -> Tuple[pd.Index, ...]:
     """
@@ -61,31 +62,25 @@ def remove_columns(df: pd.DataFrame,
     
     return df_clean
 
-def binary_categorical_columns(df: pd.DataFrame, exclude_columns: pd.Index = None) -> Tuple[pd.DataFrame, dict]:
+def encode_label_columns(df: pd.DataFrame, exclude_columns: pd.Index = None) -> Tuple[pd.DataFrame, dict]:
     # Identify string-type columns
     str_columns = df.select_dtypes(include=['object']).columns
     if exclude_columns is not None:
         str_columns = str_columns.difference(exclude_columns)
 
-    # Lists to hold names of columns that will be converted
-    binary_list = []
-
-    # Process string-type columns based on the number of unique values
+    # Process string-type columns
     for col in str_columns:
         unique_values = df[col].nunique()
         print(f"Column '{col}' has {unique_values} unique values.")
-        if unique_values == 2:
-            # Mark columns with exactly 2 unique values for binary conversion
-            binary_list.append(col)
+        # Convert string columns to numeric values from 0 to n
+        le = LabelEncoder()
+        df[col] = le.fit_transform(df[col])
     
-    # Binary encoding for columns with exactly 2 unique values
-    for col in binary_list:
-        df[col] = pd.get_dummies(df[col], drop_first=True).astype(float)
-
-    encoded_columns = to_indices(df, binary_list)
+    encoded_columns = to_indices(df, str_columns.tolist())
+    
     return df, encoded_columns
 
-def encode_categorical_columns(df: pd.DataFrame, exclude_columns: pd.Index = None) -> Tuple[pd.DataFrame, dict]:
+def encode_data_columns(df: pd.DataFrame, exclude_columns: pd.Index = None) -> Tuple[pd.DataFrame, dict]:
     # Identify string-type columns
     str_columns = df.select_dtypes(include=['object']).columns
     if exclude_columns is not None:
@@ -203,12 +198,11 @@ def scale_columns(df: pd.DataFrame,
     return df_scaled, scaler_description
 
 def process_df(df: pd.DataFrame, 
-                 drop_columns: pd.Index,
                  one_hot_columns: pd.Index,
                  minmax_columns: pd.Index,
                  standard_columns: pd.Index, 
                  robust_columns: pd.Index, 
-                 exclude_scale_columns: pd.Index, use_encoding = False) -> Tuple[pd.DataFrame, dict]:
+                 exclude_scale_columns: pd.Index, label_encoding = False) -> Tuple[pd.DataFrame, dict]:
     
     original_columns = df.columns
     
@@ -216,10 +210,10 @@ def process_df(df: pd.DataFrame,
         df = pd.get_dummies(df, columns=one_hot_columns, drop_first=False).astype(float)
 
     encoded_columns = pd.Index([])
-    if use_encoding:
-        df, encoded_columns = encode_categorical_columns(df)
+    if label_encoding:
+        df, encoded_columns = encode_label_columns(df)
     else:
-        df, encoded_columns = binary_categorical_columns(df)
+        df, encoded_columns = encode_data_columns(df)
         
     non_scale_columns = one_hot_columns.union(encoded_columns).union(exclude_scale_columns)
     df, scaler_description = scale_columns(df, original_columns, minmax_columns, standard_columns, robust_columns, exclude_columns=non_scale_columns)
@@ -245,17 +239,17 @@ def process_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> Tuple[pd.Da
     df.drop(columns=target_columns, inplace=True)
     
     ################## Data Preprocessing #####################
-    df, encoded_columns, scaler_description = process_df(df, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns, exclude_scale_columns, use_encoding = True)
+    df, encoded_columns, scaler_description = process_df(df, one_hot_columns, minmax_columns, standard_columns, robust_columns, exclude_scale_columns, label_encoding = False)
     # Convert the entire DataFrame to float
     df = df.astype(float)
 
     ################## Target Preprocessing ###################
-    target_df, target_encoded_columns, target_scaler_description = process_df(target_df, pd.Index([]), pd.Index([]), minmax_columns, standard_columns, robust_columns, exclude_scale_columns, use_encoding = False)
+    target_df, target_encoded_columns, target_scaler_description = process_df(target_df, pd.Index([]), minmax_columns, standard_columns, robust_columns, exclude_scale_columns, label_encoding = True)
 
     # Calculate the number of features and classes
     num_features = df.shape[1]
-    num_classes = target_df.shape[1]
-
+    target_last_size = target_df.shape[1]
+    num_classes = target_df.iloc[:, 0].nunique() if 1 == target_last_size else target_last_size
     # Concatenate target columns to the end
     df = pd.concat([df, target_df], axis=1)   
 
