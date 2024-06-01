@@ -75,7 +75,7 @@ def wandb_init(data_config, ml_params):
     trainer_name = 'causal-learning'
     
     wandb.init(
-        project='causal-learning-temp',
+        project='causal-learning',
         name=f'{trainer_name}-{data_config.dataset_name} : {formatted_date}',
         save_code=True,
         monitor_gym=False, 
