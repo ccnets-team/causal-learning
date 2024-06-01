@@ -58,7 +58,7 @@ def wandb_init(data_config, ml_params):
     
     merged_config_dict = {**data_config_dict, **ml_params_dict}
     
-    trainer_name = 'causal_learning'
+    trainer_name = 'causal-learning'
     
     wandb.init(
         project='causal-learning',
@@ -104,7 +104,7 @@ def _wandb_log_data(metrics, log_data = None, iters = None):
         return
     wandb.log(log_data, step=iters)  # Log all data including the metrics
 
-def wandb_log_train_metrics(time_cost, lr, ccnet_metric=None, encoder_metric=None, images=None):
+def wandb_log_train_metrics(time_cost, lr, ccnet_metric=None, encoder_metric=None, images=None, iters = None):
     # Define step_logs as a dictionary with relevant key-value pairs
     
     if ccnet_metric is not None:
@@ -112,8 +112,8 @@ def wandb_log_train_metrics(time_cost, lr, ccnet_metric=None, encoder_metric=Non
         gpt_ccnet_errors = dict(ccnet_metric.errors.data)
         
         ccnet_metric = {
-        'CCNet/losses': gpt_ccnet_losses,
-        'CCNet/errors': gpt_ccnet_errors,
+        'CCNet/Losses': gpt_ccnet_losses,
+        'CCNet/Errors': gpt_ccnet_errors,
         }
     else:
         ccnet_metric = {
@@ -124,29 +124,29 @@ def wandb_log_train_metrics(time_cost, lr, ccnet_metric=None, encoder_metric=Non
         encoder_ccnet_errors = dict(encoder_metric.errors.data)
         
         encoder_metric = {
-        'Encoder/losses': encoder_ccnet_losses,
-        'Encoder/errors': encoder_ccnet_errors,
+        'Encoder/Losses': encoder_ccnet_losses,
+        'Encoder/Errors': encoder_ccnet_errors,
         }    
     else:
         encoder_metric = {
         }
     
-    additional_logs = {"Learning Rate": lr, 
-                       "Time Cost": time_cost
+    additional_logs = {"Step/LearningRate": lr, 
+                       "Step/TimeCost": time_cost
                        }
     if images is not None:
         additional_logs["WB Images"] = images
     
     log_data = {**additional_logs}
     train_metrics = {**ccnet_metric, **encoder_metric}
-    _wandb_log_data(train_metrics, log_data)
+    _wandb_log_data(train_metrics, log_data, iters = iters)
 
-def wandb_log_eval_data(metrics, images):
+def wandb_log_eval_data(metrics, images, iters):
     additional_logs = {}
     if images is not None:
         additional_logs["WB Images"] = images
         
     log_data = {**additional_logs}
     eval_metrics = {"Evaluate": metrics}
-    _wandb_log_data(eval_metrics, log_data=log_data)
+    _wandb_log_data(eval_metrics, log_data=log_data, iters = iters)
 

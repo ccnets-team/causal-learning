@@ -93,6 +93,7 @@ class TrainerHubHelper:
         """Handle all operations required at checkpoint: logging, saving, and metrics reset."""
         time_cost = time.time() - self.pivot_time
         wb_image = self.update_image()
+        total_iters = epoch_idx * len_dataloader + iter_idx 
         
         self.log_checkpoint_details(time_cost, epoch_idx, iter_idx, len_dataloader, wb_image)
         self.save_trainers()
@@ -101,7 +102,7 @@ class TrainerHubHelper:
         if self.use_ccnet and test_results is not None:
             self.handle_test_results(test_results)
             if self.use_wandb:
-                wandb_log_eval_data(test_results, wb_image)
+                wandb_log_eval_data(test_results, wb_image, iters = total_iters)
                 
     def handle_test_results(self, test_results=None):
         """Print and log test results if core is used."""
@@ -139,6 +140,7 @@ class TrainerHubHelper:
         """Calculates average metrics over the checkpoints."""
         avg_ccnet_metric = self.ccnet_metrics / float(self.num_checkpoints) if self.use_ccnet else None
         avg_encoder_metric = self.encoder_metrics / float(self.num_checkpoints) if self.use_encoder else None
+        total_iters = epoch_idx * len_dataloader + iter_idx 
         
         if self.use_print:
             self.print_checkpoint_info(time_cost, epoch_idx, iter_idx, len_dataloader, avg_ccnet_metric, avg_encoder_metric)
@@ -147,7 +149,7 @@ class TrainerHubHelper:
         """Logs training data to Weights & Biases if enabled."""
         if self.use_wandb:
             lr = ccnet_trainer.get_lr() 
-            wandb_log_train_metrics(time_cost, lr=lr, ccnet_metric=avg_ccnet_metric, encoder_metric=avg_encoder_metric, images=wb_image)
+            wandb_log_train_metrics(time_cost, lr=lr, ccnet_metric=avg_ccnet_metric, encoder_metric=avg_encoder_metric, images=wb_image, iters = total_iters)
 
     def print_checkpoint_info(self, time_cost, epoch_idx, iter_idx, len_dataloader, avg_ccnet_metric = None, avg_encoder_metric = None):
         """Prints formatted information about the current checkpoint."""
