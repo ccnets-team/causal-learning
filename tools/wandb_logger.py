@@ -36,6 +36,10 @@ def sort_key(item):
     else:
         return (2, key)  
 
+# Added helper function to remove specified fields
+def remove_fields(d, fields):
+    return {k: v for k, v in d.items() if k not in fields}
+
 METRICS_CATEGORY_MAP = {
     'losses': 'Losses',
     'errors': 'Errors'
@@ -49,9 +53,16 @@ def wandb_init(data_config, ml_params):
     data_config_dict = convert_to_dict(data_config)
     ml_params_ccnet_config, ml_params_encoder_config = convert_to_dict(ml_params.model.ccnet_config),convert_to_dict(ml_params.model.encoder_config)
     ml_params_dict = convert_to_dict(ml_params)
+    
+    # Applied remove_fields function to exclude specified fields
+    if ml_params_ccnet_config is not None:
+        ml_params_ccnet_config = remove_fields(ml_params_ccnet_config, ['obs_shape', 'condition_dim', 'z_dim'])
+    if ml_params_encoder_config is not None:
+        ml_params_encoder_config = remove_fields(ml_params_encoder_config, ['obs_shape', 'condition_dim', 'z_dim'])
+        
     ml_params_dict['model']['ccnet_config'] = ml_params_ccnet_config
     ml_params_dict['model']['encoder_config'] = ml_params_encoder_config
-    
+
     data_config_dict = {k: v for k, v in data_config_dict.items() if isinstance(v, (int, float, str, bool))}
     data_config_dict = dict(sorted(data_config_dict.items(), key=sort_key))
     data_config_dict = {'data_config':data_config_dict}
