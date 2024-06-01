@@ -9,6 +9,10 @@
 [![Static Badge](https://img.shields.io/badge/Patent-Google-%234285F4)](https://patents.google.com/patent/WO2022164299A1/en)
 [![Static Badge](https://img.shields.io/badge/Patent-KR-F70505)](https://doi.org/10.8080/1020237037422)
 
+# Monitor Real-Time CCNets W&B Workspace
+
+Explore our real-time modeling and causal learning metrics: [Workspace Link](https://wandb.ai/ccnets/causal-learning/)
+ 
 # Table of Contents
 
 - [🎈 **Overview**](#🎈-overview)
