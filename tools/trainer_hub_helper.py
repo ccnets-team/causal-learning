@@ -119,7 +119,8 @@ class TrainerHubHelper:
                 
     def handle_test_results(self, test_results=None):
         """Print and log test results if core is used."""
-        print_test_results(test_results)
+        if self.use_print:
+            print_test_results(test_results)
         log_test_results(self.tensorboard, self.iters, test_results)
 
     def increment_counters(self):
@@ -180,9 +181,9 @@ class TrainerHubHelper:
             print_lr(encoder_trainer.optimizers)
         print('--------------------Training Metrics--------------------')
         if self.use_encoder and avg_encoder_metric is not None:
-            encoder_network_type = "Encoder" 
+            encoder_type = "Encoder" 
             encoder_network_name = encoder.model_name.capitalize()
-            print_trainer(encoder_network_type, encoder_network_name, avg_encoder_metric)
+            print_trainer(encoder_type, encoder_network_name, avg_encoder_metric)
         if self.use_ccnet and avg_ccnet_metric is not None:
             ccnet_type = "CCNet" 
             ccnet_name = ccnet.model_name.capitalize()
