@@ -38,6 +38,8 @@ def sort_key(item):
 
 # Added helper function to remove specified fields
 def remove_fields(d, fields):
+    if d is None:
+        return None
     return {k: v for k, v in d.items() if k not in fields}
 
 METRICS_CATEGORY_MAP = {
@@ -51,32 +53,33 @@ def wandb_init(data_config, ml_params):
     wandb.login()
     
     data_config_dict = convert_to_dict(data_config)
-    ml_params_ccnet_config, ml_params_encoder_config = convert_to_dict(ml_params.model.ccnet_config),convert_to_dict(ml_params.model.encoder_config)
-    ml_params_dict = convert_to_dict(ml_params)
     
-    # Applied remove_fields function to exclude specified fields
-    if ml_params_ccnet_config is not None:
-        ml_params_ccnet_config = remove_fields(ml_params_ccnet_config, ['obs_shape', 'condition_dim', 'z_dim'])
-    if ml_params_encoder_config is not None:
-        ml_params_encoder_config = remove_fields(ml_params_encoder_config, ['obs_shape', 'condition_dim', 'z_dim'])
-        
-    ml_params_dict['model']['ccnet_config'] = ml_params_ccnet_config
-    ml_params_dict['model']['encoder_config'] = ml_params_encoder_config
+    delete_keys = ['obs_shape', 'condition_dim', 'z_dim']
+    if ml_params.ccnet_config is not None:
+        ccnet_config_dict = convert_to_dict(ml_params.ccnet_config)
+        ml_params.ccnet_config = remove_fields(ccnet_config_dict, delete_keys)
+    if ml_params.encoder_config is not None:
+        encoder_config_dict = convert_to_dict(ml_params.encoder_config)
+        ml_params.encoder_config = remove_fields(encoder_config_dict, delete_keys)
+    
+    ml_params_dict = convert_to_dict(ml_params)
+    ml_params_dict['ccnet_config'] = ml_params.ccnet_config
+    ml_params_dict['encoder_config'] = ml_params.encoder_config
 
     data_config_dict = {k: v for k, v in data_config_dict.items() if isinstance(v, (int, float, str, bool))}
     data_config_dict = dict(sorted(data_config_dict.items(), key=sort_key))
-    data_config_dict = {'data_config':data_config_dict}
+    data_config_dict = {'data_config': data_config_dict}
     
     merged_config_dict = {**data_config_dict, **ml_params_dict}
     
     trainer_name = 'causal-learning'
     
     wandb.init(
-        project='causal-learning',
-        name= f'{trainer_name}-{data_config.dataset_name} : {formatted_date}',
-        save_code = True,
-        monitor_gym = False, 
-        config= merged_config_dict
+        project='causal-learning-temp',
+        name=f'{trainer_name}-{data_config.dataset_name} : {formatted_date}',
+        save_code=True,
+        monitor_gym=False, 
+        config=merged_config_dict
     )
     
     directory_path = f'../saved/{data_config.dataset_name}/{trainer_name}'
