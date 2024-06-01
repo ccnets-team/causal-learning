@@ -1,13 +1,11 @@
 import torch
 import torch.optim as optim
-from framework.train.utils.schedulers import LinearDecayLR, CyclicLR
 
 LR_CYCLE_SIZE = 20000
 STEPS_100K = 100000  # Represents the number of steps over which decay is applied
 
 class OptimizationManager:
-    def __init__(self, networks, learning_params, total_iterations):
-        self.total_iterations = total_iterations
+    def __init__(self, networks, learning_params):
 
         self.optimizers = []
         self.schedulers = []
@@ -22,7 +20,7 @@ class OptimizationManager:
     def setup_optimization(self, networks, learning_params):
         for network, params in zip(networks, learning_params):
             optimizer = self.create_optimizer(network, params['lr'])
-            scheduler = self.create_scheduler(optimizer, params, self.total_iterations)
+            scheduler = self.create_scheduler(optimizer, params)
             
             self.current_lrs.append(params['lr'])
             self.initial_lrs.append(params['lr'])
@@ -34,18 +32,12 @@ class OptimizationManager:
     def create_optimizer(self, network, lr):
         return optim.Adam(network.parameters(), lr=lr, betas=(0.9, 0.999))
 
-    def create_scheduler(self, optimizer, params, total_iterations):
+    def create_scheduler(self, optimizer, params):
         scheduler_type = params['scheduler_type']
         decay_rate = params['decay_rate_100k']
-        if scheduler_type == 'linear':
-            return LinearDecayLR(optimizer, total_steps=total_iterations, decay_rate_100k=decay_rate)
-        elif scheduler_type == 'exponential':
+        if scheduler_type == 'exponential':
             gamma = pow(decay_rate, 1/STEPS_100K)
             return optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=gamma)
-        elif scheduler_type == 'cyclic':
-            base_lr = params['lr'] * decay_rate * STEPS_100K / total_iterations
-            max_lr = params['lr']
-            return CyclicLR(optimizer, base_lr=base_lr, max_lr=max_lr, step_size_up=STEPS_100K // 2, mode='triangular', cycle_momentum=False)
         else:
             raise ValueError(f"Unknown scheduler type: {scheduler_type}")
 

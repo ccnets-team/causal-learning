@@ -76,3 +76,26 @@ def modify_network_params(network_params, attribute=None, value=None):
         setattr(copy_network_params, attribute, value)
     
     return copy_network_params
+
+def _determine_max_iters_and_epoch(ml_params):
+    """
+    The training duration follows based on the shortest ends either 'max_iters' or 'num_epoch', unless one is missing.
+    
+    Parameters:
+    ml_params (object): Contains 'num_epoch', 'max_iters', and 'batch_size' under 'training'.
+
+    Raises:
+    ValueError: If both 'num_epoch' and 'max_iters' are None.
+    """    
+    if ml_params.num_epoch is None:
+        ml_params.num_epoch = ml_params.training.max_iters // ml_params.training.batch_size
+    elif ml_params.training.max_iters is None:
+        ml_params.training.max_iters = ml_params.num_epoch * ml_params.training.batch_size
+    elif ml_params.num_epoch is not None and ml_params.training.max_iters is not None:
+        epoch_iters = ml_params.num_epoch * ml_params.training.batch_size
+        if epoch_iters > ml_params.training.max_iters:
+            ml_params.num_epoch = ml_params.training.max_iters // ml_params.training.batch_size
+        else:
+            ml_params.training.max_iters = epoch_iters
+    else:
+        raise ValueError("Both 'num_epoch' and 'max_iters' cannot be set. Please set only one of them.")
