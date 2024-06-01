@@ -56,6 +56,8 @@ class TrainingParameters:
     num_epoch: int = 100
     max_iters: int = 1_000_000
     batch_size: int = 64
+    max_seq_len: int = None
+    min_seq_len: int = None
 
 @dataclass
 class AlgorithmParameters:

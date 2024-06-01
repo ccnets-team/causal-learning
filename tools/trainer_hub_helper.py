@@ -1,11 +1,9 @@
 import time
-import wandb
-import numpy as np
 from tools.wandb_logger import wandb_init 
 from tools.loader import save_trainer
 from tools.logger import tensorboard_log_train_metrics, log_test_results
 from tools.print import print_iter, print_lr, print_trainer, print_test_results
-from tools.wandb_logger import wandb_log_train_metrics, wandb_log_eval_data
+from tools.wandb_logger import wandb_log_train_metrics, wandb_log_eval_data, wandb_image
 from tools.image_debugger import ImageDebugger
 from tools.logger import get_log_name
 import os
@@ -14,15 +12,16 @@ from tools.metric_tracker import MetricsTracker
 
 from torch.utils.tensorboard import SummaryWriter
 
+from tools.setting.ml_params import MLParameters 
+from tools.setting.data_config import DataConfig
+
 class TrainerHubHelper:
-    def __init__(self, parent, data_config, ml_params, device, use_print, use_wandb, print_interval):
+    def __init__(self, parent, data_config: DataConfig, ml_params: MLParameters, device, use_print, use_wandb, print_interval):
         self.parent = parent
         self.device = device
         
         self.use_print = use_print
         self.tensorboard = SummaryWriter(log_dir=get_log_name('../logs'))
-        if use_wandb:
-            wandb_init(data_config, ml_params)
         
         self.use_wandb = use_wandb
         
@@ -37,6 +36,7 @@ class TrainerHubHelper:
         self.use_gpt = self.parent.use_gpt
         self.use_ccnet = self.parent.use_ccnet
         self.use_encoder = self.parent.use_encoder
+        
         self.ccnet_metrics = MetricsTracker()
         self.encoder_metrics = MetricsTracker() 
         
@@ -46,8 +46,19 @@ class TrainerHubHelper:
             image_ccnet = self.parent.ccnet if self.use_ccnet else self.parent.encoder 
             self.image_debugger = ImageDebugger(image_ccnet, data_config, self.device, use_ccnet = self.use_ccnet)
         
+        self.data_config = data_config 
+        self.ml_params = ml_params
+        
     def initialize_train(self, dataset):
-        # self.sum_losses, self.sum_errors = None, None
+        if hasattr(dataset, 'max_seq_len'):
+            self.ml_params.training.max_seq_len = dataset.max_seq_len
+        
+        if hasattr(dataset, 'min_seq_len'):
+            self.ml_params.training.max_seq_len = dataset.max_seq_len
+        
+        if self.use_wandb:
+            wandb_init(self.data_config, self.ml_params)
+        
         self.iters, self.cnt_checkpoints, self.cnt_print = 0, 0, 0
         if self.use_image_debugger:
             self.image_debugger.initialize_(dataset)
@@ -122,7 +133,7 @@ class TrainerHubHelper:
             
             # Log the image to Wandb if enabled
             if self.use_wandb:
-                return wandb.Image(image_display)
+                return wandb_image(image_display)
             
         # Return None if images are not used or logging is not enabled
         return None

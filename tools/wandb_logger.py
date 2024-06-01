@@ -150,3 +150,5 @@ def wandb_log_eval_data(metrics, images, iters):
     eval_metrics = {"Evaluate": metrics}
     _wandb_log_data(eval_metrics, log_data=log_data, iters = iters)
 
+def wandb_image(image):
+    return wandb.Image(image)
