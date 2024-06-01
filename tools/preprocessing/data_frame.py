@@ -219,6 +219,24 @@ def process_df(df: pd.DataFrame,
     df, scaler_description = scale_columns(df, original_columns, minmax_columns, standard_columns, robust_columns, exclude_columns=non_scale_columns)
     
     return df, encoded_columns, scaler_description
+
+def calculate_num_classes(target_df: pd.DataFrame) -> int:
+    num_classes = 0
+    target_col_len = len(target_df.columns)
+    target_str_columns = target_df.select_dtypes(include=['object']).columns
+    target_str_col_len = len(target_str_columns)
+    non_str_target_len = target_col_len - target_str_col_len
+    
+    num_classes += non_str_target_len
+    
+    for col in target_str_columns:
+        unique_values = target_df[col].nunique()
+        if unique_values > 2:
+            num_classes += unique_values
+        else:
+            num_classes += 1
+    return num_classes
+
     
 def process_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> Tuple[pd.DataFrame, dict]:
     
@@ -238,6 +256,9 @@ def process_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> Tuple[pd.Da
     target_df = df[target_columns]
     df.drop(columns=target_columns, inplace=True)
     
+    num_features = df.shape[1]
+    num_classes = calculate_num_classes(target_df)
+    
     ################## Data Preprocessing #####################
     df, encoded_columns, scaler_description = process_df(df, one_hot_columns, minmax_columns, standard_columns, robust_columns, exclude_scale_columns, label_encoding = False)
     # Convert the entire DataFrame to float
@@ -246,10 +267,6 @@ def process_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> Tuple[pd.Da
     ################## Target Preprocessing ###################
     target_df, target_encoded_columns, target_scaler_description = process_df(target_df, pd.Index([]), minmax_columns, standard_columns, robust_columns, exclude_scale_columns, label_encoding = True)
 
-    # Calculate the number of features and classes
-    num_features = df.shape[1]
-    target_last_size = target_df.shape[1]
-    num_classes = target_df.iloc[:, 0].nunique() if 1 == target_last_size else target_last_size
     # Concatenate target columns to the end
     df = pd.concat([df, target_df], axis=1)   
 
