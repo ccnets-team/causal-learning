@@ -42,6 +42,7 @@ def configure_encoder_network(model_name, model_config, data_config):
     
 def configure_ccnet_network(model_name, model_config, data_config):
     obs_shape = data_config.obs_shape if data_config.state_size is None else [data_config.state_size]
+    label_size = data_config.label_size
     if data_config.task_type == 'ordinal_regression':
         label_size = 1
     elif data_config.task_type == 'binary_classification':        
@@ -52,7 +53,7 @@ def configure_ccnet_network(model_name, model_config, data_config):
         if len(obs_shape) != 1:
             explain_size = max(model_config.d_model//2, 1)
         else:
-            explain_size = int(max(round((data_config.state_size - data_config.label_size)/2), 1))
+            explain_size = int(max(round((obs_shape[-1] - data_config.label_size)/2), 1))
         data_config.explain_size = explain_size
     else:
         explain_size = data_config.explain_size
