@@ -48,7 +48,11 @@ def configure_ccnet_network(model_name, model_config, data_config):
         label_size = 2
     else:
         label_size = data_config.label_size
-    explain_size = max(model_config.d_model//2, 1) if data_config.explain_size is None else data_config.explain_size
+    if data_config.explain_size is None:
+        explain_size = max(model_config.d_model//2, 1)
+        data_config.explain_size = explain_size
+    else:
+        explain_size = data_config.explain_size
     return configure_model(model_name, model_config, obs_shape, condition_dim=label_size, z_dim=explain_size)
 
 def modify_network_params(network_params, attribute=None, value=None):
