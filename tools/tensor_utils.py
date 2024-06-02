@@ -4,7 +4,6 @@ COPYRIGHT (c) 2022. CCNets. All Rights reserved.
 import torch
 import random
 from torch.nn.utils.rnn import pad_sequence
-from collections import Counter
 
 def adjust_tensor_dim(tensor, target_dim = 3):
     if tensor is None:
@@ -23,7 +22,7 @@ def adjust_tensor_dim(tensor, target_dim = 3):
                 tensor = tensor.squeeze(0)  # Squeeze dimension at index 1 if it's 1
     return tensor
 
-def manage_batch_dimensions(use_gpt, source_batch, target_batch, padding_mask = None):
+def manage_batch_dimensions(use_seq, source_batch, target_batch, padding_mask = None):
     """
     Prepares batch data by adjusting tensor dimensions for processing.
 
@@ -38,7 +37,7 @@ def manage_batch_dimensions(use_gpt, source_batch, target_batch, padding_mask = 
     - padding_mask (Tensor, optional): The prepared padding mask tensor.
     """
             
-    if use_gpt:
+    if use_seq:
         # Adjust tensor dimensions for causal processing
         state_trajectory = adjust_tensor_dim(source_batch, target_dim=3)  # off when it's img data set
         target_trajectory = adjust_tensor_dim(target_batch, target_dim=3)  # off when it's img data set

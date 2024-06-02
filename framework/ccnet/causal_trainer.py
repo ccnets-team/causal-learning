@@ -15,11 +15,11 @@ from framework.ccnet.cooperative_network import CooperativeNetwork
 from framework.train.trainer_base import TrainerBase
 
 class CausalTrainer(TrainerBase):
-    def __init__(self, ccnet: CooperativeNetwork, algorithm_params, optimization_params, task_type):
-        TrainerBase.__init__(self, ccnet.networks, algorithm_params, optimization_params, task_type, ccnet.device)
+    def __init__(self, ccnet: CooperativeNetwork, algorithm_params, optimization_params, data_config):
+        TrainerBase.__init__(self, ccnet.networks, algorithm_params, optimization_params, data_config.task_type, ccnet.device)
         self.explainer, self.reasoner, self.producer = self.networks  
         self.network_names = ccnet.network_names
-        self.use_gpt = ccnet.use_gpt
+        self.use_seq = ccnet.use_seq
     
     def train_models(self, state, label, padding_mask=None):
         # Set the models to training mode and perform the forward pass.
@@ -82,12 +82,12 @@ class CausalTrainer(TrainerBase):
         """Calculate mean of data, use mask if provided to exclude padded data."""
         if padding_mask is not None:
             expanded_mask = padding_mask.expand_as(discrepancy)
-            if self.use_gpt:
+            if self.use_seq:
                 return discrepancy.sum(dim=-1, keepdim=True) / expanded_mask.sum(dim=-1, keepdim=True).clamp_min(1)
             else:
                 return discrepancy.view(discrepancy.size(0), -1).sum(dim=1, keepdim=True) / expanded_mask.view(expanded_mask.size(0), -1).sum(dim=1, keepdim=True).clamp_min(1)
         else:
-            if self.use_gpt:
+            if self.use_seq:
                 return discrepancy.mean(dim=-1, keepdim=True)
             else:
                 return discrepancy.view(discrepancy.size(0), -1).mean(dim=1, keepdim=True)

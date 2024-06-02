@@ -18,7 +18,7 @@ class CausalEncodingTrainer(TrainerBase):
     Trainer for the Causal Encoding Network, handling the training process across
     the network's components: Explainer, Reasoner, and Producer.
     """
-    def __init__(self, encoder: Encoder, algorithm_params, optimization_params, task_type):
+    def __init__(self, encoder: Encoder, algorithm_params, optimization_params, data_config):
         """
         Initialize the trainer with an encoder network, training parameters, and optimization settings.
 
@@ -27,7 +27,7 @@ class CausalEncodingTrainer(TrainerBase):
         - training_params: Dictionary containing parameters specific to training (e.g., batch size, epochs).
         - optimization_params: Dictionary containing parameters specific to optimization (e.g., learning rate).
         """        
-        TrainerBase.__init__(self, encoder.networks, algorithm_params, optimization_params, task_type, encoder.device)
+        TrainerBase.__init__(self, encoder.networks, algorithm_params, optimization_params, data_config.task_type, encoder.device)
         self.explainer, self.reasoner, self.producer = self.networks        
         self.network_names = encoder.network_names
         self.layer_norm = torch.nn.LayerNorm(encoder.stoch_size, elementwise_affine=False).to(encoder.device)

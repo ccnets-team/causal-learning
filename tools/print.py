@@ -10,7 +10,7 @@ Reference:
 COPYRIGHT (c) 2022. CCNets. All Rights reserved.
 '''
 
-import torch
+DEFAULT_PRINT_INTERVAL = 100
 
 def print_iter(epoch, num_epoch, iters, len_dataloader, et):
     print('[%d/%d][%d/%d][Time %.2f]'
@@ -69,3 +69,30 @@ def print_test_results(metrics):
             % metric)
         print(text)
     print()
+    
+def print_checkpoint_info(parent, time_cost, epoch_idx, iter_idx, len_dataloader, 
+                            ccnet_metric = None, encoder_metric = None):
+    """Prints formatted information about the current checkpoint."""
+    ccnet = parent.ccnet
+    encoder = parent.encoder
+    ccnet_trainer = parent.ccnet_trainer
+    encoder_trainer = parent.encoder_trainer
+    use_encoder = parent.use_encoder
+    use_ccnet = parent.use_ccnet
+        
+    print_iter(epoch_idx, parent.num_epoch, iter_idx, len_dataloader, time_cost)
+    if ccnet_metric is not None and encoder_metric is not None:
+        print_lr(encoder_trainer.optimizers, ccnet_trainer.optimizers)
+    elif ccnet_metric is not None:
+        print_lr(ccnet_trainer.optimizers)
+    elif encoder_metric is not None:
+        print_lr(encoder_trainer.optimizers)
+    print('--------------------Training Metrics--------------------')
+    if use_encoder and encoder_metric is not None:
+        encoder_type = "Encoder" 
+        encoder_network_name = encoder.model_name.capitalize()
+        print_trainer(encoder_type, encoder_network_name, encoder_metric)
+    if use_ccnet and ccnet_metric is not None:
+        ccnet_type = "CCNet" 
+        ccnet_name = ccnet.model_name.capitalize()
+        print_trainer(ccnet_type, ccnet_name, ccnet_metric)

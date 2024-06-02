@@ -9,9 +9,9 @@ from tools.utils.image_utils import text_on_image, load_images_and_labels, prepa
 import os
 
 class ImageDebugger:
-    def __init__(self, image_ccnet, data_config, device, use_ccnet=False):
+    def __init__(self, model, data_config, device, use_ccnet=False):
         self.device = device
-        self.image_ccnet = image_ccnet
+        self.model = model
         self.use_ccnet = use_ccnet
         self.show_image_indices = data_config.show_image_indices
         self.label_size = data_config.label_size
@@ -43,20 +43,20 @@ class ImageDebugger:
     def update_images(self):
         with torch.no_grad():
             if self.use_ccnet:
-                explains = self.image_ccnet.explain(self.debug_images)
-                inferred_labels = self.image_ccnet.reason(self.debug_images, explains)
+                explains = self.model.explain(self.debug_images)
+                inferred_labels = self.model.reason(self.debug_images, explains)
             else:
-                recognized_features, explains = self.image_ccnet.decompose(self.debug_images)
+                recognized_features, explains = self.model.decompose(self.debug_images)
 
             # Assuming `self.n_img_h` and `self.n_img_w` are the correct dimensions for each image
             for i in range(self.num_images):
                 if self.use_ccnet:
                     selected_features = self.debug_labels[i:i + 1, :].expand_as(inferred_labels)
-                    generated_images = self.image_ccnet.produce(selected_features, explains).cpu()
+                    generated_images = self.model.produce(selected_features, explains).cpu()
                 else:
                     selected_features = recognized_features[i:i + 1, :].expand_as(recognized_features)
                     generated_code = torch.cat([selected_features, explains], dim=-1)
-                    generated_images = self.image_ccnet.decode(generated_code).cpu()
+                    generated_images = self.model.decode(generated_code).cpu()
                 if self.n_img_ch == 1:
                     generated_images = generated_images.repeat_interleave(3, dim=1)
                 img_array = vutils.make_grid(generated_images, nrow=self.num_images, padding=0, normalize=True).numpy()

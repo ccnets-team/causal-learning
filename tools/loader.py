@@ -2,6 +2,16 @@ import os
 import torch.utils.data
 from torch.nn.utils.rnn import pad_sequence
 
+def setup_directories(base_path = '../'):
+    set_model_path = os.path.join(base_path, "models")
+    set_temp_path = os.path.join(base_path, "models/temp")
+    set_log_path = os.path.join(base_path, "logs")
+
+    for path in [set_model_path, set_temp_path, set_log_path]:
+        os.makedirs(path, exist_ok=True)
+
+    return set_model_path, set_temp_path, set_log_path
+    
 def save_model(model_path, model_name, model, opt_models, scheduler_models):
     torch.save(model.state_dict(),os.path.join(model_path, model_name + '.pth'))
     torch.save(opt_models.state_dict(),os.path.join(model_path, 'opt_' + model_name + '.pth'))
@@ -53,6 +63,12 @@ def get_eval_loader(evalset, batch_size, num_workers = 0, collate = collate_fn):
 def get_test_loader(testset, batch_size, num_workers=0, collate=collate_fn):
     return torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=num_workers, collate_fn=collate, drop_last=False)
 
+def load_trainer(self, ccnet_network = True):
+    if ccnet_network:
+        _load_trainer(self.helper.model_path, self.ccnet_trainer)
+    else:
+        _load_trainer(self.helper.model_path, self.encoder_trainer)
+
 def save_trainer(model_path, trainer):
     # Lists of components to be saved for GPT
     network_names = trainer.network_names
@@ -67,7 +83,7 @@ def save_trainer(model_path, trainer):
     for model_name, network, optimizer, scheduler in zip(network_names, networks, optimizers, schedulers):
         save_model(model_path, model_name, network, optimizer, scheduler)
 
-def load_trainer(model_path, trainer):
+def _load_trainer(model_path, trainer):
     # Lists of components to be loadd for GPT
     network_names = trainer.network_names
     networks = trainer.networks

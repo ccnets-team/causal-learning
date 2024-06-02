@@ -73,12 +73,12 @@ def prepare_metrics_data(metric_data: Optional[Dict]):
 
 def tensorboard_log_train_metrics(tensorboard, iteration: int, ccnet_metric: Optional[Dict], encoder_metric: Optional[Dict]):
     """
-    Log training metrics for core and encoder types to TensorBoard.
+    Log training metrics for ccnet and encoder types to TensorBoard.
 
     Args:
     tensorboard : The TensorBoard logger.
     iteration : The current training iteration.
-    core_metric : Core trainer specific metric data.
+    ccnet_metric : CCNet trainer specific metric data.
     encoder_metric : Encoder trainer specific metric data.
     """
     # Prepare metric data
@@ -91,7 +91,7 @@ def tensorboard_log_train_metrics(tensorboard, iteration: int, ccnet_metric: Opt
             for metric_name, metric_value in values.items():
                 tensorboard.add_scalar(f"Train/{trainer_type}/{metric_name}", metric_value, iteration)
 
-    # Log metrics for core and encoder
+    # Log metrics for ccnet and encoder
     log_metrics(ccnet_metrics, 'CCNet')
     log_metrics(encoder_metrics, 'Encoder')
 

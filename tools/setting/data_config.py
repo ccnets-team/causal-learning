@@ -24,6 +24,8 @@ class DataConfig:
         explain_size (int, optional): Dimensionality of the latent space from the explainer network, essential for 
                                       generating compressed, efficient explanations during inference and data generation.
                                       Defaults to half of `d_model` if not set.
+        explain_layer (str, optional): Output layer type for the ccnet's explainer network. 
+                                       Supported options include 'layer_norm', 'tanh', 'sigmoid' and 'none'.
         state_size (int, optional): Total dimensionality for the internal state of the encoder network, calculated as the 
                                     sum of half the `d_model` from both the explainer and reasoner if not explicitly defined.
                                     This replaces traditional input shapes when both encoder and core models are utilized, 
@@ -36,7 +38,8 @@ class DataConfig:
             Raises an error if an unsupported task type is specified.
     """
     def __init__(self, dataset_name: str, task_type: str, obs_shape: list, label_size: int = None,
-                 explain_size: int = None, state_size: int = None, show_image_indices: list = None):
+                 explain_size: int = None, explain_layer: str = 'layer_norm',
+                 state_size: int = None, show_image_indices: list = None):
         valid_task_types = ['binary_classification', 'multi_class_classification','multi_label_classification', 
                             'regression', 'ordinal_regression', 'compositional_regression',
                             'encoding', 'generation']
@@ -48,6 +51,7 @@ class DataConfig:
         self.obs_shape = obs_shape
         self.label_size = label_size
         self.explain_size = explain_size
+        self.explain_layer = explain_layer
         self.state_size = state_size
         self.show_image_indices = show_image_indices
 
