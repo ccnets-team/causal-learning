@@ -38,7 +38,7 @@ class DataConfig:
             Raises an error if an unsupported task type is specified.
     """
     def __init__(self, dataset_name: str, task_type: str, obs_shape: list, label_size: int = None,
-                 explain_size: int = None, explain_layer: str = 'layer_norm',
+                 explain_size: int = None, explain_layer: str = 'tanh',
                  state_size: int = None, show_image_indices: list = None):
         valid_task_types = ['binary_classification', 'multi_class_classification','multi_label_classification', 
                             'regression', 'ordinal_regression', 'compositional_regression',
