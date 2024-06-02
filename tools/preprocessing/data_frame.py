@@ -14,7 +14,7 @@ from typing import Tuple
 from tools.preprocessing.scaler import scale_columns
 from tools.preprocessing.encode import encode_data_columns, encode_label_columns
 from tools.preprocessing.utils import calculate_num_classes, to_indices, remove_columns, display_statistics
-from tools.preprocessing.utils import preprocess_cyclical_columns, preprocess_date_column
+from tools.preprocessing.utils import preprocess_cyclical_columns, preprocess_date_column, preprocess_datetime_columns
 
 def process_df(df: pd.DataFrame, 
                  one_hot_columns: pd.Index,

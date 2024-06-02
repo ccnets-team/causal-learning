@@ -152,3 +152,72 @@ def preprocess_date_column(df: pd.DataFrame) -> pd.DataFrame:
     df.drop(['date', 'day_of_year'], axis=1, inplace=True)
     
     return df
+
+def preprocess_datetime_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Preprocesses the 'date' and 'time' columns in the DataFrame.
+    - Converts the 'date' column to sine and cosine transformations of the month.
+    - Encodes the 'time' column linearly from -1 to 1.
+    - Handles cases where the 'time' column contains date information.
+    
+    Parameters:
+    df (pd.DataFrame): The input DataFrame containing 'date' and/or 'time' columns.
+    
+    Returns:
+    pd.DataFrame: The DataFrame with the 'date' and 'time' columns processed.
+    """
+
+    # Check if 'time' column also contains date information
+    if 'time' in df.columns:
+        # Try to parse the 'time' column with both date and time
+        try:
+            df['time'] = pd.to_datetime(df['time'], errors='coerce')
+            df['contains_date'] = df['time'].dt.date.notnull()  # Check if 'time' column has date info
+            
+            if df['contains_date'].all():  # If all entries in 'time' column have date info
+                df['date'] = df['time'].dt.date  # Extract date part
+                df['time'] = df['time'].dt.time  # Extract time part
+        except:
+            pass
+        
+        # Drop the helper column
+        df.drop(columns=['contains_date'], inplace=True)
+        
+        # Handle 'time' column
+        df['time'] = pd.to_datetime(df['time'], format='%H:%M:%S', errors='coerce')
+        
+        # Extract hours, minutes, and seconds
+        df['hours'] = df['time'].dt.hour
+        df['minutes'] = df['time'].dt.minute
+        df['seconds'] = df['time'].dt.second
+        
+        # Calculate total seconds in the day
+        df['total_seconds'] = df['hours'] * 3600 + df['minutes'] * 60 + df['seconds']
+        
+        # Encode time within the day linearly from -1 to 1
+        df['time_scaled'] = 2 * (df['total_seconds'] / 86400) - 1
+        
+        # Drop the original 'time' column and the extracted 'hours', 'minutes', 'seconds', and 'total_seconds'
+        df.drop(['time', 'hours', 'minutes', 'seconds', 'total_seconds'], axis=1, inplace=True)
+        
+    # Handle 'date' column
+    if 'date' in df.columns:
+        df['date'] = pd.to_datetime(df['date'], errors='coerce')
+        
+        # Extract month if 'month' column does not exist
+        if 'month' not in df.columns:
+            df['month'] = df['date'].dt.month
+        
+        # Drop the original 'date' column
+        df.drop(['date'], axis=1, inplace=True)
+
+    # Handle 'month' column (either pre-existing or extracted from 'date')
+    if 'month' in df.columns:
+        # Encode month using sine and cosine transformations
+        df['month_sin'] = np.sin(2 * np.pi * df['month'] / 12)
+        df['month_cos'] = np.cos(2 * np.pi * df['month'] / 12)
+        
+        # Drop the extracted 'month' column
+        df.drop(['month'], axis=1, inplace=True)
+        
+    return df
