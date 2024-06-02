@@ -153,43 +153,46 @@ def preprocess_date_column(df: pd.DataFrame) -> pd.DataFrame:
     
     return df
 
+
 def preprocess_datetime_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Preprocesses the 'date' and 'time' columns in the DataFrame.
+    Preprocesses the 'date', 'time', and 'month' columns in the DataFrame.
     - Converts the 'date' column to sine and cosine transformations of the month.
     - Encodes the 'time' column linearly from -1 to 1.
     - Handles cases where the 'time' column contains date information.
+    - Considers both lowercase and capitalized versions of 'time' and 'month'.
     
     Parameters:
     df (pd.DataFrame): The input DataFrame containing 'date' and/or 'time' columns.
     
     Returns:
-    pd.DataFrame: The DataFrame with the 'date' and 'time' columns processed.
+    pd.DataFrame: The DataFrame with the 'date', 'time', and 'month' columns processed.
     """
+    
+    # Define possible column names
+    time_cols = ['time', 'Time']
+    date_cols = ['date', 'Date']
+    month_cols = ['month', 'Month']
 
-    # Check if 'time' column also contains date information
-    if 'time' in df.columns:
-        # Try to parse the 'time' column with both date and time
-        try:
-            df['time'] = pd.to_datetime(df['time'], errors='coerce')
-            df['contains_date'] = df['time'].dt.date.notnull()  # Check if 'time' column has date info
-            
-            if df['contains_date'].all():  # If all entries in 'time' column have date info
-                df['date'] = df['time'].dt.date  # Extract date part
-                df['time'] = df['time'].dt.time  # Extract time part
-        except:
-            pass
+    # Find the actual columns present in the DataFrame
+    actual_time_col = next((col for col in time_cols if col in df.columns), None)
+    actual_date_col = next((col for col in date_cols if col in df.columns), None)
+    actual_month_col = next((col for col in month_cols if col in df.columns), None)
+
+    # Handle 'time' column
+    if actual_time_col:
+        df[actual_time_col] = pd.to_datetime(df[actual_time_col], errors='coerce')
         
-        # Drop the helper column
-        df.drop(columns=['contains_date'], inplace=True)
-        
-        # Handle 'time' column
-        df['time'] = pd.to_datetime(df['time'], format='%H:%M:%S', errors='coerce')
-        
+        if df[actual_time_col].dt.date.notnull().all():  # If all entries in 'time' column have date info
+            if actual_date_col is None:  # If 'date' column is not present, extract date part
+                df['date'] = df[actual_time_col].dt.date
+                actual_date_col = 'date'
+            df[actual_time_col] = df[actual_time_col].dt.time  # Extract time part
+
         # Extract hours, minutes, and seconds
-        df['hours'] = df['time'].dt.hour
-        df['minutes'] = df['time'].dt.minute
-        df['seconds'] = df['time'].dt.second
+        df['hours'] = df[actual_time_col].apply(lambda x: x.hour if pd.notnull(x) else np.nan)
+        df['minutes'] = df[actual_time_col].apply(lambda x: x.minute if pd.notnull(x) else np.nan)
+        df['seconds'] = df[actual_time_col].apply(lambda x: x.second if pd.notnull(x) else np.nan)
         
         # Calculate total seconds in the day
         df['total_seconds'] = df['hours'] * 3600 + df['minutes'] * 60 + df['seconds']
@@ -198,26 +201,27 @@ def preprocess_datetime_columns(df: pd.DataFrame) -> pd.DataFrame:
         df['time_scaled'] = 2 * (df['total_seconds'] / 86400) - 1
         
         # Drop the original 'time' column and the extracted 'hours', 'minutes', 'seconds', and 'total_seconds'
-        df.drop(['time', 'hours', 'minutes', 'seconds', 'total_seconds'], axis=1, inplace=True)
+        df.drop([actual_time_col, 'hours', 'minutes', 'seconds', 'total_seconds'], axis=1, inplace=True)
         
     # Handle 'date' column
-    if 'date' in df.columns:
-        df['date'] = pd.to_datetime(df['date'], errors='coerce')
+    if actual_date_col:
+        df[actual_date_col] = pd.to_datetime(df[actual_date_col], errors='coerce')
         
         # Extract month if 'month' column does not exist
-        if 'month' not in df.columns:
-            df['month'] = df['date'].dt.month
+        if actual_month_col is None:
+            df['month'] = df[actual_date_col].dt.month
+            actual_month_col = 'month'
         
         # Drop the original 'date' column
-        df.drop(['date'], axis=1, inplace=True)
+        df.drop([actual_date_col], axis=1, inplace=True)
 
     # Handle 'month' column (either pre-existing or extracted from 'date')
-    if 'month' in df.columns:
+    if actual_month_col:
         # Encode month using sine and cosine transformations
-        df['month_sin'] = np.sin(2 * np.pi * df['month'] / 12)
-        df['month_cos'] = np.cos(2 * np.pi * df['month'] / 12)
+        df['month_sin'] = np.sin(2 * np.pi * df[actual_month_col] / 12)
+        df['month_cos'] = np.cos(2 * np.pi * df[actual_month_col] / 12)
         
         # Drop the extracted 'month' column
-        df.drop(['month'], axis=1, inplace=True)
+        df.drop([actual_month_col], axis=1, inplace=True)
         
     return df
