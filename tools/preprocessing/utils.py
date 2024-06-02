@@ -126,34 +126,6 @@ def preprocess_cyclical_columns(df: pd.DataFrame, columns: List[str]) -> pd.Data
     
     return df
 
-def preprocess_date_column(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Preprocesses the 'date' column in the DataFrame by converting it to the day of the year
-    and applying sine and cosine transformations to capture its cyclical nature.
-
-    Parameters:
-    df (pd.DataFrame): The input DataFrame containing a 'date' column.
-
-    Returns:
-    pd.DataFrame: The DataFrame with the 'date' column processed.
-    """
-    if 'date' not in df.columns:
-        raise ValueError("DataFrame must contain a 'date' column.")
-    
-    df['date'] = pd.to_datetime(df['date'], errors='coerce')
-
-    # Convert date to day of the year
-    df['day_of_year'] = df['date'].dt.dayofyear
-    
-    # Apply sine and cosine transformations
-    df['day_of_year_sin'] = np.sin(2 * np.pi * df['day_of_year'] / 365)
-    df['day_of_year_cos'] = np.cos(2 * np.pi * df['day_of_year'] / 365)
-
-    df.drop(['date', 'day_of_year'], axis=1, inplace=True)
-    
-    return df
-
-
 def preprocess_datetime_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
     Preprocesses the 'date', 'time', and 'month' columns in the DataFrame.
@@ -190,18 +162,18 @@ def preprocess_datetime_columns(df: pd.DataFrame) -> pd.DataFrame:
             df[actual_time_col] = df[actual_time_col].dt.time  # Extract time part
 
         # Extract hours, minutes, and seconds
-        df['hours'] = df[actual_time_col].apply(lambda x: x.hour if pd.notnull(x) else np.nan)
-        df['minutes'] = df[actual_time_col].apply(lambda x: x.minute if pd.notnull(x) else np.nan)
-        df['seconds'] = df[actual_time_col].apply(lambda x: x.second if pd.notnull(x) else np.nan)
+        df['ccnets_processed_hours'] = df[actual_time_col].apply(lambda x: x.hour if pd.notnull(x) else np.nan)
+        df['ccnets_processed_minutes'] = df[actual_time_col].apply(lambda x: x.minute if pd.notnull(x) else np.nan)
+        df['ccnets_processed_seconds'] = df[actual_time_col].apply(lambda x: x.second if pd.notnull(x) else np.nan)
         
         # Calculate total seconds in the day
-        df['total_seconds'] = df['hours'] * 3600 + df['minutes'] * 60 + df['seconds']
+        df['ccnets_processed_total_seconds'] = df['ccnets_processed_hours'] * 3600 + df['ccnets_processed_minutes'] * 60 + df['ccnets_processed_seconds']
         
         # Encode time within the day linearly from -1 to 1
-        df['time_scaled'] = 2 * (df['total_seconds'] / 86400) - 1
+        df['ccnets_processed_time_scaled'] = 2 * (df['ccnets_processed_total_seconds'] / 86400) - 1
         
-        # Drop the original 'time' column and the extracted 'hours', 'minutes', 'seconds', and 'total_seconds'
-        df.drop([actual_time_col, 'hours', 'minutes', 'seconds', 'total_seconds'], axis=1, inplace=True)
+        # Drop the original 'time' column and the extracted 'ccnets_processed_hours', 'ccnets_processed_minutes', 'ccnets_processed_seconds', and 'ccnets_processed_total_seconds'
+        df.drop([actual_time_col, 'ccnets_processed_hours', 'ccnets_processed_minutes', 'ccnets_processed_seconds', 'ccnets_processed_total_seconds'], axis=1, inplace=True)
         
     # Handle 'date' column
     if actual_date_col:
@@ -218,8 +190,8 @@ def preprocess_datetime_columns(df: pd.DataFrame) -> pd.DataFrame:
     # Handle 'month' column (either pre-existing or extracted from 'date')
     if actual_month_col:
         # Encode month using sine and cosine transformations
-        df['month_sin'] = np.sin(2 * np.pi * df[actual_month_col] / 12)
-        df['month_cos'] = np.cos(2 * np.pi * df[actual_month_col] / 12)
+        df['ccnets_processed_month_sin'] = np.sin(2 * np.pi * df[actual_month_col] / 12)
+        df['ccnets_processed_month_cos'] = np.cos(2 * np.pi * df[actual_month_col] / 12)
         
         # Drop the extracted 'month' column
         df.drop([actual_month_col], axis=1, inplace=True)

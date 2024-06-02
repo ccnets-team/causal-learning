@@ -14,7 +14,7 @@ from typing import Tuple
 from tools.preprocessing.scaler import scale_columns
 from tools.preprocessing.encode import encode_data_columns, encode_label_columns
 from tools.preprocessing.utils import calculate_num_classes, to_indices, remove_columns, display_statistics
-from tools.preprocessing.utils import preprocess_cyclical_columns, preprocess_date_column, preprocess_datetime_columns
+from tools.preprocessing.utils import preprocess_cyclical_columns, preprocess_datetime_columns
 
 def process_df(df: pd.DataFrame, 
                  one_hot_columns: pd.Index,
@@ -46,6 +46,8 @@ def process_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> Tuple[pd.Da
 
     target_columns, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns, exclude_scale_columns = \
         to_indices(df, target_columns, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns, exclude_scale_columns)
+
+    exclude_scale_columns = exclude_scale_columns.union(df.columns[df.columns.str.startswith('ccnets_processed')])
 
     # First, drop unwanted columns using the new function
     df = remove_columns(df, drop_columns)
