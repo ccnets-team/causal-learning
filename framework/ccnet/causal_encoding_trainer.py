@@ -31,6 +31,7 @@ class CausalEncodingTrainer(TrainerBase):
         self.explainer, self.reasoner, self.producer = self.networks        
         self.network_names = encoder.network_names
         self.layer_norm = torch.nn.LayerNorm(encoder.stoch_size, elementwise_affine=False).to(encoder.device)
+        self.obs_shape = data_config.obs_shape
 
     def train_models(self, observation, padding_mask=None):
         """
@@ -71,9 +72,9 @@ class CausalEncodingTrainer(TrainerBase):
         cost_cs = self.cost_fn(cs_generated_observation, target_observation)
 
         ################################  Causal Losses  ########################################
-        recognition_loss = self.loss_fn(cost_ds, cost_sc, padding_mask)
-        generation_loss = self.loss_fn(cost_sd, cost_cs, padding_mask)
-        reconstruction_loss = self.loss_fn(cc_generated_observation, target_observation, padding_mask)
+        recognition_loss = self.loss_fn(cost_ds, cost_sc)
+        generation_loss = self.loss_fn(cost_sd, cost_cs)
+        reconstruction_loss = self.loss_fn(cc_generated_observation, target_observation)
 
         ################################  Model Errors  #########################################
         explainer_error = self.error_fn(recognition_loss + generation_loss, reconstruction_loss, padding_mask)
