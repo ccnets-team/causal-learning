@@ -9,6 +9,7 @@ COPYRIGHT (c) 2022. CCNets. All Rights reserved.
 from nn.utils.init import set_random_seed
 from framework.train.manager.optimization_manager import OptimizationManager
 from framework.diffusion.noise_diffuser import NoiseDiffuser
+from framework.utils.ccnet_utils import reduce_tensor
 import torch
 
 # Base class for trainers
@@ -54,6 +55,12 @@ class TrainerBase(OptimizationManager):
     def update_seed(self):
         self.train_iter += 1
         set_random_seed(self.train_iter)
+
+    def update_step(self):
+        self.clip_gradients()    
+        self.update_optimizers()    
+        self.update_schedulers()
+        self.update_seed()
 
     def backwards(self, networks, network_errors):
         """
@@ -101,3 +108,30 @@ class TrainerBase(OptimizationManager):
         for network in networks:
             network.requires_grad_(True)
         return
+
+    def cost_fn(self, predict, target):
+        # Calculate path costs derived from the absolute difference between predictions and targets
+        path_cost = (predict - target.detach()).abs()
+        return path_cost
+    
+    def loss_fn(self, predict, target):
+        # Compute the absolute discrepancy between predictions and targets
+        discrepancy = (predict - target.detach()).abs()
+        
+        # Flatten the observation shape for feature reduction while keeping batch or sequence dimensions intact
+        discrepancy = discrepancy.view(*discrepancy.shape[:-len(self.obs_shape)], -1)
+        
+        # Calculate and return the mean discrepancy along the last dimension (feature_dim)
+        return discrepancy.mean(dim=-1, keepdim=True)
+
+    def error_fn(self, predict, target, padding_mask=None):
+        # Compute the discrepancy based on the specified error function
+        if self.error_function == 'mse':
+            discrepancy_tensor = (predict - target.detach()).square()
+        else:
+            discrepancy_tensor = (predict - target.detach()).abs()
+        
+        # Reduce the tensor along the batch dimension, optionally considering the padding mask
+        reduced_tensor = reduce_tensor(discrepancy_tensor, padding_mask, dim=0)
+        return reduced_tensor
+ 

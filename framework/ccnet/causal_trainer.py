@@ -19,7 +19,7 @@ class CausalTrainer(TrainerBase):
         TrainerBase.__init__(self, ccnet.networks, algorithm_params, optimization_params, data_config.task_type, ccnet.device)
         self.explainer, self.reasoner, self.producer = self.networks  
         self.network_names = ccnet.network_names
-        self.use_seq = ccnet.use_seq
+        self.obs_shape = data_config.obs_shape
     
     def train_models(self, state, label, padding_mask=None):
         # Set the models to training mode and perform the forward pass.
@@ -41,9 +41,9 @@ class CausalTrainer(TrainerBase):
 
         ################################  Prediction Losses  ###########################################
         # Calculate prediction losses for inference, generation, and reconstruction.
-        inference_loss = self.loss_fn(reconstructed_state, generated_state, padding_mask)
-        generation_loss = self.loss_fn(generated_state, target_state, padding_mask)
-        reconstruction_loss = self.loss_fn(reconstructed_state, target_state, padding_mask)
+        inference_loss = self.loss_fn(reconstructed_state, generated_state)
+        generation_loss = self.loss_fn(generated_state, target_state)
+        reconstruction_loss = self.loss_fn(reconstructed_state, target_state)
 
         ################################  Model Losses  ################################################
         # Calculate model errors based on the losses.
@@ -72,45 +72,3 @@ class CausalTrainer(TrainerBase):
             padding_mask = padding_mask
         )
         return metrics
-
-    def loss_fn(self, predict, target, padding_mask=None):
-        """Calculate the prediction loss, optionally excluding padded data."""
-        discrepancy = (predict - target.detach()).abs()
-        if padding_mask is not None:
-            discrepancy *= padding_mask
-            
-        """Calculate mean of data, use mask if provided to exclude padded data."""
-        if padding_mask is not None:
-            expanded_mask = padding_mask.expand_as(discrepancy)
-            if self.use_seq:
-                return discrepancy.sum(dim=-1, keepdim=True) / expanded_mask.sum(dim=-1, keepdim=True).clamp_min(1)
-            else:
-                return discrepancy.view(discrepancy.size(0), -1).sum(dim=1, keepdim=True) / expanded_mask.view(expanded_mask.size(0), -1).sum(dim=1, keepdim=True).clamp_min(1)
-        else:
-            if self.use_seq:
-                return discrepancy.mean(dim=-1, keepdim=True)
-            else:
-                return discrepancy.view(discrepancy.size(0), -1).mean(dim=1, keepdim=True)
-        
-    def error_fn(self, predict, target, padding_mask=None):
-
-        if self.error_function == 'mse':
-            discrepancy = (predict - target.detach()).square()
-        else:
-            discrepancy = (predict - target.detach()).abs()
-        
-        # Compute the mean error, considering only the non-padded data
-        if padding_mask is not None:
-            discrepancy *= padding_mask
-            expanded_mask = padding_mask.expand_as(discrepancy)
-            cooperative_error = discrepancy.sum(dim = 0, keepdim = True) / expanded_mask.sum(dim = 0, keepdim = True).clamp_min(1)
-        else:
-            cooperative_error = discrepancy.mean(dim = 0, keepdim = True)
-        
-        return cooperative_error
-    
-    def update_step(self):
-        self.clip_gradients()    
-        self.update_optimizers()    
-        self.update_schedulers()
-        self.update_seed()

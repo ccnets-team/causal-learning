@@ -120,3 +120,27 @@ def generate_condition_data(label_shape, task_type, device):
 
 def extend_obs_shape_channel(obs_shape):
     return [obs_shape[0] + 1] + list(obs_shape[1:])
+
+def reduce_tensor(input_tensor, padding_mask, dim):
+    """
+    Reduce the tensor by computing the mean or sum, considering only non-padded data if a padding mask is provided.
+
+    Args:
+        input_tensor (Tensor): The input tensor to reduce.
+        padding_mask (Tensor, optional): The mask indicating padded elements to exclude from the calculation.
+        dim (int): The dimension along which to reduce the tensor.
+
+    Returns:
+        Tensor: The reduced tensor.
+    """
+    if padding_mask is not None:
+        # Apply the padding mask to the input tensor
+        input_tensor *= padding_mask
+        expanded_mask = padding_mask.expand_as(input_tensor)
+        # Compute the sum of the input tensor, considering only the non-padded data
+        reduced_tensor = input_tensor.sum(dim=dim, keepdim=True) / expanded_mask.sum(dim=dim, keepdim=True).clamp_min(1)
+    else:
+        # Compute the mean of the input tensor
+        reduced_tensor = input_tensor.mean(dim=dim, keepdim=True)
+    
+    return reduced_tensor
