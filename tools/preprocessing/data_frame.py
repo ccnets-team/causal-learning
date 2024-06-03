@@ -12,10 +12,11 @@ Author:
 import numpy as np
 import pandas as pd
 from typing import Tuple, List, Tuple
-from tools.preprocessing.utils import get_columns, generate_description, remove_process_prefix
+from tools.preprocessing.utils import generate_description, remove_process_prefix
 from tools.preprocessing.utils import calculate_num_classes, convert_to_indices, remove_columns, display_statistics
 from tools.preprocessing.scaler import auto_scale_columns
 from tools.preprocessing.encode import one_hot_encode_columns, encode_label_columns
+from tools.preprocessing.datetime import auto_encode_datetime_columns
 from tools.preprocessing.utils import PROCESSED_PREFIX 
 
 def auto_encode_cyclical_columns(df: pd.DataFrame, columns: List[str]) -> pd.DataFrame:
@@ -47,97 +48,6 @@ def auto_encode_cyclical_columns(df: pd.DataFrame, columns: List[str]) -> pd.Dat
         processed_columns[col] = [PROCESSED_PREFIX + col + '_sin', PROCESSED_PREFIX + col + '_cos']
     
     return df, processed_columns
-
-def process_time_column(df, actual_time_col, prefix):
-    datetime = pd.to_datetime(df[actual_time_col], errors='coerce', format='%H:%M:%S', exact=False)
-    
-    if datetime.notnull().all() and isinstance(datetime.iloc[0], pd.Timestamp):
-        if datetime.dt.date.notnull().all():
-            if 'date' not in df.columns:
-                df['date'] = datetime.dt.date
-            datetime = datetime.dt.time
-
-        df[prefix + 'hours'] = datetime.apply(lambda x: x.hour if pd.notnull(x) else np.nan)
-        df[prefix + 'minutes'] = datetime.apply(lambda x: x.minute if pd.notnull(x) else np.nan)
-        df[prefix + 'seconds'] = datetime.apply(lambda x: x.second if pd.notnull(x) else np.nan)
-        
-        df[prefix + 'total_seconds'] = df[prefix + 'hours'] * 3600 + df[prefix + 'minutes'] * 60 + df[prefix + 'seconds']
-        df[prefix + 'time_scaled'] = 2 * (df[prefix + 'total_seconds'] / 86400) - 1
-        
-        df.drop([actual_time_col, prefix + 'hours', prefix + 'minutes', prefix + 'seconds', prefix + 'total_seconds'], axis=1, inplace=True)
-
-        return [prefix + 'time_scaled']
-    return []
-
-def process_date_column(df, actual_date_col, prefix):
-    datetime = pd.to_datetime(df[actual_date_col], errors='coerce')
-    
-    if datetime.notnull().all():
-        df['day_of_year'] = datetime.dt.dayofyear
-        
-        df[prefix + 'day_of_year_sin'] = np.sin(2 * np.pi * df['day_of_year'] / 365)
-        df[prefix + 'day_of_year_cos'] = np.cos(2 * np.pi * df['day_of_year'] / 365)
-
-        if 'month' in df.columns:
-            df.drop(['month'], axis=1, inplace=True)
-
-        df.drop([actual_date_col, 'day_of_year'], axis=1, inplace=True)
-        return [prefix + 'day_of_year_sin', prefix + 'day_of_year_cos']
-    return []
-
-def process_month_column(df, actual_month_col, prefix):
-    df[actual_month_col] = pd.to_numeric(df[actual_month_col], errors='coerce')
-    
-    if df[actual_month_col].between(1, 12).all():
-        df[prefix + 'month_sin'] = np.sin(2 * np.pi * df[actual_month_col] / 12)
-        df[prefix + 'month_cos'] = np.cos(2 * np.pi * df[actual_month_col] / 12)
-        
-        df.drop([actual_month_col], axis=1, inplace=True)
-        return [prefix + 'month_sin', prefix + 'month_cos']
-    return []
-
-
-def auto_encode_datetime_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Automatically encodes datetime-related columns in the DataFrame.
-    - Converts the 'date' column to sine and cosine transformations of the day of the year.
-    - Encodes the 'time' column linearly from -1 to 1.
-    - Handles cases where the 'time' column contains date information.
-    - Considers both lowercase and capitalized versions of 'time' and 'month'.
-    
-    Parameters:
-    df (pd.DataFrame): The input DataFrame containing 'date' and/or 'time' columns.
-    
-    Returns:
-    pd.DataFrame: The DataFrame with the 'date', 'time', and 'month' columns processed.
-    """
-    
-    prefix = PROCESSED_PREFIX
-
-    # Define possible column names
-    time_cols = ['time', 'Time']
-    date_cols = ['date', 'Date']
-    month_cols = ['month', 'Month']
-
-    processed_columns = []
-
-    # Find the actual columns present in the DataFrame
-    actual_time_col = next((col for col in time_cols if col in df.columns), None)
-    actual_date_col = next((col for col in date_cols if col in df.columns), None)
-    actual_month_col = next((col for col in month_cols if col in df.columns), None)
-
-    # Process columns
-    if actual_time_col:
-        processed_columns += process_time_column(df, actual_time_col, prefix)
-        
-    if actual_date_col:
-        processed_columns += process_date_column(df, actual_date_col, prefix)
-        
-    if actual_month_col:
-        processed_columns += process_month_column(df, actual_month_col, prefix)
-
-    encoded_columns = convert_to_indices(df, processed_columns)
-    return df, encoded_columns        
 
 def auto_preprocess_dataframe(df: pd.DataFrame, target_columns, drop_columns = None, one_hot_columns = None) -> Tuple[pd.DataFrame, dict]:
     """

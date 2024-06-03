@@ -8,11 +8,9 @@ Author:
 
 import torch
 import pandas as pd
-import random
 import numpy as np
 
 NUM_PRE_BATCHES = 64
-MAX_SEQ_LEN = 128
 
 class BaseDataset(torch.utils.data.Dataset):
     def __init__(self, dataset_X, dataset_y=None):
