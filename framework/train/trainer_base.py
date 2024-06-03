@@ -120,12 +120,11 @@ class TrainerBase(OptimizationManager):
         
         # Flatten the observation shape for feature reduction while keeping batch or sequence dimensions intact
         discrepancy = discrepancy.view(*discrepancy.shape[:-len(self.obs_shape)], -1)
-        if padding_mask is not None:
-            discrepancy *= padding_mask
-            
-        # Calculate and return the mean discrepancy along the last dimension (feature_dim)
-        return discrepancy.mean(dim=-1, keepdim=True)
-
+        
+        # Reduce the tensor along the batch dimension, optionally considering the padding mask
+        reduced_tensor = reduce_tensor(discrepancy, padding_mask, dim=-1)
+        return reduced_tensor
+        
     def error_fn(self, predict, target, padding_mask=None):
         # Compute the discrepancy based on the specified error function
         if self.error_function == 'mse':
