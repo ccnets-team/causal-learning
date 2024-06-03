@@ -46,13 +46,33 @@ def encode_label_columns(df: pd.DataFrame) -> Tuple[pd.DataFrame, dict]:
     
     return df, encoded_columns
 
-def one_hot_encode_columns(df: pd.DataFrame, one_hot_columns: pd.Index) -> Tuple[pd.DataFrame, dict]:
+def detect_categorical_named_columns(df):
+    """
+    Detects columns likely to be categorical based on naming conventions.
+    
+    Parameters:
+    df (pd.DataFrame): The input DataFrame.
+    
+    Returns:
+    list: List of column names identified as categorical.
+    """
+    categorical_columns = []
+    suffixes = ['_id', '_code', '_type', '_cat', '_category', '_status', '_flag']
+    prefixes = ['cat_', 'category_', 'is_', 'has_', 'type_']
+
+    for column in df.columns:
+        if any(column.endswith(suffix) for suffix in suffixes) or any(column.startswith(prefix) for prefix in prefixes):
+            categorical_columns.append(column)
+
+    return categorical_columns
+
+def one_hot_encode_columns(df: pd.DataFrame, given_one_hot_columns: list) -> Tuple[pd.DataFrame, dict]:
     """
     Encodes categorical columns in the DataFrame.
     
     Parameters:
     df (pd.DataFrame): The input DataFrame.
-    instructed_one_hot_columns (pd.Index): Columns to one-hot encode.
+    given_one_hot_columns (list): Columns to one-hot encode.
     
     Returns:
     Tuple[pd.DataFrame, dict]: The processed DataFrame and a dictionary of encoded columns.
@@ -61,14 +81,16 @@ def one_hot_encode_columns(df: pd.DataFrame, one_hot_columns: pd.Index) -> Tuple
     # Identify string-type columns
     str_columns = df.select_dtypes(include=['object']).columns
 
-    str_columns = str_columns.union(one_hot_columns)
+    name_indicated_columns = detect_categorical_named_columns(str_columns)
+    
+    category_columns = str_columns.union(given_one_hot_columns).union(name_indicated_columns)
 
     # Lists to hold names of columns that will be converted
     binary_list = []
     one_hot_list = []
 
     # Process string-type columns based on the number of unique values
-    for col in str_columns:
+    for col in category_columns:
         unique_values = df[col].nunique()
         print(f"Column '{col}' has {unique_values} unique values.")
         if unique_values == 1:
