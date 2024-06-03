@@ -106,11 +106,8 @@ def get_columns(**kwargs) -> Tuple[pd.Index, pd.Index, pd.Index, pd.Index, pd.In
     """
     drop_columns = kwargs.get('drop_columns', pd.Index([]))
     one_hot_columns = kwargs.get('one_hot_columns', pd.Index([]))
-    minmax_columns = kwargs.get('minmax_columns', pd.Index([]))
-    standard_columns = kwargs.get('standard_columns', pd.Index([]))
-    robust_columns = kwargs.get('robust_columns', pd.Index([]))
     
-    return drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns
+    return drop_columns, one_hot_columns
 
 def generate_description(**kwargs) -> dict:
     """

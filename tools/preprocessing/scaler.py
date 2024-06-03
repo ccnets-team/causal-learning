@@ -67,32 +67,20 @@ def auto_determine_scaler(data, skew_threshold=0.5, mean_threshold=2.0, outlier_
         else:
             return "none"
             
-def auto_scale_columns(df: pd.DataFrame, 
-                  minmax_columns: pd.Index, 
-                  standard_columns: pd.Index, 
-                  robust_columns: pd.Index) -> Tuple[pd.DataFrame, dict]:
+def auto_scale_columns(df: pd.DataFrame) -> Tuple[pd.DataFrame, dict]:
 
     scaler_dict = {
         'minmax': MinMaxScaler,
         'standard': StandardScaler,
         'robust': RobustScaler
     }
-    exclude_columns = df.columns[df.columns.str.startswith(PROCESSED_PREFIX)]
     
     df_scaled = df.copy()
     scaler_description = {}
 
-    for columns, scaler in zip([minmax_columns, standard_columns, robust_columns], 
-                               ['minmax', 'standard', 'robust']):
-        valid_columns = columns.difference(exclude_columns)
-        if not valid_columns.empty:
-            scaler_instance = scaler_dict[scaler]()
-            df_scaled[valid_columns] = scaler_instance.fit_transform(df[valid_columns])
-            for col in valid_columns:
-                scaler_description[col] = scaler
-    
+    exclude_columns = df.columns[df.columns.str.startswith(PROCESSED_PREFIX)]
     # Determine and apply scalers for columns not in any predefined list
-    remaining_columns = df.columns.difference(exclude_columns.union(minmax_columns).union(standard_columns).union(robust_columns))
+    remaining_columns = df.columns.difference(exclude_columns)
 
     for column in remaining_columns:
         scaler_type = auto_determine_scaler(df.loc[:, column])

@@ -139,17 +139,14 @@ def auto_encode_datetime_columns(df: pd.DataFrame) -> pd.DataFrame:
     encoded_columns = convert_to_indices(df, processed_columns)
     return df, encoded_columns        
 
-def auto_preprocess_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> Tuple[pd.DataFrame, dict]:
+def auto_preprocess_dataframe(df: pd.DataFrame, target_columns, drop_columns = None, one_hot_columns = None) -> Tuple[pd.DataFrame, dict]:
     """
     Automatically preprocesses the DataFrame by encoding, scaling, and handling target columns.
     """
 
-    # Extract column processing options from kwargs
-    drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns = get_columns(**kwargs)
-
     # Convert columns to DataFrame indices
-    target_columns, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns = \
-        convert_to_indices(df, target_columns, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns)
+    target_columns, drop_columns, one_hot_columns = \
+        convert_to_indices(df, target_columns, drop_columns, one_hot_columns)
 
     # Drop unwanted columns
     df = remove_columns(df, drop_columns)
@@ -163,7 +160,7 @@ def auto_preprocess_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> Tup
     df_x, encoded_one_hot_columns = one_hot_encode_columns(df_x, one_hot_columns)
     
     # Scale non-target columns
-    df_x, scaler_description = auto_scale_columns(df_x, minmax_columns, standard_columns, robust_columns)
+    df_x, scaler_description = auto_scale_columns(df_x)
     
     # Convert all features to float type
     df_x = df_x.astype(float)
