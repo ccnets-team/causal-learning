@@ -137,9 +137,8 @@ class TrainerBase(OptimizationManager):
             discrepancy_tensor = (predict - target.detach()).abs()
         
         if padding_mask is not None:
-            expanded_mask = padding_mask.expand_as(discrepancy_tensor)
             # Compute the sum of the input tensor, considering only the non-padded data
-            reduced_tensor = discrepancy_tensor.sum(dim=0, keepdim=True) / expanded_mask.sum(dim=0, keepdim=True).clamp_min(1)
+            reduced_tensor = discrepancy_tensor.sum(dim=0, keepdim=True) / padding_mask.sum(dim=0, keepdim=True).clamp_min(1)
         else:
             # Compute the mean of the input tensor
             reduced_tensor = discrepancy_tensor.mean(dim=0, keepdim=True)
