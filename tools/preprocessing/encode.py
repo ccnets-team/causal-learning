@@ -12,13 +12,26 @@ Author:
 import pandas as pd
 from typing import Tuple
 from sklearn.preprocessing import LabelEncoder
-from tools.preprocessing.utils import to_indices
+from tools.preprocessing.utils import convert_to_indices
+from tools.preprocessing.utils import PROCESSED_PREFIX 
 
-def encode_label_columns(df: pd.DataFrame, exclude_columns: pd.Index = None) -> Tuple[pd.DataFrame, dict]:
+def encode_label_columns(df: pd.DataFrame) -> Tuple[pd.DataFrame, dict]:
+    """
+    Encodes label columns in the DataFrame.
+    
+    Parameters:
+    df (pd.DataFrame): The input DataFrame.
+    
+    Returns:
+    Tuple[pd.DataFrame, dict]: The DataFrame with encoded label columns and a dictionary of encoded columns.
+    """
+    
     # Identify string-type columns
     str_columns = df.select_dtypes(include=['object']).columns
-    if exclude_columns is not None:
-        str_columns = str_columns.difference(exclude_columns)
+    
+    # Automatically exclude columns that already have the prefix
+    exclude_columns = df.columns[df.columns.str.startswith(PROCESSED_PREFIX)]
+    str_columns = str_columns.difference(exclude_columns)
 
     # Process string-type columns
     for col in str_columns:
@@ -26,17 +39,29 @@ def encode_label_columns(df: pd.DataFrame, exclude_columns: pd.Index = None) -> 
         print(f"Column '{col}' has {unique_values} unique values.")
         # Convert string columns to numeric values from 0 to n
         le = LabelEncoder()
-        df[col] = le.fit_transform(df[col])
+        df[PROCESSED_PREFIX + col] = le.fit_transform(df[col])
+        df.drop(columns=[col], inplace=True)
     
-    encoded_columns = to_indices(df, str_columns.tolist())
+    encoded_columns = convert_to_indices(df, [PROCESSED_PREFIX + col for col in str_columns.tolist()])
     
     return df, encoded_columns
 
-def encode_data_columns(df: pd.DataFrame, exclude_columns: pd.Index = None) -> Tuple[pd.DataFrame, dict]:
+def one_hot_encode_columns(df: pd.DataFrame, one_hot_columns: pd.Index) -> Tuple[pd.DataFrame, dict]:
+    """
+    Encodes categorical columns in the DataFrame.
+    
+    Parameters:
+    df (pd.DataFrame): The input DataFrame.
+    instructed_one_hot_columns (pd.Index): Columns to one-hot encode.
+    
+    Returns:
+    Tuple[pd.DataFrame, dict]: The processed DataFrame and a dictionary of encoded columns.
+    """
+    if not one_hot_columns.empty:
+        df = pd.get_dummies(df, columns=one_hot_columns, prefix=PROCESSED_PREFIX, drop_first=False).astype(float)
+    
     # Identify string-type columns
     str_columns = df.select_dtypes(include=['object']).columns
-    if exclude_columns is not None:
-        str_columns = str_columns.difference(exclude_columns)
 
     # Lists to hold names of columns that will be converted
     binary_list = []
@@ -58,11 +83,13 @@ def encode_data_columns(df: pd.DataFrame, exclude_columns: pd.Index = None) -> T
     
     # Binary encoding for columns with exactly 2 unique values
     for col in binary_list:
-        df[col] = pd.get_dummies(df[col], drop_first=True).astype(float)
+        df[PROCESSED_PREFIX + col] = pd.get_dummies(df[col], drop_first=True).astype(float)
+        df = df.drop(columns=[col])
 
     # One-hot encoding for columns with more than 2 unique values
     if one_hot_list:
-        df = pd.get_dummies(df, columns=one_hot_list, drop_first=False).astype(float)
+        df = pd.get_dummies(df, columns=one_hot_list, prefix=PROCESSED_PREFIX, drop_first=False).astype(float)
         
-    encoded_columns = to_indices(df, binary_list + one_hot_list)
+    encoded_columns = convert_to_indices(df, [PROCESSED_PREFIX + col for col in binary_list] + 
+                                                     [PROCESSED_PREFIX + col for col in one_hot_list])
     return df, encoded_columns

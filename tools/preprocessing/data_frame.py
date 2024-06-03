@@ -9,74 +9,186 @@ Author:
     COPYRIGHT (c) 2024. CCNets. All Rights reserved.
 '''
 
+import numpy as np
 import pandas as pd
-from typing import Tuple
-from tools.preprocessing.scaler import scale_columns
-from tools.preprocessing.encode import encode_data_columns, encode_label_columns
-from tools.preprocessing.utils import calculate_num_classes, to_indices, remove_columns, display_statistics
-from tools.preprocessing.utils import preprocess_cyclical_columns, preprocess_datetime_columns
+from typing import Tuple, List, Tuple
+from tools.preprocessing.utils import get_columns, generate_description, remove_process_prefix
+from tools.preprocessing.utils import calculate_num_classes, convert_to_indices, remove_columns, display_statistics
+from tools.preprocessing.scaler import auto_scale_columns
+from tools.preprocessing.encode import one_hot_encode_columns, encode_label_columns
+from tools.preprocessing.utils import PROCESSED_PREFIX 
 
-def process_df(df: pd.DataFrame, 
-                 one_hot_columns: pd.Index,
-                 minmax_columns: pd.Index,
-                 standard_columns: pd.Index, 
-                 robust_columns: pd.Index, 
-                 exclude_scale_columns: pd.Index) -> Tuple[pd.DataFrame, dict]:
-    
-    original_columns = df.columns
-    
-    if not one_hot_columns.empty:
-        df = pd.get_dummies(df, columns=one_hot_columns, drop_first=False).astype(float)
+def auto_encode_cyclical_columns(df: pd.DataFrame, columns: List[str]) -> pd.DataFrame:
+    """
+    Preprocesses specified cyclical columns in the DataFrame by applying sine and cosine transformations.
 
-    df, encoded_columns = encode_data_columns(df)
+    Parameters:
+    df (pd.DataFrame): The input DataFrame.
+    columns (List[str]): List of column names to be processed.
+
+    Returns:
+    pd.DataFrame: The DataFrame with the specified columns processed.
+    """
+    
+    processed_columns = {}
+    
+    for col in columns:
+        if col not in df.columns:
+            raise ValueError(f"Column '{col}' not found in DataFrame.")
         
-    non_scale_columns = one_hot_columns.union(encoded_columns).union(exclude_scale_columns)
-    df, scaler_description = scale_columns(df, original_columns, minmax_columns, standard_columns, robust_columns, exclude_columns=non_scale_columns)
+        min_val = df[col].min()
+        max_val = df[col].max()
+        range_val = max_val - min_val
+        
+        # Apply sine and cosine transformations
+        df[PROCESSED_PREFIX + col + '_sin'] = np.sin(2 * np.pi * (df[col] - min_val) / range_val)
+        df[PROCESSED_PREFIX + col + '_cos'] = np.cos(2 * np.pi * (df[col] - min_val) / range_val)
+        df.drop(col, axis=1, inplace=True)
+        processed_columns[col] = [PROCESSED_PREFIX + col + '_sin', PROCESSED_PREFIX + col + '_cos']
     
-    return df, encoded_columns, scaler_description
+    return df, processed_columns
+
+def process_time_column(df, actual_time_col, prefix):
+    datetime = pd.to_datetime(df[actual_time_col], errors='coerce', format='%H:%M:%S', exact=False)
     
-def process_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> Tuple[pd.DataFrame, dict]:
+    if datetime.notnull().all() and isinstance(datetime.iloc[0], pd.Timestamp):
+        if datetime.dt.date.notnull().all():
+            if 'date' not in df.columns:
+                df['date'] = datetime.dt.date
+            datetime = datetime.dt.time
+
+        df[prefix + 'hours'] = datetime.apply(lambda x: x.hour if pd.notnull(x) else np.nan)
+        df[prefix + 'minutes'] = datetime.apply(lambda x: x.minute if pd.notnull(x) else np.nan)
+        df[prefix + 'seconds'] = datetime.apply(lambda x: x.second if pd.notnull(x) else np.nan)
+        
+        df[prefix + 'total_seconds'] = df[prefix + 'hours'] * 3600 + df[prefix + 'minutes'] * 60 + df[prefix + 'seconds']
+        df[prefix + 'time_scaled'] = 2 * (df[prefix + 'total_seconds'] / 86400) - 1
+        
+        df.drop([actual_time_col, prefix + 'hours', prefix + 'minutes', prefix + 'seconds', prefix + 'total_seconds'], axis=1, inplace=True)
+
+        return {actual_time_col: [prefix + 'time_scaled']}
+    return {}
+
+def process_date_column(df, actual_date_col, prefix):
+    datetime = pd.to_datetime(df[actual_date_col], errors='coerce')
     
-    drop_columns = kwargs.get('drop_columns', pd.Index([]))
-    one_hot_columns = kwargs.get('one_hot_columns', pd.Index([]))
-    minmax_columns = kwargs.get('minmax_columns', pd.Index([]))
-    standard_columns = kwargs.get('standard_columns', pd.Index([]))
-    robust_columns = kwargs.get('robust_columns', pd.Index([]))
-    exclude_scale_columns = kwargs.get('exclude_scale_columns', pd.Index([]))
+    if datetime.notnull().all():
+        df['day_of_year'] = datetime.dt.dayofyear
+        
+        df[prefix + 'day_of_year_sin'] = np.sin(2 * np.pi * df['day_of_year'] / 365)
+        df[prefix + 'day_of_year_cos'] = np.cos(2 * np.pi * df['day_of_year'] / 365)
 
-    target_columns, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns, exclude_scale_columns = \
-        to_indices(df, target_columns, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns, exclude_scale_columns)
+        if 'month' in df.columns:
+            df.drop(['month'], axis=1, inplace=True)
 
-    exclude_scale_columns = exclude_scale_columns.union(df.columns[df.columns.str.startswith('ccnets_processed')])
+        df.drop([actual_date_col, 'day_of_year'], axis=1, inplace=True)
+        return {actual_date_col: [prefix + 'day_of_year_sin', prefix + 'day_of_year_cos']}
+    return {}
 
-    # First, drop unwanted columns using the new function
+def process_month_column(df, actual_month_col, prefix):
+    df[actual_month_col] = pd.to_numeric(df[actual_month_col], errors='coerce')
+    
+    if df[actual_month_col].between(1, 12).all():
+        df[prefix + 'month_sin'] = np.sin(2 * np.pi * df[actual_month_col] / 12)
+        df[prefix + 'month_cos'] = np.cos(2 * np.pi * df[actual_month_col] / 12)
+        
+        df.drop([actual_month_col], axis=1, inplace=True)
+        return {actual_month_col: [prefix + 'month_sin', prefix + 'month_cos']}
+    return {}
+
+
+def auto_encode_datetime_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Automatically encodes datetime-related columns in the DataFrame.
+    - Converts the 'date' column to sine and cosine transformations of the day of the year.
+    - Encodes the 'time' column linearly from -1 to 1.
+    - Handles cases where the 'time' column contains date information.
+    - Considers both lowercase and capitalized versions of 'time' and 'month'.
+    
+    Parameters:
+    df (pd.DataFrame): The input DataFrame containing 'date' and/or 'time' columns.
+    
+    Returns:
+    pd.DataFrame: The DataFrame with the 'date', 'time', and 'month' columns processed.
+    """
+    
+    prefix = PROCESSED_PREFIX
+
+    # Define possible column names
+    time_cols = ['time', 'Time']
+    date_cols = ['date', 'Date']
+    month_cols = ['month', 'Month']
+
+    processed_columns = {}
+
+    # Find the actual columns present in the DataFrame
+    actual_time_col = next((col for col in time_cols if col in df.columns), None)
+    actual_date_col = next((col for col in date_cols if col in df.columns), None)
+    actual_month_col = next((col for col in month_cols if col in df.columns), None)
+
+    # Process columns
+    if actual_time_col:
+        processed_columns.update(process_time_column(df, actual_time_col, prefix))
+        
+    if actual_date_col:
+        processed_columns.update(process_date_column(df, actual_date_col, prefix))
+        
+    if actual_month_col:
+        processed_columns.update(process_month_column(df, actual_month_col, prefix))
+        
+    return df, processed_columns
+
+def auto_preprocess_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> Tuple[pd.DataFrame, dict]:
+    """
+    Automatically preprocesses the DataFrame by encoding, scaling, and handling target columns.
+    """
+
+    # Extract column processing options from kwargs
+    drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns = get_columns(**kwargs)
+
+    # Convert columns to DataFrame indices
+    target_columns, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns = \
+        convert_to_indices(df, target_columns, drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns)
+
+    # Drop unwanted columns
     df = remove_columns(df, drop_columns)
-        
-    target_df = df[target_columns]
-    df.drop(columns=target_columns, inplace=True)
     
-    # Process the DataFrame excluding the target columns
-    df, encoded_columns, scaler_description = process_df(df, one_hot_columns, minmax_columns, standard_columns, robust_columns, exclude_scale_columns)
-
-    # Convert the entire DataFrame to float
-    df = df.astype(float)
-    num_features = df.shape[1]
-    num_classes = calculate_num_classes(target_df)
+    # Split DataFrame into feature columns and target columns
+    df_x, df_y = df.drop(columns=target_columns), df[target_columns]
     
-    # Process the target columns separately
-    target_df, target_encoded_columns = encode_label_columns(target_df)
-
-    # Concatenate target columns to the end
-    df = pd.concat([df, target_df], axis=1)   
-
-    ##################### Description ##########################
-    description = {}
-    description['num_features'] = num_features
-    description['num_classes'] = num_classes
-    description['encoded_columns'] = encoded_columns
-    description['target_encoded_columns'] = target_encoded_columns
-    description['scalers'] = scaler_description
+    df_x, encoded_datatime_columns = auto_encode_datetime_columns(df_x)
     
+    # Encode non-target columns
+    df_x, encoded_one_hot_columns = one_hot_encode_columns(df_x, one_hot_columns)
+    
+    # Scale non-target columns
+    df_x, scaler_description = auto_scale_columns(df_x, minmax_columns, standard_columns, robust_columns)
+    
+    # Convert all features to float type
+    df_x = df_x.astype(float)
+    
+    # Calculate the number of features and the number of classes in the target columns
+    num_features = df_x.shape[1]
+    num_classes = calculate_num_classes(df_y)
+    
+    # Encode target columns
+    df_y, encoded_target_columns = encode_label_columns(df_y)
+
+    # Concatenate processed feature columns and target columns
+    df = pd.concat([df_x, df_y], axis=1)
+    
+    # Remove internal process tags from column names
+    df = remove_process_prefix(df)
+    
+    # combine encoded columns
+    encoded_columns = list(set(encoded_datatime_columns + encoded_one_hot_columns + encoded_target_columns))
+    
+    # Generate description dictionary
+    description = generate_description(num_features=num_features, num_classes=num_classes, 
+                                       encoded_columns=encoded_columns, scalers=scaler_description)
+    
+    # Display DataFrame statistics
     display_statistics(df)
 
+    # Return processed DataFrame and description
     return df, description

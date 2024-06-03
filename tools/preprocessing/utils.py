@@ -9,11 +9,11 @@ Author:
     COPYRIGHT (c) 2024. CCNets. All Rights reserved.
 '''
 
-import numpy as np
 import pandas as pd
 from typing import Optional, List, Union, Tuple
+PROCESSED_PREFIX = "cnets_processed_"
 
-def to_indices(df: pd.DataFrame, *columns: Optional[Union[List[str], pd.Index, str]]) -> Tuple[pd.Index, ...]:
+def convert_to_indices(df: pd.DataFrame, *columns: Optional[Union[List[str], pd.Index, str]]) -> Tuple[pd.Index, ...]:
     """
     Convert input columns to pd.Index format, handling lists of strings, pd.Index, None, or pd.Series.
     """
@@ -100,100 +100,63 @@ def display_statistics(df: pd.DataFrame) -> None:
     # Display the result in a Jupyter Notebook
     display(stats_df)  
 
-def preprocess_cyclical_columns(df: pd.DataFrame, columns: List[str]) -> pd.DataFrame:
+def get_columns(**kwargs) -> Tuple[pd.Index, pd.Index, pd.Index, pd.Index, pd.Index, pd.Index, pd.Index]:
     """
-    Preprocesses specified cyclical columns in the DataFrame by applying sine and cosine transformations.
+    Get the columns from the DataFrame based on the target columns and keyword arguments.
+    """
+    drop_columns = kwargs.get('drop_columns', pd.Index([]))
+    one_hot_columns = kwargs.get('one_hot_columns', pd.Index([]))
+    minmax_columns = kwargs.get('minmax_columns', pd.Index([]))
+    standard_columns = kwargs.get('standard_columns', pd.Index([]))
+    robust_columns = kwargs.get('robust_columns', pd.Index([]))
+    
+    return drop_columns, one_hot_columns, minmax_columns, standard_columns, robust_columns
 
+def generate_description(**kwargs) -> dict:
+    """
+    Generates a description dictionary from the provided keyword arguments.
+    
+    Parameters:
+    **kwargs: Arbitrary keyword arguments to be included in the description.
+    
+    Returns:
+    dict: A dictionary containing the description information.
+    """
+    description = {}
+    for key, value in kwargs.items():
+        description[key] = value
+    return description
+
+def remove_process_prefix(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Removes the 'ccnets_processed_' prefix from DataFrame columns and handles duplicates.
+    
     Parameters:
     df (pd.DataFrame): The input DataFrame.
-    columns (List[str]): List of column names to be processed.
-
-    Returns:
-    pd.DataFrame: The DataFrame with the specified columns processed.
-    """
-    for col in columns:
-        if col not in df.columns:
-            raise ValueError(f"Column '{col}' not found in DataFrame.")
-        
-        min_val = df[col].min()
-        max_val = df[col].max()
-        range_val = max_val - min_val
-        
-        # Apply sine and cosine transformations
-        df[col + '_sin'] = np.sin(2 * np.pi * (df[col] - min_val) / range_val)
-        df[col + '_cos'] = np.cos(2 * np.pi * (df[col] - min_val) / range_val)
-        df.drop(col, axis=1, inplace=True)
-    
-    return df
-
-def preprocess_datetime_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Preprocesses the 'date', 'time', and 'month' columns in the DataFrame.
-    - Converts the 'date' column to sine and cosine transformations of the month.
-    - Encodes the 'time' column linearly from -1 to 1.
-    - Handles cases where the 'time' column contains date information.
-    - Considers both lowercase and capitalized versions of 'time' and 'month'.
-    
-    Parameters:
-    df (pd.DataFrame): The input DataFrame containing 'date' and/or 'time' columns.
     
     Returns:
-    pd.DataFrame: The DataFrame with the 'date', 'time', and 'month' columns processed.
+    pd.DataFrame: The DataFrame with updated column names.
     """
+    # Before detaching the prefix, check for duplicate columns
+    columns_with_prefix = df.columns
+    columns_without_prefix = [col.split(PROCESSED_PREFIX)[-1] for col in columns_with_prefix]
+
+    # Check for duplicates
+    duplicates = set([col for col in columns_without_prefix if columns_without_prefix.count(col) > 1])
+
+    # Rename duplicates with a suffix
+    if duplicates:
+        for dup in duplicates:
+            count = 1
+            for i in range(len(columns_without_prefix)):
+                if columns_without_prefix[i] == dup:
+                    columns_without_prefix[i] = f"{dup}_dup{count}"
+                    count += 1
+                    
+    if len(duplicates) > 0:
+        print("Duplicate columns were detected and renamed with a suffix.")
     
-    # Define possible column names
-    time_cols = ['time', 'Time']
-    date_cols = ['date', 'Date']
-    month_cols = ['month', 'Month']
-
-    # Find the actual columns present in the DataFrame
-    actual_time_col = next((col for col in time_cols if col in df.columns), None)
-    actual_date_col = next((col for col in date_cols if col in df.columns), None)
-    actual_month_col = next((col for col in month_cols if col in df.columns), None)
-
-    # Handle 'time' column
-    if actual_time_col:
-        df[actual_time_col] = pd.to_datetime(df[actual_time_col], errors='coerce')
-        
-        if df[actual_time_col].dt.date.notnull().all():  # If all entries in 'time' column have date info
-            if actual_date_col is None:  # If 'date' column is not present, extract date part
-                df['date'] = df[actual_time_col].dt.date
-                actual_date_col = 'date'
-            df[actual_time_col] = df[actual_time_col].dt.time  # Extract time part
-
-        # Extract hours, minutes, and seconds
-        df['ccnets_processed_hours'] = df[actual_time_col].apply(lambda x: x.hour if pd.notnull(x) else np.nan)
-        df['ccnets_processed_minutes'] = df[actual_time_col].apply(lambda x: x.minute if pd.notnull(x) else np.nan)
-        df['ccnets_processed_seconds'] = df[actual_time_col].apply(lambda x: x.second if pd.notnull(x) else np.nan)
-        
-        # Calculate total seconds in the day
-        df['ccnets_processed_total_seconds'] = df['ccnets_processed_hours'] * 3600 + df['ccnets_processed_minutes'] * 60 + df['ccnets_processed_seconds']
-        
-        # Encode time within the day linearly from -1 to 1
-        df['ccnets_processed_time_scaled'] = 2 * (df['ccnets_processed_total_seconds'] / 86400) - 1
-        
-        # Drop the original 'time' column and the extracted 'ccnets_processed_hours', 'ccnets_processed_minutes', 'ccnets_processed_seconds', and 'ccnets_processed_total_seconds'
-        df.drop([actual_time_col, 'ccnets_processed_hours', 'ccnets_processed_minutes', 'ccnets_processed_seconds', 'ccnets_processed_total_seconds'], axis=1, inplace=True)
-        
-    # Handle 'date' column
-    if actual_date_col:
-        df[actual_date_col] = pd.to_datetime(df[actual_date_col], errors='coerce')
-        
-        # Extract month if 'month' column does not exist
-        if actual_month_col is None:
-            df['month'] = df[actual_date_col].dt.month
-            actual_month_col = 'month'
-        
-        # Drop the original 'date' column
-        df.drop([actual_date_col], axis=1, inplace=True)
-
-    # Handle 'month' column (either pre-existing or extracted from 'date')
-    if actual_month_col:
-        # Encode month using sine and cosine transformations
-        df['ccnets_processed_month_sin'] = np.sin(2 * np.pi * df[actual_month_col] / 12)
-        df['ccnets_processed_month_cos'] = np.cos(2 * np.pi * df[actual_month_col] / 12)
-        
-        # Drop the extracted 'month' column
-        df.drop([actual_month_col], axis=1, inplace=True)
-        
+    # Assign the new column names to the DataFrame
+    df.columns = columns_without_prefix
+    
     return df
