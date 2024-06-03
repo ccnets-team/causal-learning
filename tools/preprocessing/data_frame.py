@@ -66,8 +66,8 @@ def process_time_column(df, actual_time_col, prefix):
         
         df.drop([actual_time_col, prefix + 'hours', prefix + 'minutes', prefix + 'seconds', prefix + 'total_seconds'], axis=1, inplace=True)
 
-        return {actual_time_col: [prefix + 'time_scaled']}
-    return {}
+        return [prefix + 'time_scaled']
+    return []
 
 def process_date_column(df, actual_date_col, prefix):
     datetime = pd.to_datetime(df[actual_date_col], errors='coerce')
@@ -82,8 +82,8 @@ def process_date_column(df, actual_date_col, prefix):
             df.drop(['month'], axis=1, inplace=True)
 
         df.drop([actual_date_col, 'day_of_year'], axis=1, inplace=True)
-        return {actual_date_col: [prefix + 'day_of_year_sin', prefix + 'day_of_year_cos']}
-    return {}
+        return [prefix + 'day_of_year_sin', prefix + 'day_of_year_cos']
+    return []
 
 def process_month_column(df, actual_month_col, prefix):
     df[actual_month_col] = pd.to_numeric(df[actual_month_col], errors='coerce')
@@ -93,8 +93,8 @@ def process_month_column(df, actual_month_col, prefix):
         df[prefix + 'month_cos'] = np.cos(2 * np.pi * df[actual_month_col] / 12)
         
         df.drop([actual_month_col], axis=1, inplace=True)
-        return {actual_month_col: [prefix + 'month_sin', prefix + 'month_cos']}
-    return {}
+        return [prefix + 'month_sin', prefix + 'month_cos']
+    return []
 
 
 def auto_encode_datetime_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -119,7 +119,7 @@ def auto_encode_datetime_columns(df: pd.DataFrame) -> pd.DataFrame:
     date_cols = ['date', 'Date']
     month_cols = ['month', 'Month']
 
-    processed_columns = {}
+    processed_columns = []
 
     # Find the actual columns present in the DataFrame
     actual_time_col = next((col for col in time_cols if col in df.columns), None)
@@ -128,15 +128,16 @@ def auto_encode_datetime_columns(df: pd.DataFrame) -> pd.DataFrame:
 
     # Process columns
     if actual_time_col:
-        processed_columns.update(process_time_column(df, actual_time_col, prefix))
+        processed_columns += process_time_column(df, actual_time_col, prefix)
         
     if actual_date_col:
-        processed_columns.update(process_date_column(df, actual_date_col, prefix))
+        processed_columns += process_date_column(df, actual_date_col, prefix)
         
     if actual_month_col:
-        processed_columns.update(process_month_column(df, actual_month_col, prefix))
-        
-    return df, processed_columns
+        processed_columns += process_month_column(df, actual_month_col, prefix)
+
+    encoded_columns = convert_to_indices(df, processed_columns)
+    return df, encoded_columns        
 
 def auto_preprocess_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> Tuple[pd.DataFrame, dict]:
     """
@@ -179,9 +180,9 @@ def auto_preprocess_dataframe(df: pd.DataFrame, target_columns, **kwargs) -> Tup
     
     # Remove internal process tags from column names
     df = remove_process_prefix(df)
-    
+
     # combine encoded columns
-    encoded_columns = list(set(encoded_datatime_columns + encoded_one_hot_columns + encoded_target_columns))
+    encoded_columns = encoded_datatime_columns.union(encoded_one_hot_columns).union(encoded_target_columns)
     
     # Generate description dictionary
     description = generate_description(num_features=num_features, num_classes=num_classes, 

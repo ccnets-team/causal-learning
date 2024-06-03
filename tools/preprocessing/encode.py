@@ -57,11 +57,11 @@ def one_hot_encode_columns(df: pd.DataFrame, one_hot_columns: pd.Index) -> Tuple
     Returns:
     Tuple[pd.DataFrame, dict]: The processed DataFrame and a dictionary of encoded columns.
     """
-    if not one_hot_columns.empty:
-        df = pd.get_dummies(df, columns=one_hot_columns, prefix=PROCESSED_PREFIX, drop_first=False).astype(float)
     
     # Identify string-type columns
     str_columns = df.select_dtypes(include=['object']).columns
+
+    str_columns = str_columns.union(one_hot_columns)
 
     # Lists to hold names of columns that will be converted
     binary_list = []
@@ -88,7 +88,7 @@ def one_hot_encode_columns(df: pd.DataFrame, one_hot_columns: pd.Index) -> Tuple
 
     # One-hot encoding for columns with more than 2 unique values
     if one_hot_list:
-        df = pd.get_dummies(df, columns=one_hot_list, prefix=PROCESSED_PREFIX, drop_first=False).astype(float)
+        df = pd.get_dummies(df, columns=one_hot_list, prefix=[PROCESSED_PREFIX + col for col in one_hot_list], drop_first=False).astype(float)
         
     encoded_columns = convert_to_indices(df, [PROCESSED_PREFIX + col for col in binary_list] + 
                                                      [PROCESSED_PREFIX + col for col in one_hot_list])
