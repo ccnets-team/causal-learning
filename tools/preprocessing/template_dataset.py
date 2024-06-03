@@ -57,7 +57,9 @@ class TemplateDataset(BaseDataset):
             if self.max_seq_len is None:
                 self.max_seq_len = 2 * self.min_seq_len
                 
-            self.dataset_length = max(self.dataset_length - self.max_seq_len, 0)
+            self.last_start_idx = max(self.dataset_length - self.max_seq_len, 0)
+        else:
+            self.last_start_idx = self.dataset_length
             
         self.shuffle_indices()
         self.precompute_batches(self.total_iters)
@@ -74,7 +76,8 @@ class TemplateDataset(BaseDataset):
         if self.use_seq:
             window_sizes = np.random.randint(self.min_seq_len, self.max_seq_len + 1, size=len(batch_indices))
             end_indices = batch_indices + window_sizes
-            end_indices = np.clip(end_indices, 0, self.dataset_length)  # Ensure indices are within bounds
+            
+            assert self.dataset_length >= end_indices.any(), "The end index is out of bounds"
 
             X_batch = [self.X[i:end] for i, end in zip(batch_indices, end_indices)]
             y_batch = [self.y[i:end] for i, end in zip(batch_indices, end_indices)] if self.y is not None else None
@@ -94,10 +97,10 @@ class TemplateDataset(BaseDataset):
         return torch.tensor(self.X_cache[selected_idx], dtype=torch.float64), torch.tensor(self.y_cache[selected_idx], dtype=torch.float64) if self.y_cache is not None else None
 
     def shuffle_indices(self):
-        if self.total_iters % self.dataset_length != 0:
+        if self.total_iters % self.last_start_idx != 0:
             return
         # use numpy function
-        self.batch_indices = np.random.permutation(self.dataset_length)
+        self.batch_indices = np.random.permutation(self.last_start_idx)
         self.total_iters = 0
 
     def __getitem__(self, idx):

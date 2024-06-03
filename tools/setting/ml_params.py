@@ -38,44 +38,6 @@ class ModelConfig:
             self.obs_shape = []
             self.condition_dim = None
             self.z_dim = None
-
-@dataclass
-class TrainingParameters:
-    """
-    Parameters defining the training configuration for machine learning models.
-    
-    Attributes:
-        num_epoch (int): Number of training epochs. One epoch is a complete pass through the entire dataset.
-        max_iters (int): Total number of iterations or updates to the model during training.
-        batch_size (int): Number of samples to process in each batch during training.
-        max_seq_len (int): Maximum sequence length for training.
-        min_seq_len (int): Minimum sequence length for training.
-        
-    Note:
-        Training will halt when either the total number of epochs ('num_epoch') or the total number of iterations
-        ('max_iters') is reached, whichever comes first. This dual limit approach provides control over training duration and computational resources.
-    """
-    num_epoch: int = 100
-    max_iters: int = 100_000
-    batch_size: int = 64
-    max_seq_len: int = None
-    min_seq_len: int = None
-
-@dataclass
-class AlgorithmParameters:
-    """
-    Parameters defining the algorithm configuration for machine learning models.
-    
-    Attributes:
-        enable_diffusion (bool): Flag to enable the diffusion model, which is combined with the NoiseDiffuser class.
-        reset_pretrained (bool): Determines if pretrained models are used for the ccnet network. At least one network in the ccnet uses a pretrained model.
-        error_function (str): Error function used for the cooperative network (ccnet) which includes explainer, reasoner, and producer networks.
-                              Two options are available: 'mae' (Mean Absolute Error) or 'mse' (Mean Squared Error).
-                              'mae' is good for general cases or outliers, while 'mse' is suitable for generation tasks.
-    """
-    enable_diffusion: bool = False
-    reset_pretrained: bool = False
-    error_function: str = 'mse'
     
 @dataclass
 class ModelParameters:
@@ -106,6 +68,37 @@ class ModelParameters:
         else:
             self.encoder_config = None  # Properly handle 'none' to avoid creating a config
 
+    def __repr__(self):
+        return (f"ModelParameters(ccnet_network={self.ccnet_network}, encoder_network={self.encoder_network}\n")
+        
+@dataclass
+class TrainingParameters:
+    """
+    Parameters defining the training configuration for machine learning models.
+    
+    Attributes:
+        num_epoch (int): Number of training epochs. One epoch is a complete pass through the entire dataset.
+        max_iters (int): Total number of iterations or updates to the model during training.
+        batch_size (int): Number of samples to process in each batch during training.
+        max_seq_len (int): Maximum sequence length for training.
+        min_seq_len (int): Minimum sequence length for training.
+        
+    Note:
+        Training will halt when either the total number of epochs ('num_epoch') or the total number of iterations
+        ('max_iters') is reached, whichever comes first. This dual limit approach provides control over training duration and computational resources.
+    """
+    num_epoch: int = 100
+    max_iters: int = 100_000
+    batch_size: int = 64
+    max_seq_len: int = None
+    min_seq_len: int = None
+
+    def __repr__(self):
+        max_seq_repr = f", max_seq_len={self.max_seq_len}" if self.max_seq_len is not None else ""
+        min_seq_repr = f", min_seq_len={self.min_seq_len}" if self.min_seq_len is not None else ""
+        return (f"TrainingParameters(num_epoch={self.num_epoch}, max_iters={self.max_iters}, "
+                f"batch_size={self.batch_size}{max_seq_repr}{min_seq_repr}\n")
+
 @dataclass
 class OptimizationParameters:
     """
@@ -124,44 +117,74 @@ class OptimizationParameters:
     clip_grad_range: tuple = field(default=None)
     max_grad_norm: float = 1.0
 
+    def __repr__(self):
+        return (f"OptimizationParameters(learning_rate={self.learning_rate}, "
+                f"decay_rate_100k={self.decay_rate_100k}, scheduler_type={self.scheduler_type}, "
+                f"clip_grad_range={self.clip_grad_range}, max_grad_norm={self.max_grad_norm})\n")
+        
+@dataclass
+class AlgorithmParameters:
+    """
+    Parameters defining the algorithm configuration for machine learning models.
+    
+    Attributes:
+        enable_diffusion (bool): Flag to enable the diffusion model, which is combined with the NoiseDiffuser class.
+        reset_pretrained (bool): Determines if pretrained models are used for the ccnet network. At least one network in the ccnet uses a pretrained model.
+        error_function (str): Error function used for the cooperative network (ccnet) which includes explainer, reasoner, and producer networks.
+                              Two options are available: 'mae' (Mean Absolute Error) or 'mse' (Mean Squared Error).
+                              'mae' is good for general cases or outliers, while 'mse' is suitable for generation tasks.
+    """
+    enable_diffusion: bool = False
+    reset_pretrained: bool = False
+    error_function: str = 'mse'
+
+    def __repr__(self):
+        return (f"AlgorithmParameters(enable_diffusion={self.enable_diffusion}, "
+                f"reset_pretrained={self.reset_pretrained}, error_function={self.error_function})\n")
+
 class MLParameters:
     def __init__(self, 
-                 training: TrainingParameters = None,
-                 algorithm: AlgorithmParameters = None,
                  model: ModelParameters = None,
+                 training: TrainingParameters = None,
                  optimization: OptimizationParameters = None,
+                 algorithm: AlgorithmParameters = None,
                  **kwargs):
-        # Use kwargs to set up initial parameters, categorizing them for each parameter class
-        training_kwargs = {k: v for k, v in kwargs.items() if k in TrainingParameters.__annotations__}
-        algorithm_kwargs = {k: v for k, v in kwargs.items() if k in AlgorithmParameters.__annotations__}
-        model_kwargs = {k: v for k, v in kwargs.items() if k in ModelParameters.__annotations__}
-        optimization_kwargs = {k: v for k, v in kwargs.items() if k in OptimizationParameters.__annotations__}
+        def filter_kwargs(cls):
+            return {k: v for k, v in kwargs.items() if k in cls.__annotations__}
 
-        # Initialize ML parameters with filtered kwargs
-        self.training = TrainingParameters(**training_kwargs) if training is None else training
-        self.algorithm = AlgorithmParameters(**algorithm_kwargs) if algorithm is None else algorithm
-        self.model = ModelParameters(**model_kwargs) if model is None else model
-        self.optimization = OptimizationParameters(**optimization_kwargs) if optimization is None else optimization
-
+        self.model = model or ModelParameters(**filter_kwargs(ModelParameters))
+        self.training = training or TrainingParameters(**filter_kwargs(TrainingParameters))
+        self.optimization = optimization or OptimizationParameters(**filter_kwargs(OptimizationParameters))
+        self.algorithm = algorithm or AlgorithmParameters(**filter_kwargs(AlgorithmParameters))
+        self.ml_param_list = [self.model, self.training, self.optimization, self.algorithm]
+        
     def __getattr__(self, name):
         # Check if the attribute is part of any of the parameter classes
-        for param in [self.training, self.algorithm, self.model, self.optimization]:
+        for param in self.ml_param_list:
             if hasattr(param, name):
                 return getattr(param, name)
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
     def __setattr__(self, name, value):
         # Set attribute if it's one of MLParameters' direct attributes
-        if name in ["training", "algorithm", "model", "optimization"]:
+        if name in ["model", "training", "optimization", "algorithm"]:
             super().__setattr__(name, value)
         else:
             # Set attribute in one of the parameter classes
-            for param in [self.training, self.algorithm, self.model, self.optimization]:
+            for param in [self.model, self.training, self.optimization, self.algorithm]:
                 if hasattr(param, name):
                     setattr(param, name, value)
                     return
             # If the attribute is not found in any of the parameter classes, set it as a new attribute of MLParameters
             super().__setattr__(name, value)
 
+    def __repr__(self):
+        components = []
+        for param in self.ml_param_list:
+            if param is not None:
+                components.append(repr(param))
+        return "\n".join(components)   
+        
     def __iter__(self):
-        yield from [self.training, self.algorithm, self.model, self.optimization]
+        yield from self.ml_param_list
+

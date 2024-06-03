@@ -12,6 +12,9 @@ COPYRIGHT (c) 2022. CCNets. All Rights reserved.
 
 DEFAULT_PRINT_INTERVAL = 100
 
+from tools.setting.ml_params import MLParameters
+from tools.setting.data_config import DataConfig
+
 def print_iter(epoch, num_epoch, iters, len_dataloader, et):
     print('[%d/%d][%d/%d][Time %.2f]'
         % (epoch, num_epoch, iters, len_dataloader, et))
@@ -96,3 +99,13 @@ def print_checkpoint_info(parent, time_cost, epoch_idx, iter_idx, len_dataloader
         ccnet_type = "CCNet" 
         ccnet_name = ccnet.model_name.capitalize()
         print_trainer(ccnet_type, ccnet_name, ccnet_metric)
+
+def print_ml_params(trainer_name, ml_params: MLParameters, data_config: DataConfig):
+    print("Trainer Name:", trainer_name)
+
+    print(ml_params)
+    
+    # Print directly
+    print(data_config)
+    
+    print("\n")  # to print a newline at the end

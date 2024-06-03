@@ -21,7 +21,7 @@ from tools.loader import get_data_loader, get_test_loader, _load_trainer
 from nn.utils.init import set_random_seed
 from tools.wandb_logger import wandb_end
 from tools.report import calculate_test_results
-from tools.print import DEFAULT_PRINT_INTERVAL
+from tools.print import print_ml_params, DEFAULT_PRINT_INTERVAL
 
 from framework.ccnet.cooperative_network import CooperativeNetwork
 from framework.ccnet.cooperative_encoding_network import CooperativeEncodingNetwork
@@ -33,6 +33,8 @@ class TrainerHub:
     def __init__(self, ml_params: MLParameters, data_config: DataConfig, device, use_print=False, use_wandb=False, print_interval=DEFAULT_PRINT_INTERVAL):
         self.data_config = data_config
         self.device = device
+        
+        print_ml_params("causal_trainer", ml_params, data_config)
         
         self.initialize_usage_flags(ml_params)
         
@@ -71,7 +73,7 @@ class TrainerHub:
             _load_trainer(self.helper.model_path, self.encoder_trainer)
             
     def setup_models(self, ml_params):
-        training_params, algorithm_params, model_params, optimization_params = ml_params
+        model_params, training_params, optimization_params, algorithm_params = ml_params
         if self.use_encoder:
             encoder_networks, network_params = configure_encoder_network(model_params.encoder_network, model_params.encoder_config, self.data_config)
             self.encoder = CooperativeEncodingNetwork(encoder_networks, network_params, algorithm_params, self.device)
