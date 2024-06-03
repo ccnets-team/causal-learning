@@ -41,9 +41,9 @@ class CausalTrainer(TrainerBase):
 
         ################################  Prediction Losses  ###########################################
         # Calculate prediction losses for inference, generation, and reconstruction.
-        inference_loss = self.loss_fn(reconstructed_state, generated_state, padding_mask)
-        generation_loss = self.loss_fn(generated_state, target_state, padding_mask)
-        reconstruction_loss = self.loss_fn(reconstructed_state, target_state, padding_mask)
+        inference_loss = self.loss_fn(reconstructed_state, generated_state)
+        generation_loss = self.loss_fn(generated_state, target_state)
+        reconstruction_loss = self.loss_fn(reconstructed_state, target_state)
 
         ################################  Model Losses  ################################################
         # Calculate model errors based on the losses.
