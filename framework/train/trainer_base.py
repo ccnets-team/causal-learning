@@ -120,10 +120,13 @@ class TrainerBase(OptimizationManager):
         
         # Flatten the observation shape for feature reduction while keeping batch or sequence dimensions intact
         preserved_shape = absolute_discrepancy.shape[:len(absolute_discrepancy.shape) - len(self.obs_shape)]
-        flattened_discrepancy = absolute_discrepancy.view(*preserved_shape, -1)
+        flattened_discrepancy = absolute_discrepancy.reshape(*preserved_shape, -1)
         
-        # Reduce the tensor along the batch dimension, optionally considering the padding mask
-        reduced_tensor = reduce_tensor(flattened_discrepancy, padding_mask, dim=-1)
+        if padding_mask is not None:
+            # Apply the padding mask to the flattened discrepancy tensor
+            flattened_discrepancy *= padding_mask
+            
+        reduced_tensor = flattened_discrepancy.mean(dim=-1, keepdim = True)
         return reduced_tensor
         
     def error_fn(self, predict, target, padding_mask=None):
@@ -133,7 +136,12 @@ class TrainerBase(OptimizationManager):
         else:
             discrepancy_tensor = (predict - target.detach()).abs()
         
-        # Reduce the tensor along the batch dimension, optionally considering the padding mask
-        reduced_tensor = reduce_tensor(discrepancy_tensor, padding_mask, dim=0)
+        if padding_mask is not None:
+            expanded_mask = padding_mask.expand_as(discrepancy_tensor)
+            # Compute the sum of the input tensor, considering only the non-padded data
+            reduced_tensor = discrepancy_tensor.sum(dim=0, keepdim=True) / expanded_mask.sum(dim=0, keepdim=True).clamp_min(1)
+        else:
+            # Compute the mean of the input tensor
+            reduced_tensor = discrepancy_tensor.mean(dim=0, keepdim=True)
+        
         return reduced_tensor
- 
