@@ -114,16 +114,17 @@ class TrainerBase(OptimizationManager):
         path_cost = (predict - target.detach()).abs()
         return path_cost
     
-    def loss_fn(self, predict, target, padding_mask):
-        # Compute the absolute discrepancy between predictions and targets
-        discrepancy = (predict - target.detach()).abs()
+    def loss_fn(self, predicted_output, actual_output, mask):
+        # Compute the absolute discrepancy between predictions and actual values
+        absolute_discrepancy = (predicted_output - actual_output.detach()).abs()
         
         # Flatten the observation shape for feature reduction while keeping batch or sequence dimensions intact
-        discrepancy = discrepancy.view(*discrepancy.shape[:-len(self.obs_shape)], -1)
+        preserved_shape = absolute_discrepancy.shape[:len(absolute_discrepancy.shape) - len(self.obs_shape)]
+        flattened_discrepancy = absolute_discrepancy.view(*preserved_shape, -1)
         
         # Reduce the tensor along the batch dimension, optionally considering the padding mask
-        reduced_tensor = reduce_tensor(discrepancy, padding_mask, dim=-1)
-        return reduced_tensor
+        reduced_output = reduce_tensor(flattened_discrepancy, mask, dim=-1)
+        return reduced_output
         
     def error_fn(self, predict, target, padding_mask=None):
         # Compute the discrepancy based on the specified error function
