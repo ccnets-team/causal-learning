@@ -9,7 +9,8 @@ Author:
 import torch
 import pandas as pd
 import numpy as np
-
+from nn.utils.init import set_random_seed
+ 
 NUM_PRE_BATCHES = 64
 
 class BaseDataset(torch.utils.data.Dataset):
@@ -48,6 +49,7 @@ class TemplateDataset(BaseDataset):
         self.min_seq_len = min_seq_len
         self.max_seq_len = max_seq_len
         self.input_wrapper = input_wrapper
+        self.seed_count = 0
         
         self.use_seq = False
         if self.max_seq_len is not None or self.min_seq_len is not None:
@@ -100,6 +102,9 @@ class TemplateDataset(BaseDataset):
         if self.total_iters % self.last_start_idx != 0:
             return
         # use numpy function
+        set_random_seed(self.seed_count)
+        self.seed_count+= 1
+        
         self.batch_indices = np.random.permutation(self.last_start_idx)
         self.total_iters = 0
 
