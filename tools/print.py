@@ -102,6 +102,7 @@ def print_checkpoint_info(parent, time_cost, epoch_idx, iter_idx, len_dataloader
 
 def print_ml_params(trainer_name, ml_params: MLParameters, data_config: DataConfig):
     print("Trainer Name:", trainer_name)
+    print("\n")
 
     print(ml_params)
     

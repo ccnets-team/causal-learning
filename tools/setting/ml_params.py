@@ -118,9 +118,11 @@ class OptimizationParameters:
     max_grad_norm: float = 1.0
 
     def __repr__(self):
+        clip_grad_repr = f", clip_grad_range={self.clip_grad_range}" if self.clip_grad_range is not None else ""
+        max_grad_norm = f", max_grad_norm={self.max_grad_norm}" if self.max_grad_norm is not None else ""
         return (f"OptimizationParameters(learning_rate={self.learning_rate}, "
-                f"decay_rate_100k={self.decay_rate_100k}, scheduler_type={self.scheduler_type}, "
-                f"clip_grad_range={self.clip_grad_range}, max_grad_norm={self.max_grad_norm})\n")
+                f"decay_rate_100k={self.decay_rate_100k}, scheduler_type={self.scheduler_type}"
+                f"{clip_grad_repr}{max_grad_norm}\n")
         
 @dataclass
 class AlgorithmParameters:

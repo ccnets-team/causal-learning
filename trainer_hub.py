@@ -34,7 +34,6 @@ class TrainerHub:
         self.data_config = data_config
         self.device = device
         
-        print_ml_params("causal_trainer", ml_params, data_config)
         
         self.initialize_usage_flags(ml_params)
         
@@ -42,6 +41,8 @@ class TrainerHub:
         self.label_size = self.data_config.label_size
         
         self.setup_models(ml_params)
+        
+        print_ml_params("causal_trainer", ml_params, data_config)
         
         self.helper = TrainerHubHelper(self, data_config, ml_params, device, use_print, use_wandb, print_interval)
         

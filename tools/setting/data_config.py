@@ -56,7 +56,9 @@ class DataConfig:
         self.show_image_indices = show_image_indices
 
     def __repr__(self):
+        label_size_repr = f", label_size={self.label_size}" if self.label_size is not None else ""
+        explain_size_repr = f", explain_size={self.explain_size}" if self.explain_size is not None else ""
+        state_size_repr = f", state_size={self.state_size}" if self.state_size is not None else ""
+        show_image_indices_repr = f", show_image_indices={self.show_image_indices}" if self.show_image_indices is not None else ""
         return (f"DataConfig(dataset_name={self.dataset_name}, task_type={self.task_type}, "
-                f"obs_shape={self.obs_shape}, label_size={self.label_size}, "
-                f"explain_size={self.explain_size}, state_size={self.state_size},"
-                f"show_image_indices={self.show_image_indices})")
+                f"obs_shape={self.obs_shape}{label_size_repr}{explain_size_repr}{state_size_repr}{show_image_indices_repr})")
