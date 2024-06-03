@@ -81,7 +81,7 @@ def one_hot_encode_columns(df: pd.DataFrame, given_one_hot_columns: list) -> Tup
     # Identify string-type columns
     str_columns = df.select_dtypes(include=['object']).columns
 
-    name_indicated_columns = detect_categorical_named_columns(str_columns)
+    name_indicated_columns = detect_categorical_named_columns(df)
     
     category_columns = str_columns.union(given_one_hot_columns).union(name_indicated_columns)
 
