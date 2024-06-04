@@ -61,8 +61,8 @@ class TemplateDataset(BaseDataset):
             if self.max_seq_len is None:
                 self.max_seq_len = 2 * self.min_seq_len
         else:
-            self.min_seq_len = 0
-            self.max_seq_len = 0
+            self.min_seq_len = 1
+            self.max_seq_len = 1
 
         self.shuffle_indices()
         self.precompute_batches(self.total_iters)
