@@ -24,32 +24,6 @@ def get_activation_function(activation_function, feature_size=None):
     else:
         raise ValueError(f"Unsupported activation function: {activation_function}")
 
-def create_layer(input_size, output_size, first_act_fn="none", last_act_fn="none"):
-    """
-    Creates a PyTorch layer with specified input and output sizes, including optional activation functions.
-
-    Args:
-        input_size (int): Size of the input features.
-        output_size (int): Size of the output features.
-        first_act_fn (str): Name of the activation function to apply before the linear layer.
-        last_act_fn (str): Name of the activation function to apply after the linear layer.
-
-    Returns:
-        nn.Sequential: A sequential container of layers.
-    """
-    _input_size = input_size[-1] if isinstance(input_size, list) else input_size
-    _output_size = output_size[-1] if isinstance(output_size, list) else output_size
-
-    layers = []
-    first_activation_layer = get_activation_function(first_act_fn, _input_size)
-    if not isinstance(first_activation_layer, nn.Identity):  # Add activation layer if it's not Identity
-        layers.append(first_activation_layer)
-    layers.append(EmbeddingLayer(_input_size, _output_size))
-    last_activation_layer = get_activation_function(last_act_fn, _output_size)
-    if not isinstance(last_activation_layer, nn.Identity):  # Add activation layer if it's not Identity
-        layers.append(last_activation_layer)
-    return nn.Sequential(*layers)
-
 class EmbeddingLayer(nn.Module):
     """ Layer that applies a linear transformation to the input features """
     def __init__(self, input_features, output_features):
@@ -75,3 +49,27 @@ class EmbeddingLayer(nn.Module):
         # feature_emb_bias shape: [B, S, W] or [B, W]
 
         return feature_emb_bias
+    
+class FinalLayer(nn.Module):
+    """
+    Final layer that configures an input layer with optional pre- and post-activation functions
+    and an embedding layer in between.
+    """
+    def __init__(self, input_size, output_size, first_act_fn="none", last_act_fn="none"):
+        super(FinalLayer, self).__init__()
+        _input_size = input_size[-1] if isinstance(input_size, list) else input_size
+        _output_size = output_size[-1] if isinstance(output_size, list) else output_size
+        
+        layers = []
+        first_activation_layer = get_activation_function(first_act_fn, _input_size)
+        if not isinstance(first_activation_layer, nn.Identity):  # Add activation layer if it's not Identity
+            layers.append(first_activation_layer)        
+        layers.append(EmbeddingLayer(_input_size, _output_size))
+        last_activation_layer = get_activation_function(last_act_fn, _output_size)
+        if not isinstance(last_activation_layer, nn.Identity):  # Add activation layer if it's not Identity
+            layers.append(last_activation_layer)
+        self.layers = nn.Sequential(*layers)
+            
+    def forward(self, features):
+        return self.layers(features)
+    

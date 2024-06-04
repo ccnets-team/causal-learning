@@ -8,8 +8,8 @@
 import torch
 import torch.nn as nn
 from nn.utils.init import init_weights
-from nn.utils.layers import create_layer
 from nn.utils.joint_layer import JointLayer
+from nn.utils.final_layer import FinalLayer
 from framework.utils.ccnet_utils import convert_explanation_to_image_shape, extend_obs_shape_channel
 from tools.setting.ml_config import modify_network_params
 
@@ -54,10 +54,10 @@ class Reasoner(nn.Module):
             self.image_elements = torch.prod(torch.tensor(extended_obs_shape[1:], dtype=torch.int)).item()
         else:
             reasoner_params = modify_network_params(network_params)
-            self.input_embedding_layer = JointLayer(d_model, input_shape, explain_size)
+            self.joint_layer = JointLayer(d_model, input_shape, explain_size)
 
         self.net = net(reasoner_params)
-        self.final_layer = create_layer(d_model, output_size, first_act_fn='relu', last_act_fn=act_fn)
+        self.final_layer = FinalLayer(d_model, output_size, first_act_fn='relu', last_act_fn=act_fn)
         self.apply(lambda module: init_weights(module, reset_pretrained))
     
     def forward(self, obs, e, padding_mask=None):
@@ -76,7 +76,7 @@ class Reasoner(nn.Module):
             image_e = self._convert_explanation_to_image_shape(e)
             z = torch.cat([obs, image_e], dim=1)
         else:
-            z = self.input_embedding_layer(obs, e)
+            z = self.joint_layer(obs, e)
         y = self.net(z) if padding_mask is None else self.net(z, padding_mask=padding_mask)
         y = self.final_layer(y)
         return y

@@ -4,7 +4,7 @@
 
 import torch
 from torch import nn
-from nn.utils.layers import EmbeddingLayer, get_activation_function
+from nn.utils.final_layer import get_activation_function
 
 try:
     from nn.utils.test import JointLayer
@@ -21,7 +21,7 @@ except ImportError:
                 else:
                     filtered_num_features.append(nf)
                                 
-            self.embedding_layers = nn.ModuleList([EmbeddingLayer(nf, embedding_size) for nf in filtered_num_features])
+            self.embedding_layers = nn.ModuleList([nn.Linear(nf, embedding_size) for nf in filtered_num_features])
             self.final_layer = get_activation_function(act_fn, embedding_size)
 
         def forward(self, *features):

@@ -6,8 +6,8 @@
 import torch
 import torch.nn as nn
 from nn.utils.init import init_weights
-from nn.utils.layers import create_layer
 from nn.utils.joint_layer import JointLayer
+from nn.utils.final_layer import FinalLayer
 from tools.setting.ml_config import modify_network_params
 
 class Producer(nn.Module):
@@ -41,7 +41,7 @@ class Producer(nn.Module):
                                                                producer_params.condition_dim)
 
         # Embedding layer for combined condition and explanation inputs
-        self.embedding_layer = JointLayer(d_model, condition_size, explain_size)
+        self.joint_layer = JointLayer(d_model, condition_size, explain_size)
 
         # Initialize the main network module
         self.net = net(producer_params)
@@ -49,7 +49,7 @@ class Producer(nn.Module):
         self.use_image = len(output_shape) != 1
         
         if not self.use_image:
-            self.final_layer = create_layer(d_model, output_shape, first_act_fn='relu', last_act_fn=act_fn)
+            self.final_layer = FinalLayer(d_model, output_shape, first_act_fn='relu', last_act_fn=act_fn)
 
         # Apply initial weights
         self.apply(lambda module: init_weights(module, reset_pretrained))
@@ -66,7 +66,7 @@ class Producer(nn.Module):
         Returns:
             Tensor: The output tensor after processing through the network.
         """
-        z = self.embedding_layer(labels, explains)
+        z = self.joint_layer(labels, explains)
         if self.use_image:
             return self.net(z)
         else:
