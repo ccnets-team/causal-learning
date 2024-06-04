@@ -55,10 +55,26 @@ def remove_columns(df: pd.DataFrame,
         drop_columns = drop_columns.difference(exclude_columns)
     
     if not drop_columns.empty:
+        print(f"Dropped columns: {', '.join(drop_columns)}")
         df = df.drop(columns=drop_columns)
 
+    missing_values = df.isnull().sum()
+    missing_columns = missing_values[missing_values > 0]
+    
+    if not missing_columns.empty:
+        print("Number of missing values in each column:")
+        print(missing_columns)
+        
+    rows_before = df.shape[0]
+    
     df_clean = df.dropna(axis=0).reset_index(drop=True).copy()
     
+    rows_after = df_clean.shape[0]
+    rows_dropped = rows_before - rows_after
+
+    if rows_dropped > 0:
+        print(f"Number of rows dropped due to missing values: {rows_dropped}")
+        print()
     return df_clean
 
 def calculate_num_classes(target_df: pd.DataFrame) -> int:
@@ -177,3 +193,4 @@ def update_one_hot_encoded_columns(stats_df, one_hot_encoded_columns):
         for col in stats_df.index:
             if pattern.match(col):
                 stats_df.loc[col, 'Encoded'] = 'One_hot'
+                
