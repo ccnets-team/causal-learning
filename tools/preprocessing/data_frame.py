@@ -49,14 +49,14 @@ def auto_encode_cyclical_columns(df: pd.DataFrame, columns: List[str]) -> pd.Dat
     
     return df, processed_columns
 
-def auto_preprocess_dataframe(df: pd.DataFrame, target_columns, drop_columns = None, one_hot_columns = None) -> Tuple[pd.DataFrame, dict]:
+def auto_preprocess_dataframe(df: pd.DataFrame, target_columns, drop_columns = None, encode_columns = None, no_scale_columns = None) -> Tuple[pd.DataFrame, dict]:
     """
     Automatically preprocesses the DataFrame by encoding, scaling, and handling target columns.
     """
 
     # Convert columns to DataFrame indices
-    target_columns, drop_columns, one_hot_columns = \
-        convert_to_indices(df, target_columns, drop_columns, one_hot_columns)
+    target_columns, drop_columns, encode_columns, no_scale_columns = \
+        convert_to_indices(df, target_columns, drop_columns, encode_columns, no_scale_columns)
 
     # Drop unwanted columns
     df = remove_columns(df, drop_columns)
@@ -67,10 +67,10 @@ def auto_preprocess_dataframe(df: pd.DataFrame, target_columns, drop_columns = N
     df_x, encoded_datatime_columns = auto_encode_datetime_columns(df_x)
     
     # Encode non-target columns
-    df_x, encoded_one_hot_columns = one_hot_encode_columns(df_x, one_hot_columns)
+    df_x, encoded_columns = one_hot_encode_columns(df_x, encode_columns)
     
     # Scale non-target columns
-    df_x, scaler_description = auto_scale_columns(df_x)
+    df_x, scaler_description = auto_scale_columns(df_x, no_scale_columns)
     
     # Convert all features to float type
     df_x = df_x.astype(float)
@@ -89,7 +89,7 @@ def auto_preprocess_dataframe(df: pd.DataFrame, target_columns, drop_columns = N
     df = remove_process_prefix(df)
 
     # combine encoded columns
-    encoded_columns = encoded_datatime_columns.union(encoded_one_hot_columns).union(encoded_target_columns)
+    encoded_columns = encoded_datatime_columns.union(encoded_columns).union(encoded_target_columns)
     
     # Generate description dictionary
     description = generate_description(num_features=num_features, num_classes=num_classes, 

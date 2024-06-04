@@ -16,14 +16,14 @@ from typing import Tuple
 from scipy.stats import skew
 from tools.preprocessing.utils import PROCESSED_PREFIX 
 
-def auto_determine_scaler(data, skew_threshold=0.5, mean_threshold=2.0, outlier_threshold=1.5):
+def auto_determine_scaler(data, skew_threshold=0.5, abs_mean_threshold=2.0, outlier_threshold=1.5):
     """
     Determines the appropriate scaler for data preprocessing based on the skewness, mean, and presence of outliers.
     
     Parameters:
     data (pd.Series or np.ndarray): The input data to be analyzed.
     skew_threshold (float): The threshold for skewness to determine the need for scaling.
-    mean_threshold (float): The threshold for the mean to determine the scaling method.
+    abs_mean_threshold (float): The threshold for the abs mean to determine the scaling method.
     outlier_threshold (float): The multiplier used in the IQR method to detect outliers.
     
     Returns:
@@ -50,16 +50,17 @@ def auto_determine_scaler(data, skew_threshold=0.5, mean_threshold=2.0, outlier_
     outliers = (data < lower_bound) | (data > upper_bound)
     has_outliers = np.any(outliers)
     
-    column_mean = np.abs(data).mean() 
+    centered_data = data - np.mean(data)
+    column_mean = np.abs(centered_data).mean()
     
     # # Determine the scaler
     if abs(data_skewness) < skew_threshold:
-        if column_mean > mean_threshold:
+        if column_mean > abs_mean_threshold:
             return "minmax"
         else:
             return "none"
     else:
-        if column_mean > mean_threshold:
+        if column_mean > abs_mean_threshold:
             if has_outliers:
                 return "robust"
             else:
@@ -67,7 +68,8 @@ def auto_determine_scaler(data, skew_threshold=0.5, mean_threshold=2.0, outlier_
         else:
             return "none"
             
-def auto_scale_columns(df: pd.DataFrame) -> Tuple[pd.DataFrame, dict]:
+def auto_scale_columns(df: pd.DataFrame,
+                       no_scale_columns: pd.Index) -> Tuple[pd.DataFrame, dict]:
 
     scaler_dict = {
         'minmax': MinMaxScaler,
@@ -80,7 +82,7 @@ def auto_scale_columns(df: pd.DataFrame) -> Tuple[pd.DataFrame, dict]:
 
     exclude_columns = df.columns[df.columns.str.startswith(PROCESSED_PREFIX)]
     # Determine and apply scalers for columns not in any predefined list
-    remaining_columns = df.columns.difference(exclude_columns)
+    remaining_columns = df.columns.difference(exclude_columns).difference(no_scale_columns)
 
     for column in remaining_columns:
         scaler_type = auto_determine_scaler(df.loc[:, column])
@@ -88,8 +90,9 @@ def auto_scale_columns(df: pd.DataFrame) -> Tuple[pd.DataFrame, dict]:
             # centering the data
             df_scaled.loc[:, [column]] -= df.loc[:, [column]].mean()
         elif scaler_type == 'minmax':
-            column_mean = df[column].abs().mean() + 1e-8
-            df_scaled[column] = 2.0 * (df_scaled[column] / column_mean) - 1.0            
+            df_scaled.loc[:, [column]] -= df.loc[:, [column]].mean()
+            column_mean = df_scaled.loc[:, [column]].abs().mean() + 1e-8
+            df_scaled.loc[:, [column]] = 2.0 * (df_scaled.loc[:, [column]] / column_mean) - 1.0            
         else:
             scaler_instance = scaler_dict[scaler_type]()
             df_scaled.loc[:, [column]] = scaler_instance.fit_transform(df.loc[:, [column]])

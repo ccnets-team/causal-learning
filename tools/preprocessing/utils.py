@@ -11,7 +11,7 @@ Author:
 
 import pandas as pd
 from typing import Optional, List, Union, Tuple
-PROCESSED_PREFIX = "cnets_processed_"
+PROCESSED_PREFIX = "ccnets_processed_"
 
 def convert_to_indices(df: pd.DataFrame, *columns: Optional[Union[List[str], pd.Index, str]]) -> Tuple[pd.Index, ...]:
     """

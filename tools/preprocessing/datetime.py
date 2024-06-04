@@ -45,9 +45,30 @@ def auto_encode_cyclical_columns(df: pd.DataFrame, columns: List[str]) -> pd.Dat
     
     return df, processed_columns
 
+def parse_datetime_column(value, date_formats, time_formats):
+    # Try time formats first
+    for fmt in time_formats:
+        try:
+            parsed_time = pd.to_datetime(value, format=fmt, errors='raise')
+            return parsed_time.time() if isinstance(parsed_time, pd.Timestamp) else parsed_time
+        except (ValueError, TypeError):
+            continue
+    # Try date formats
+    for fmt in date_formats:
+        try:
+            return pd.to_datetime(value, format=fmt, errors='raise')
+        except (ValueError, TypeError):
+            continue
+    return pd.NaT  # If all formats fail, return NaT
+
 def process_time_column(df, actual_time_col, prefix):
-    datetime = pd.to_datetime(df[actual_time_col], errors='coerce', format='%H:%M:%S', exact=False)
-    
+    # List of possible datetime formats
+    time_formats = ['%M:%S', '%H:%M:%S']
+    date_formats = ['%Y-%m-%d %H:%M:%S', '%m/%d/%Y %I:%M %p', '%B %d, %Y %H:%M:%S']
+
+    # Apply the parsing function to the column
+    datetime = df[actual_time_col].apply(lambda x: parse_datetime_column(x, date_formats, time_formats))
+
     if datetime.notnull().all() and isinstance(datetime.iloc[0], pd.Timestamp):
         if datetime.dt.date.notnull().all():
             if 'date' not in df.columns:
@@ -63,7 +84,7 @@ def process_time_column(df, actual_time_col, prefix):
         
         df.drop([actual_time_col, prefix + 'hours', prefix + 'minutes', prefix + 'seconds', prefix + 'total_seconds'], axis=1, inplace=True)
 
-        return [prefix + 'time_scaled']
+        return ['time_scaled']
     return []
 
 def process_date_column(df, actual_date_col, prefix):
@@ -79,7 +100,7 @@ def process_date_column(df, actual_date_col, prefix):
             df.drop(['month'], axis=1, inplace=True)
 
         df.drop([actual_date_col, 'day_of_year'], axis=1, inplace=True)
-        return [prefix + 'day_of_year_sin', prefix + 'day_of_year_cos']
+        return ['day_of_year_sin', 'day_of_year_cos']
     return []
 
 def process_month_column(df, actual_month_col, prefix):
@@ -90,7 +111,7 @@ def process_month_column(df, actual_month_col, prefix):
         df[prefix + 'month_cos'] = np.cos(2 * np.pi * df[actual_month_col] / 12)
         
         df.drop([actual_month_col], axis=1, inplace=True)
-        return [prefix + 'month_sin', prefix + 'month_cos']
+        return ['month_sin', 'month_cos']
     return []
 
 
@@ -120,16 +141,15 @@ def auto_encode_datetime_columns(df: pd.DataFrame) -> pd.DataFrame:
 
     # Find the actual columns present in the DataFrame
     actual_time_col = next((col for col in time_cols if col in df.columns), None)
-    actual_date_col = next((col for col in date_cols if col in df.columns), None)
-    actual_month_col = next((col for col in month_cols if col in df.columns), None)
-
     # Process columns
     if actual_time_col:
         processed_columns += process_time_column(df, actual_time_col, prefix)
-        
+
+    actual_date_col = next((col for col in date_cols if col in df.columns), None)
     if actual_date_col:
         processed_columns += process_date_column(df, actual_date_col, prefix)
-        
+
+    actual_month_col = next((col for col in month_cols if col in df.columns), None)
     if actual_month_col:
         processed_columns += process_month_column(df, actual_month_col, prefix)
 
