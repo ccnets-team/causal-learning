@@ -50,7 +50,7 @@ class CausalEncodingTrainer(TrainerBase):
         ################################  Forward Pass  ########################################
         # Generate explanations and features.
         causal_explain = self.explainer(input_observation, padding_mask)
-        random_explain = torch.randn_like(causal_explain)
+        random_explain = 2 * torch.rand_like(causal_explain) - 1
         
         causal_feature = self.reasoner(input_observation, causal_explain, padding_mask)
         stochastic_feature = self.reasoner(input_observation, random_explain, padding_mask)

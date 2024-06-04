@@ -53,7 +53,8 @@ class TrainerHub:
     def initialize_usage_flags(self, ml_params):
         self.use_encoder = ml_params.encoder_network != 'none'
         self.use_ccnet = ml_params.ccnet_network != 'none'
-        self.use_seq = ml_params.ccnet_network == 'gpt'
+        self.is_encoder_seq = ml_params.encoder_network == 'gpt'
+        self.is_ccnet_seq = ml_params.ccnet_network == 'gpt'
         
     def initialize_training_params(self, ml_params):
         
@@ -84,7 +85,7 @@ class TrainerHub:
             self.encoder_trainer = None
         
         if self.use_ccnet:
-            ccnet_networks, network_params = configure_ccnet_network(model_params.ccnet_network, model_params.ccnet_config, self.data_config)
+            ccnet_networks, network_params = configure_ccnet_network(model_params.ccnet_network, model_params.ccnet_config, self.data_config, use_encoder=self.use_encoder)
             self.ccnet = CooperativeNetwork(ccnet_networks, network_params, algorithm_params, self.data_config, self.device, encoder=self.encoder)
             self.ccnet_trainer = CausalTrainer(self.ccnet, algorithm_params, optimization_params, self.data_config)
         else:
@@ -96,13 +97,14 @@ class TrainerHub:
         
         source_batch, target_batch, padding_mask = prepare_batches(source_batch, target_batch, self.label_size, self.task_type, self.device)        
         if self.use_encoder:
+            source_batch, target_batch, padding_mask = manage_batch_dimensions(self.is_encoder_seq, source_batch, target_batch, padding_mask)
             encoder_metric = self.encoder_trainer.train_models(source_batch, padding_mask)
         else:
             encoder_metric = None
 
         if self.use_ccnet:
             source_batch, target_batch = self.encode_inputs(source_batch, target_batch, padding_mask)
-            source_batch, target_batch, padding_mask = manage_batch_dimensions(self.use_seq, source_batch, target_batch, padding_mask)
+            source_batch, target_batch, padding_mask = manage_batch_dimensions(self.is_ccnet_seq, source_batch, target_batch, padding_mask)
             ccnet_metric = self.ccnet_trainer.train_models(source_batch, target_batch, padding_mask)
         else:
             ccnet_metric = None
@@ -163,7 +165,7 @@ class TrainerHub:
         return test_metrics
     
     def should_select_last_sequence(self, padding_mask):
-        return self.use_seq and padding_mask is not None
+        return self.is_ccnet_seq and padding_mask is not None
         
     def start_iteration(self, iters):
         set_random_seed(iters)

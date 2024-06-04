@@ -11,7 +11,7 @@ class CooperativeEncodingNetwork:
     def __init__(self, model_networks, network_params, algorithm_params, device):
         # Initialize model names and configurations.
         reset_pretrained = algorithm_params.reset_pretrained
-        self.explainer = Explainer(model_networks[0], network_params, reset_pretrained, act_fn="layer_norm").to(device)
+        self.explainer = Explainer(model_networks[0], network_params, reset_pretrained, act_fn="tanh").to(device)
         self.reasoner = Reasoner(model_networks[1], network_params, reset_pretrained, act_fn="tanh").to(device)
         self.producer = Producer(model_networks[2], network_params, reset_pretrained, act_fn="none").to(device)
 
@@ -50,10 +50,8 @@ class CooperativeEncodingNetwork:
         with torch.no_grad():
             self.__set_train(False)
             deterministic_variables = self.explainer(input_data, padding_mask)
-            stochastic_variables = self.reasoner(input_data, deterministic_variables, padding_mask)
-            encoded_data = torch.cat([stochastic_variables, deterministic_variables], dim=-1)
             self.__set_train(True)
-        return encoded_data
+        return deterministic_variables
 
     def decode(self, encoded_data: torch.Tensor, padding_mask = None) -> torch.Tensor:
         """
@@ -108,9 +106,8 @@ class CooperativeEncodingNetwork:
         """
         with torch.no_grad():
             self.__set_train(False)
-            encoded_data = self.encode(input_data, padding_mask)
-            stochastic_variables = encoded_data[..., :self.stoch_size]
-            deterministic_variables = encoded_data[..., self.stoch_size:]
+            deterministic_variables = self.explainer(input_data, padding_mask)
+            stochastic_variables = self.reasoner(input_data, deterministic_variables, padding_mask)
             
             batch_size = input_data.size(0)
             if output_multiplier is None:

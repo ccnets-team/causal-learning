@@ -32,7 +32,8 @@ class TrainerHubHelper:
         self.use_wandb = use_wandb
         self.use_image = len(data_config.obs_shape) != 1
         
-        self.use_seq = self.parent.use_seq
+        self.is_ccnet_seq = self.parent.is_ccnet_seq
+        self.is_encoder_seq = self.parent.is_encoder_seq
         self.use_ccnet = self.parent.use_ccnet
         self.use_encoder = self.parent.use_encoder
         self.use_image_debugger = data_config.show_image_indices is not None
