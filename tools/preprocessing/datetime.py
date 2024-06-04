@@ -69,8 +69,8 @@ def process_time_column(df, actual_time_col, prefix):
     # Apply the parsing function to the column
     datetime = df[actual_time_col].apply(lambda x: parse_datetime_column(x, date_formats, time_formats))
 
-    if datetime.notnull().all() and isinstance(datetime.iloc[0], pd.Timestamp):
-        if datetime.dt.date.notnull().all():
+    if pd.notnull(datetime.iloc[0]) and isinstance(datetime.iloc[0], pd.Timestamp):
+        if pd.notnull(datetime.dt.date.iloc[0]):
             if 'date' not in df.columns:
                 df['date'] = datetime.dt.date
             datetime = datetime.dt.time
@@ -90,7 +90,7 @@ def process_time_column(df, actual_time_col, prefix):
 def process_date_column(df, actual_date_col, prefix):
     datetime = pd.to_datetime(df[actual_date_col], errors='coerce')
     
-    if datetime.notnull().all():
+    if pd.notnull(datetime.iloc[0]):
         df['day_of_year'] = datetime.dt.dayofyear
         
         df[prefix + 'day_of_year_sin'] = np.sin(2 * np.pi * df['day_of_year'] / 365)
