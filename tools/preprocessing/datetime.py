@@ -103,7 +103,7 @@ def process_date_column(df, actual_date_col, prefix):
 def process_month_column(df, actual_month_col, prefix):
     df[actual_month_col] = pd.to_numeric(df[actual_month_col], errors='coerce')
     
-    if df[actual_month_col].between(1, 12).all():
+    if df[actual_month_col].min() >= 1 and df[actual_month_col].max() <= 12:
         df[prefix + 'month_sin'] = np.sin(2 * np.pi * df[actual_month_col] / 12)
         df[prefix + 'month_cos'] = np.cos(2 * np.pi * df[actual_month_col] / 12)
         
