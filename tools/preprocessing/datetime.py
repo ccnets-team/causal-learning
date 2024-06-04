@@ -96,9 +96,6 @@ def process_date_column(df, actual_date_col, prefix):
         df[prefix + 'day_of_year_sin'] = np.sin(2 * np.pi * df['day_of_year'] / 365)
         df[prefix + 'day_of_year_cos'] = np.cos(2 * np.pi * df['day_of_year'] / 365)
 
-        if 'month' in df.columns:
-            df.drop(['month'], axis=1, inplace=True)
-
         df.drop([actual_date_col, 'day_of_year'], axis=1, inplace=True)
         return ['day_of_year_sin', 'day_of_year_cos']
     return []
