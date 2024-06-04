@@ -25,7 +25,7 @@ class BaseDataset(torch.utils.data.Dataset):
         else:
             self.y = dataset_y
 
-        self.dataset_length = len(self.X) if indices is not None else len(indices)
+        self.buffer_size = len(self.X) if indices is None else len(indices)
         self.indices = np.array(indices, dtype=int) if indices is not None else None
         self.total_iters = 0
 
@@ -39,7 +39,7 @@ class BaseDataset(torch.utils.data.Dataset):
             return torch.tensor(self.X[index], dtype=torch.float64), None
 
     def __len__(self):
-        return self.dataset_length
+        return self.buffer_size
 
 class TemplateDataset(BaseDataset):
     def __init__(self, dataset_X, dataset_y, indices = None,
@@ -64,11 +64,6 @@ class TemplateDataset(BaseDataset):
             self.min_seq_len = 0
             self.max_seq_len = 0
 
-        if indices is None:
-            self.buffer_size = max(self.dataset_length - self.max_seq_len, 0)
-        else:
-            self.buffer_size = len(indices)
-            
         self.shuffle_indices()
         self.precompute_batches(self.total_iters)
 
@@ -78,7 +73,7 @@ class TemplateDataset(BaseDataset):
             return 
         batch_idx = idx // pre_batches
         start_idx = batch_idx * pre_batches
-        end_idx = min(start_idx + pre_batches, self.dataset_length)
+        end_idx = min(start_idx + pre_batches, self.buffer_size)
         batch_indices = self.batch_indices[start_idx:end_idx]
 
         if self.use_seq:
@@ -105,8 +100,7 @@ class TemplateDataset(BaseDataset):
         return torch.tensor(self.X_cache[selected_idx], dtype=torch.float64), torch.tensor(self.y_cache[selected_idx], dtype=torch.float64) if self.y_cache is not None else None
 
     def shuffle_indices(self):
-        if self.total_iters % self.buffer_size != 0:
-            return
+
         # use numpy function
         set_random_seed(self.seed_count)
         self.seed_count+= 1
@@ -120,8 +114,10 @@ class TemplateDataset(BaseDataset):
         self.total_iters = 0
 
     def __getitem__(self, idx):
+        if self.total_iters >= self.buffer_size:
+            self.shuffle_indices()
+            
         self.precompute_batches(self.total_iters)
-        self.shuffle_indices()
 
         self.total_iters += 1
 
