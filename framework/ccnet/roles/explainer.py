@@ -6,8 +6,8 @@
 
 import torch.nn as nn
 from nn.utils.init import init_weights
-from nn.utils.layers import create_layer
 from nn.utils.joint_layer import JointLayer
+from nn.utils.final_layer import FinalLayer
 from tools.setting.ml_config import modify_network_params
 
 class Explainer(nn.Module):
@@ -41,10 +41,10 @@ class Explainer(nn.Module):
         self.use_image = len(input_shape) != 1
 
         if not self.use_image:
-            self.input_embedding_layer = JointLayer(d_model, input_shape)
+            self.joint_layer = JointLayer(d_model, input_shape)
 
         self.net = net(explainer_params)
-        self.final_layer = create_layer(d_model, output_size, first_act_fn='relu', last_act_fn=act_fn)
+        self.final_layer = FinalLayer(d_model, output_size, first_act_fn='relu', last_act_fn=act_fn)
                 
         self.apply(lambda module: init_weights(module, reset_pretrained))
 
@@ -63,7 +63,7 @@ class Explainer(nn.Module):
         if self.use_image:
             e = self.net(x)
         else:
-            x = self.input_embedding_layer(x)
+            x = self.joint_layer(x) # Joint Layer for single input
             e = self.net(x) if padding_mask is None else self.net(x, padding_mask=padding_mask)
 
         e = self.final_layer(e)

@@ -9,7 +9,9 @@ Author:
     COPYRIGHT (c) 2024. CCNets. All Rights reserved.
 '''
 
+import re
 import pandas as pd
+from IPython.display import display
 from typing import Optional, List, Union, Tuple
 PROCESSED_PREFIX = "ccnets_processed_"
 
@@ -53,10 +55,26 @@ def remove_columns(df: pd.DataFrame,
         drop_columns = drop_columns.difference(exclude_columns)
     
     if not drop_columns.empty:
+        print(f"Dropped columns: {', '.join(drop_columns)}")
         df = df.drop(columns=drop_columns)
 
+    missing_values = df.isnull().sum()
+    missing_columns = missing_values[missing_values > 0]
+    
+    if not missing_columns.empty:
+        print("Number of missing values in each column:")
+        print(missing_columns)
+        
+    rows_before = df.shape[0]
+    
     df_clean = df.dropna(axis=0).reset_index(drop=True).copy()
     
+    rows_after = df_clean.shape[0]
+    rows_dropped = rows_before - rows_after
+
+    if rows_dropped > 0:
+        print(f"Number of rows dropped due to missing values: {rows_dropped}")
+        print()
     return df_clean
 
 def calculate_num_classes(target_df: pd.DataFrame) -> int:
@@ -73,7 +91,7 @@ def calculate_num_classes(target_df: pd.DataFrame) -> int:
         num_classes += unique_values
     return num_classes
 
-def display_statistics(df: pd.DataFrame) -> None:
+def display_statistics(df: pd.DataFrame, description: dict) -> None:
     """
     Displays basic statistics for the input DataFrame.
     
@@ -96,7 +114,19 @@ def display_statistics(df: pd.DataFrame) -> None:
         'Std': std_values,
         'Null Count': null_counts
     })
+    
+    stats_df['Scaled'] = stats_df.index.map(lambda x: description['scalers'].get(x, None))
+    stats_df['Scaled'] = stats_df['Scaled'].apply(lambda x: x.capitalize() if x else None)
+    
+    one_hot_mask = stats_df.index.isin(description['one_hot_encoded_columns'])
+    datetime_encode_mask = stats_df.index.isin(description['encoded_datatime_columns'])
+    
+    stats_df['Encoded'] = None
 
+    update_one_hot_encoded_columns(stats_df, description['one_hot_encoded_columns'])
+    stats_df.loc[one_hot_mask, 'Encoded'] = 'One-hot'
+    stats_df.loc[datetime_encode_mask, 'Encoded'] = 'EncodedDateTime'
+    
     # Display the result in a Jupyter Notebook
     display(stats_df)  
 
@@ -157,3 +187,10 @@ def remove_process_prefix(df: pd.DataFrame) -> pd.DataFrame:
     df.columns = columns_without_prefix
     
     return df
+def update_one_hot_encoded_columns(stats_df, one_hot_encoded_columns):
+    for base_col in one_hot_encoded_columns:
+        pattern = re.compile(rf'^{base_col}_\d+$')  
+        for col in stats_df.index:
+            if pattern.match(col):
+                stats_df.loc[col, 'Encoded'] = 'One_hot'
+                

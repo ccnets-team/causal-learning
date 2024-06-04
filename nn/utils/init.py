@@ -6,7 +6,7 @@ import torch
 import random
 import numpy as np
 from torch import nn
-from nn.utils.layers import EmbeddingLayer
+from nn.utils.final_layer import EmbeddingLayer
     
 def set_random_seed(seed_val):
     random.seed(seed_val)
