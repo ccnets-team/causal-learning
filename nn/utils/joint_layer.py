@@ -10,7 +10,7 @@ try:
     from nn.utils.test import JointLayer
 except ImportError:
     class JointLayer(nn.Module):
-        def __init__(self, embedding_size, *num_features, act_fn='layer_norm'):
+        def __init__(self, embedding_size, *num_features, act_fn='tanh'):
             super(JointLayer, self).__init__()
         
             # Process num_features to take out the last element of sublists

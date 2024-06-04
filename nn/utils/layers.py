@@ -24,7 +24,7 @@ def get_activation_function(activation_function, feature_size=None):
     else:
         raise ValueError(f"Unsupported activation function: {activation_function}")
 
-def create_layer(input_size, output_size, first_act_fn="none", last_act_fn="none", embedding=False):
+def create_layer(input_size, output_size, first_act_fn="none", last_act_fn="none"):
     """
     Creates a PyTorch layer with specified input and output sizes, including optional activation functions.
 
@@ -44,10 +44,7 @@ def create_layer(input_size, output_size, first_act_fn="none", last_act_fn="none
     first_activation_layer = get_activation_function(first_act_fn, _input_size)
     if not isinstance(first_activation_layer, nn.Identity):  # Add activation layer if it's not Identity
         layers.append(first_activation_layer)
-    if embedding:
-        layers.append(EmbeddingLayer(_input_size, _output_size))
-    else:
-        layers.append(nn.Linear(_input_size, _output_size))
+    layers.append(EmbeddingLayer(_input_size, _output_size))
     last_activation_layer = get_activation_function(last_act_fn, _output_size)
     if not isinstance(last_activation_layer, nn.Identity):  # Add activation layer if it's not Identity
         layers.append(last_activation_layer)
@@ -57,11 +54,24 @@ class EmbeddingLayer(nn.Module):
     """ Layer that applies a linear transformation to the input features """
     def __init__(self, input_features, output_features):
         super(EmbeddingLayer, self).__init__()
+        # weight shape: [F, W]
         self.weight = nn.Parameter(torch.randn(input_features, output_features))
+        # bias shape: [W]
         self.bias = nn.Parameter(torch.zeros(output_features))
 
-    def forward(self, feature):
-        # Apply weights and add bias
-        feature_emb_mul = torch.matmul(feature, self.weight)
-        feature_emb_bias = feature_emb_mul + self.bias
+    def forward(self, features):
+        # features shape: [B, S, F] or [B, F]
+
+        # Add an extra dimension at the end
+        features_expanded = features.unsqueeze(-1)
+        # features_expanded shape: [B, S, F, 1] or [B, F, 1]
+
+        # Element-wise multiplication with the weight matrix
+        feature_emb_mul = features_expanded * self.weight
+        # feature_emb_mul shape: [B, S, F, W] or [B, F, W]
+
+        # Sum along the second-to-last dimension to reduce dimensionality
+        feature_emb_bias = feature_emb_mul.sum(dim=-2) + self.bias
+        # feature_emb_bias shape: [B, S, W] or [B, W]
+
         return feature_emb_bias

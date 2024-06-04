@@ -57,7 +57,7 @@ class Reasoner(nn.Module):
             self.input_embedding_layer = JointLayer(d_model, input_shape, explain_size)
 
         self.net = net(reasoner_params)
-        self.final_layer = create_layer(d_model, output_size, first_act_fn='relu', last_act_fn=act_fn, embedding=True)
+        self.final_layer = create_layer(d_model, output_size, first_act_fn='relu', last_act_fn=act_fn)
         self.apply(lambda module: init_weights(module, reset_pretrained))
     
     def forward(self, obs, e, padding_mask=None):
