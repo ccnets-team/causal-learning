@@ -67,7 +67,7 @@ def auto_preprocess_dataframe(df: pd.DataFrame, target_columns, drop_columns = N
     df_x, encoded_datatime_columns = auto_encode_datetime_columns(df_x)
     
     # Encode non-target columns
-    df_x, encoded_columns = one_hot_encode_columns(df_x, encode_columns)
+    df_x, one_hot_encoded_columns = one_hot_encode_columns(df_x, encode_columns)
     
     # Scale non-target columns
     df_x, scaler_description = auto_scale_columns(df_x, no_scale_columns)
@@ -89,14 +89,17 @@ def auto_preprocess_dataframe(df: pd.DataFrame, target_columns, drop_columns = N
     df = remove_process_prefix(df)
 
     # combine encoded columns
-    encoded_columns = encoded_datatime_columns.union(encoded_columns).union(encoded_target_columns)
+    encoded_columns = encoded_datatime_columns.union(one_hot_encoded_columns).union(encoded_target_columns)
     
     # Generate description dictionary
-    description = generate_description(num_features=num_features, num_classes=num_classes, 
-                                       encoded_columns=encoded_columns, scalers=scaler_description)
+    description = generate_description(num_features=num_features, num_classes=num_classes,
+                                       encoded_columns=encoded_columns,
+                                       one_hot_encoded_columns=one_hot_encoded_columns, 
+                                       encoded_datatime_columns=encoded_datatime_columns,
+                                       scalers=scaler_description)
     
     # Display DataFrame statistics
-    display_statistics(df)
+    display_statistics(df, description)
 
     # Return processed DataFrame and description
     return df, description

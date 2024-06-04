@@ -9,7 +9,9 @@ Author:
     COPYRIGHT (c) 2024. CCNets. All Rights reserved.
 '''
 
+import re
 import pandas as pd
+from IPython.display import display
 from typing import Optional, List, Union, Tuple
 PROCESSED_PREFIX = "ccnets_processed_"
 
@@ -73,7 +75,7 @@ def calculate_num_classes(target_df: pd.DataFrame) -> int:
         num_classes += unique_values
     return num_classes
 
-def display_statistics(df: pd.DataFrame) -> None:
+def display_statistics(df: pd.DataFrame, description: dict) -> None:
     """
     Displays basic statistics for the input DataFrame.
     
@@ -96,7 +98,19 @@ def display_statistics(df: pd.DataFrame) -> None:
         'Std': std_values,
         'Null Count': null_counts
     })
+    
+    stats_df['Scaled'] = stats_df.index.map(lambda x: description['scalers'].get(x, None))
+    stats_df['Scaled'] = stats_df['Scaled'].apply(lambda x: x.capitalize() if x else None)
+    
+    one_hot_mask = stats_df.index.isin(description['one_hot_encoded_columns'])
+    datetime_encode_mask = stats_df.index.isin(description['encoded_datatime_columns'])
+    
+    stats_df['Encoded'] = None
 
+    update_one_hot_encoded_columns(stats_df, description['one_hot_encoded_columns'])
+    stats_df.loc[one_hot_mask, 'Encoded'] = 'One-hot'
+    stats_df.loc[datetime_encode_mask, 'Encoded'] = 'EncodedDateTime'
+    
     # Display the result in a Jupyter Notebook
     display(stats_df)  
 
@@ -157,3 +171,9 @@ def remove_process_prefix(df: pd.DataFrame) -> pd.DataFrame:
     df.columns = columns_without_prefix
     
     return df
+def update_one_hot_encoded_columns(stats_df, one_hot_encoded_columns):
+    for base_col in one_hot_encoded_columns:
+        pattern = re.compile(rf'^{base_col}_\d+$')  
+        for col in stats_df.index:
+            if pattern.match(col):
+                stats_df.loc[col, 'Encoded'] = 'One_hot'
