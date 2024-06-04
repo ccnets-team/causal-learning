@@ -1,3 +1,4 @@
+import pandas as pd
 from nn.gpt import GPT
 from nn.custom_style_gan import Discriminator, Generator
 from nn.resnet import ResNet18, ResNet34, ResNet50
@@ -180,13 +181,5 @@ class MLParameters:
             # If the attribute is not found in any of the parameter classes, set it as a new attribute of MLParameters
             super().__setattr__(name, value)
 
-    def __repr__(self):
-        components = []
-        for param in self.ml_param_list:
-            if param is not None:
-                components.append(repr(param))
-        return "\n".join(components)   
-        
     def __iter__(self):
         yield from self.ml_param_list
-
