@@ -8,7 +8,7 @@ from .roles.reasoner import Reasoner
 from .roles.producer import Producer
 
 class CooperativeEncodingNetwork:
-    def __init__(self, model_networks, network_params, algorithm_params, device):
+    def __init__(self, model_networks, network_params, algorithm_params, data_config, device):
         # Initialize model names and configurations.
         reset_pretrained = algorithm_params.reset_pretrained
         self.explainer = Explainer(model_networks[0], network_params, reset_pretrained, act_fn="tanh").to(device)
@@ -26,6 +26,7 @@ class CooperativeEncodingNetwork:
         self.det_size = network_params.z_dim
         self.stoch_size = network_params.condition_dim
         self.device = device
+        self.task_type = data_config.task_type 
         
     def __set_train(self, train: bool):
         for network in self.networks:
@@ -35,23 +36,29 @@ class CooperativeEncodingNetwork:
             else:
                 network.eval()
                             
-    def encode(self, input_data: torch.Tensor, padding_mask = None) -> torch.Tensor:
+    def encode(self, input_data: torch.Tensor, padding_mask=None) -> torch.Tensor:
         """
-        Encodes input data using the explainer and reasoner models.
+        Encodes input data into a tensor suitable for prediction tasks, using the explainer and 
+        reasoner models. The output tensor contains all necessary variables for target prediction.
 
         Parameters:
         - input_data: A tensor representing the input data.
 
         Returns:
-        - encoded_data: A concatenated tensor of encoded deterministic and stochastic variables.
+        - output_tensor: A tensor containing all variables necessary for target prediction.
         """
         input_data = input_data.to(self.device)
         
         with torch.no_grad():
             self.__set_train(False)
             deterministic_variables = self.explainer(input_data, padding_mask)
+            if 'classification' in self.task_type:
+                output_tensor = deterministic_variables
+            else:
+                stochastic_variables = self.reasoner(input_data, deterministic_variables, padding_mask)
+                output_tensor = stochastic_variables
             self.__set_train(True)
-        return deterministic_variables
+        return output_tensor
 
     def decode(self, encoded_data: torch.Tensor, padding_mask = None) -> torch.Tensor:
         """

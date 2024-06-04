@@ -78,7 +78,7 @@ class TrainerHub:
         model_params, training_params, optimization_params, algorithm_params = ml_params
         if self.use_encoder:
             encoder_networks, network_params = configure_encoder_network(model_params.encoder_network, model_params.encoder_config, self.data_config)
-            self.encoder = CooperativeEncodingNetwork(encoder_networks, network_params, algorithm_params, self.device)
+            self.encoder = CooperativeEncodingNetwork(encoder_networks, network_params, algorithm_params, self.data_config, self.device)
             self.encoder_trainer = CausalEncodingTrainer(self.encoder, algorithm_params, optimization_params, self.data_config)
         else:
             self.encoder = None
