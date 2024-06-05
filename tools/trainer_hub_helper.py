@@ -44,8 +44,13 @@ class TrainerHubHelper:
         
         self.data_config = data_config 
         self.ml_params = ml_params
+        self.begin_training = False
         
     def begin_train(self, dataset):
+        if self.begin_training:
+           return 
+        
+        self.begin_training = True
         if hasattr(dataset, 'max_seq_len'):
             self.ml_params.training.max_seq_len = dataset.max_seq_len
         
