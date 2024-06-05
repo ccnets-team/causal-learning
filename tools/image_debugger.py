@@ -55,8 +55,7 @@ class ImageDebugger:
                     generated_images = self.model.produce(selected_features, explains).cpu()
                 else:
                     selected_features = recognized_features[i:i + 1, :].expand_as(recognized_features)
-                    generated_code = torch.cat([selected_features, explains], dim=-1)
-                    generated_images = self.model.decode(generated_code).cpu()
+                    generated_images = self.model.decode(selected_features, explains).cpu()
                 if self.n_img_ch == 1:
                     generated_images = generated_images.repeat_interleave(3, dim=1)
                 img_array = vutils.make_grid(generated_images, nrow=self.num_images, padding=0, normalize=True).numpy()

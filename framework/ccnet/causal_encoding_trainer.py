@@ -30,7 +30,6 @@ class CausalEncodingTrainer(TrainerBase):
         TrainerBase.__init__(self, encoder.networks, algorithm_params, optimization_params, data_config.task_type, encoder.device)
         self.explainer, self.reasoner, self.producer = self.networks        
         self.network_names = encoder.network_names
-        self.layer_norm = torch.nn.LayerNorm(encoder.stoch_size, elementwise_affine=False).to(encoder.device)
         self.obs_shape = data_config.obs_shape
 
     def train_models(self, observation, padding_mask=None):
@@ -50,7 +49,7 @@ class CausalEncodingTrainer(TrainerBase):
         ################################  Forward Pass  ########################################
         # Generate explanations and features.
         causal_explain = self.explainer(input_observation, padding_mask)
-        random_explain = 2 * torch.rand_like(causal_explain) - 1
+        random_explain = torch.randn_like(causal_explain)
         
         causal_feature = self.reasoner(input_observation, causal_explain, padding_mask)
         stochastic_feature = self.reasoner(input_observation, random_explain, padding_mask)

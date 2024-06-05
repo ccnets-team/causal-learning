@@ -11,7 +11,7 @@ class CooperativeEncodingNetwork:
     def __init__(self, model_networks, network_params, algorithm_params, data_config, device):
         # Initialize model names and configurations.
         reset_pretrained = algorithm_params.reset_pretrained
-        self.explainer = Explainer(model_networks[0], network_params, reset_pretrained, act_fn="tanh").to(device)
+        self.explainer = Explainer(model_networks[0], network_params, reset_pretrained, act_fn="layer_norm").to(device)
         self.reasoner = Reasoner(model_networks[1], network_params, reset_pretrained, act_fn="tanh").to(device)
         self.producer = Producer(model_networks[2], network_params, reset_pretrained, act_fn="none").to(device)
 
@@ -52,15 +52,10 @@ class CooperativeEncodingNetwork:
         with torch.no_grad():
             self.__set_train(False)
             deterministic_variables = self.explainer(input_data, padding_mask)
-            if 'classification' in self.task_type:
-                output_tensor = deterministic_variables
-            else:
-                stochastic_variables = self.reasoner(input_data, deterministic_variables, padding_mask)
-                output_tensor = stochastic_variables
             self.__set_train(True)
-        return output_tensor
+        return deterministic_variables
 
-    def decode(self, encoded_data: torch.Tensor, padding_mask = None) -> torch.Tensor:
+    def decode(self, stochastic_variables: torch.Tensor, deterministic_variables: torch.Tensor, padding_mask = None) -> torch.Tensor:
         """
         Decodes the encoded tensor using the producer model to reconstruct the input data.
 
@@ -72,8 +67,6 @@ class CooperativeEncodingNetwork:
         """
         with torch.no_grad():
             self.__set_train(False)
-            stochastic_variables = encoded_data[..., :self.stoch_size]
-            deterministic_variables = encoded_data[..., self.stoch_size:]
             reconstructed_data = self.producer(stochastic_variables, deterministic_variables, padding_mask)
             self.__set_train(True)
         return reconstructed_data
