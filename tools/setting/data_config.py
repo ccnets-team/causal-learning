@@ -46,7 +46,8 @@ class DataConfig:
         if task_type not in valid_task_types:
             raise ValueError(f"Invalid task type '{task_type}'. Valid options are {valid_task_types}")
         
-        self.dataset_name = dataset_name
+        # replace space with '-' and convert to lowercase
+        self.dataset_name = dataset_name.replace(' ', '-').lower()
         self.task_type = task_type
         self.obs_shape = obs_shape
         self.label_size = label_size
@@ -62,3 +63,4 @@ class DataConfig:
         show_image_indices_repr = f", show_image_indices={self.show_image_indices}" if self.show_image_indices is not None else ""
         return (f"DataConfig(dataset_name={self.dataset_name}, task_type={self.task_type}, "
                 f"obs_shape={self.obs_shape}{label_size_repr}{explain_size_repr}{state_size_repr}{show_image_indices_repr})")
+        
