@@ -87,15 +87,32 @@ def auto_scale_columns(df: pd.DataFrame,
     for column in remaining_columns:
         scaler_type = auto_determine_scaler(df.loc[:, column])
         if scaler_type == 'none':
+            column_mean = df.loc[:, [column]].mean()
             # centering the data
-            df_scaled.loc[:, [column]] -= df.loc[:, [column]].mean()
+            df_scaled.loc[:, [column]] -= column_mean
         elif scaler_type == 'minmax':
-            df_scaled.loc[:, [column]] -= df.loc[:, [column]].mean()
-            column_mean = df_scaled.loc[:, [column]].abs().mean() + 1e-8
-            df_scaled.loc[:, [column]] = 2.0 * (df_scaled.loc[:, [column]] / column_mean) - 1.0            
+            column_mean = df.loc[:, [column]].mean()
+            df_scaled.loc[:, [column]] = (df.loc[:, [column]] - column_mean)
+            column_scale = df_scaled.loc[:, [column]].abs().mean() + 1e-8
+            df_scaled.loc[:, [column]] /= column_scale
         else:
             scaler_instance = scaler_dict[scaler_type]()
             df_scaled.loc[:, [column]] = scaler_instance.fit_transform(df.loc[:, [column]])
         scaler_description[column] = scaler_type
             
     return df_scaled, scaler_description
+
+def scale_dataframe(df: pd.DataFrame,
+                       transform_columns: pd.Index, scaling_factor = 10, 
+                       ) -> Tuple[pd.DataFrame, dict]:
+    
+    df_scaled = df.copy()
+    # transform scale and mean
+    transform_scale = []
+
+    for column in transform_columns:
+        column_scale = df.loc[:, [column]].abs().mean()/scaling_factor + 1e-8
+        df_scaled.loc[:, [column]] = df.loc[:, [column]]/column_scale
+        transform_scale.append(column_scale)
+        
+    return df_scaled, transform_scale

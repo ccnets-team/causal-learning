@@ -11,7 +11,17 @@ from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_sc
 import torch
 import numpy as np
 
-def calculate_test_results(inferred_y, target_y, task_type = None, num_classes=None, average='macro'):
+def transform_labels_to_original_scale(inferred_y, target_y, data_config):
+    label_scale = data_config.label_scale
+    label_size = data_config.label_size
+    if label_scale is not None and 'regression' in data_config.task_type:
+        if len(label_scale) == label_size:
+            tensor_scale = torch.tensor(label_scale).to(inferred_y.device)
+            inferred_y = inferred_y * tensor_scale
+            target_y = target_y * tensor_scale
+    return inferred_y, target_y
+
+def calculate_test_results(inferred_y, target_y, data_config, average='macro'):
     """
     Calculates performance metrics for tasks using PyTorch tensors that might have batch and sequence dimensions.
     Parameters:
@@ -25,7 +35,11 @@ def calculate_test_results(inferred_y, target_y, task_type = None, num_classes=N
     - metrics: A dictionary containing relevant performance metrics.
     """
     metrics = {}
-
+    
+    task_type = data_config.task_type
+    num_classes = data_config.label_size
+    inferred_y, target_y = transform_labels_to_original_scale(inferred_y, target_y, data_config)
+    
     # Move tensors to CPU for compatibility with sklearn metrics
     inferred_y = inferred_y.cpu()
     target_y = target_y.cpu()

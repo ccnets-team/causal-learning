@@ -37,7 +37,8 @@ class DataConfig:
             Initializes the DataConfig with the specified dataset characteristics.
             Raises an error if an unsupported task type is specified.
     """
-    def __init__(self, dataset_name: str, task_type: str, obs_shape: list, label_size: int = None,
+    def __init__(self, dataset_name: str, task_type: str, obs_shape: list, 
+                 label_size: int = None, label_scale: list[float] = None, 
                  explain_size: int = None, explain_layer: str = 'tanh',
                  state_size: int = None, show_image_indices: list = None):
         valid_task_types = ['binary_classification', 'multi_class_classification','multi_label_classification', 
@@ -51,6 +52,7 @@ class DataConfig:
         self.task_type = task_type
         self.obs_shape = obs_shape
         self.label_size = label_size
+        self.label_scale = label_scale
         self.explain_size = explain_size
         self.explain_layer = explain_layer
         self.state_size = state_size
