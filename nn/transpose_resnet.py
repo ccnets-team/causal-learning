@@ -26,8 +26,8 @@ class TransposeResnet(nn.Module):
         self.initial_w = max(math.ceil(self.width / 2**num_layers), 1)
         self.initial_h = max(math.ceil(self.height / 2**num_layers), 1)
         
-        initial_channel_size = max(self.d_model, 256)
-        minimum_channel_size = 32
+        minimum_channel_size = 16
+        initial_channel_size = max(self.d_model, minimum_channel_size * (2 ** num_layers))
         
         in_channels = [max(initial_channel_size // (2 ** i), minimum_channel_size) for i in range(num_layers)]
         out_channels = in_channels[1:] + [max(in_channels[-1] // 2, minimum_channel_size)]

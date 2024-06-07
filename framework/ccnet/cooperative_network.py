@@ -85,7 +85,113 @@ class CooperativeNetwork:
         if self.encoder:
             encoded_data = self.encoder.decode(encoded_data, padding_mask)
         return encoded_data
-   
+    
+    def _explain(self, input_data, padding_mask=None, batch_size=256):
+        """
+        Generates an explanation for the input data by processing it in batches. This method is useful
+        for handling large datasets that may not fit into memory if processed all at once. It iteratively
+        processes subsets of the input data, generating explanations for each batch and then concatenating
+        these to form the final output.
+
+        Args:
+            input_data (Tensor): Input data tensor. This is the data for which explanations are generated.
+            padding_mask (Tensor, optional): An optional mask for the input data that indicates which elements
+                                            should be ignored during the explanation generation process.
+            batch_size (int): The number of examples to process in each batch. This controls the maximum number
+                            of examples that are processed at a time, which helps manage memory usage.
+
+        Returns:
+            Tensor: A tensor containing explanations for each example in the input data, concatenated along the
+                    first dimension.
+        """
+        # Initialize a list to hold batched results
+        batched_explanations = []
+
+        # Process input data in batches
+        for i in range(0, input_data.size(0), batch_size):
+            batch_input = input_data[i:i + batch_size]
+            batch_mask = padding_mask[i:i + batch_size] if padding_mask is not None else None
+
+            # Generate explanation for the batch
+            batch_explanation = self.explainer(batch_input, batch_mask)
+            batched_explanations.append(batch_explanation)
+
+        # Concatenate all batched explanations along the first dimension
+        explanations = torch.cat(batched_explanations, dim=0)
+        return explanations
+    
+    def _reason(self, input_data, explanation, padding_mask=None, batch_size=256):
+        """
+        Uses the explanations and input data to reason about the output by processing them in batches. This method
+        is useful for handling large datasets that may not fit into memory if processed all at once. It iteratively
+        processes subsets of the input data and explanations, reasoning about the output for each batch and then
+        concatenating these to form the final output.
+
+        Args:
+            input_data (Tensor): Input data tensor. This is the data for which output is reasoned about.
+            explanation (Tensor): Explanation tensor. This is the explanation for the input data.
+            padding_mask (Tensor, optional): An optional mask for the input data that indicates which elements
+                                            should be ignored during the reasoning process.
+            batch_size (int): The number of examples to process in each batch. This controls the maximum number
+                            of examples that are processed at a time, which helps manage memory usage.
+
+        Returns:
+            Tensor: A tensor containing reasoned output for each example in the input data, concatenated along the
+                    first dimension.
+        """
+        # Initialize a list to hold batched results
+        batched_outputs = []
+
+        # Process input data in batches
+        for i in range(0, input_data.size(0), batch_size):
+            batch_input = input_data[i:i + batch_size]
+            batch_explanation = explanation[i:i + batch_size]
+            batch_mask = padding_mask[i:i + batch_size] if padding_mask is not None else None
+
+            # Reason about the output for the batch
+            batch_output = self.reasoner(batch_input, batch_explanation, batch_mask)
+            batched_outputs.append(batch_output)
+
+        # Concatenate all batched outputs along the first dimension
+        outputs = torch.cat(batched_outputs, dim=0)
+        return outputs
+
+    def _produce(self, condition_data, explanation, padding_mask = None, batch_size=256):
+        """
+        Generates new data based on conditions and explanations by processing them in batches. This method is useful
+        for handling large datasets that may not fit into memory if processed all at once. It iteratively processes
+        subsets of the condition data and explanations, generating new data for each batch and then concatenating
+        these to form the final output.
+
+        Args:
+            condition_data (Tensor): Condition data tensor. This is the data that conditions the generation process.
+            explanation (Tensor): Explanation tensor. This is the explanation for the condition data.
+            padding_mask (Tensor, optional): An optional mask for the condition data that indicates which elements
+                                            should be ignored during the generation process.
+            batch_size (int): The number of examples to process in each batch. This controls the maximum number
+                            of examples that are processed at a time, which helps manage memory usage.
+
+        Returns:
+            Tensor: A tensor containing generated output data for each example in the condition data, concatenated
+                    along the first dimension.
+        """
+        # Initialize a list to hold batched results
+        batched_outputs = []
+
+        # Process condition data in batches
+        for i in range(0, condition_data.size(0), batch_size):
+            batch_condition = condition_data[i:i + batch_size]
+            batch_explanation = explanation[i:i + batch_size]
+            batch_mask = padding_mask[i:i + batch_size] if padding_mask is not None else None
+
+            # Generate new data for the batch
+            batch_output = self.producer(batch_condition, batch_explanation, batch_mask)
+            batched_outputs.append(batch_output)
+
+        # Concatenate all batched outputs along the first dimension
+        outputs = torch.cat(batched_outputs, dim=0)
+        return outputs          
+    
     def explain(self, input_data, padding_mask = None):
         """
         Generates an explanation for the input data without updating the explainer model.
@@ -101,7 +207,7 @@ class CooperativeNetwork:
             encoded_input = self.encode(input_data, padding_mask)
             if self.use_seq:
                 encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
-            explanation = self.explainer(encoded_input, padding_mask)
+            explanation = self._explain(encoded_input, padding_mask)
             self.__set_train(True)
         return explanation
 
@@ -121,8 +227,8 @@ class CooperativeNetwork:
             if self.use_seq:
                 original_dim = len(encoded_input.shape)
                 encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
-            explanation = self.explainer(encoded_input, padding_mask)
-            reasoned_output = self.reasoner(encoded_input, explanation, padding_mask)
+            explanation = self._explain(encoded_input, padding_mask)
+            reasoned_output = self._reason(encoded_input, explanation, padding_mask)
             if self.use_seq:
                 reasoned_output = adjust_tensor_dim(reasoned_output, target_dim=original_dim)
             self.__set_train(True)
@@ -145,12 +251,12 @@ class CooperativeNetwork:
             if self.use_seq:
                 original_dim = len(encoded_input.shape)
                 encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
-            reasoned_output = self.reasoner(encoded_input, explanation, padding_mask)
+            reasoned_output = self._reason(encoded_input, explanation, padding_mask)
             if self.use_seq:
                 reasoned_output = adjust_tensor_dim(reasoned_output, target_dim=original_dim)
             self.__set_train(True)
         return reasoned_output
-
+            
     def generate(self, explanation, padding_mask=None):
         """
         Generates new data based on input explanations with random discrete conditions without updating the producer model.
@@ -165,7 +271,7 @@ class CooperativeNetwork:
             self.__set_train(False)
             label_shape = explanation.shape[:-1] + (self.label_size,)
             condition_data = generate_condition_data(label_shape, self.task_type, self.device)
-            generated_output = self.producer(condition_data, explanation, padding_mask)
+            generated_output = self._produce(condition_data, explanation, padding_mask)
             generated_data = self.decode(generated_output, padding_mask)
             self.__set_train(True)
 
@@ -188,7 +294,7 @@ class CooperativeNetwork:
                 original_dim = len(condition_data.shape)
                 condition_data = adjust_tensor_dim(condition_data, target_dim=3)
                 explanation = adjust_tensor_dim(explanation, target_dim=3)
-            produced_output = self.producer(condition_data, explanation, padding_mask)
+            produced_output = self._produce(condition_data, explanation, padding_mask)
             if self.use_seq:
                 produced_output = adjust_tensor_dim(produced_output, target_dim=original_dim)
             produced_data = self.decode(produced_output, padding_mask)
@@ -212,9 +318,9 @@ class CooperativeNetwork:
             if self.use_seq:
                 original_dim = len(encoded_input.shape)
                 encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
-            explanation = self.explainer(encoded_input, padding_mask)
-            inferred_output = self.reasoner(encoded_input, explanation, padding_mask)
-            reconstructed_output = self.producer(inferred_output, explanation, padding_mask)
+            explanation = self._explain(encoded_input, padding_mask)
+            inferred_output = self._reason(encoded_input, explanation, padding_mask)
+            reconstructed_output = self._produce(inferred_output, explanation, padding_mask)
             if self.use_seq:
                 reconstructed_output = adjust_tensor_dim(reconstructed_output, target_dim=original_dim)
             reconstructed_data = self.decode(reconstructed_output, padding_mask)
