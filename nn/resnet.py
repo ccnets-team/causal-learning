@@ -6,6 +6,7 @@ class ResNet(nn.Module):
     def __init__(self, network_params, pretrained_model):
         super(ResNet, self).__init__()
         d_model = network_params.d_model
+        num_layers = network_params.num_layers
         num_channels, height, width = network_params.obs_shape
         
         # Replace the initial conv1 layer if num_channels do not match
@@ -21,12 +22,14 @@ class ResNet(nn.Module):
         min_sizes = [64, 32, 16]
         layers = ['layer4', 'layer3', 'layer2']
         num_ftrs = pretrained_model.fc.in_features
-
-        for min_size, layer in zip(min_sizes, layers):
-            if height < min_size or width < min_size:
-                setattr(pretrained_model, layer, nn.Identity())
-                num_ftrs //= 2  # Adjust num_ftrs by dividing by 2 each time a layer is removed
-
+        
+        # Loop through each layer and its corresponding min size
+        for idx, (min_size, layer) in enumerate(zip(min_sizes, layers)):
+            # Check if the layer should be removed based on input dimensions or the number of allowed layers
+            if height < min_size or width < min_size or num_layers < 4 - idx:
+                setattr(pretrained_model, layer, nn.Identity())  # Replace the layer with an identity layer to effectively remove it
+                num_ftrs //= 2  # Halve the number of input features to the next layer or function
+        
         pretrained_model.fc = nn.Linear(num_ftrs, d_model)  # Replace it with a new fc layer with d_model output features
         self.pretrained_model = pretrained_model
         

@@ -58,7 +58,7 @@ class CooperativeNetwork:
             else:
                 network.eval()
 
-    def encode(self, data, padding_mask = None):
+    def encode(self, data, padding_mask = None, batch_size = 256):
         """
         Encodes the input data using the encoder if available.
 
@@ -69,10 +69,10 @@ class CooperativeNetwork:
             Tensor: Encoded data.
         """
         if self.encoder:
-            data = self.encoder.encode(data, padding_mask)
+            data = self.encoder.encode(data, padding_mask, batch_size = batch_size)
         return data
 
-    def decode(self, encoded_data, padding_mask = None):
+    def decode(self, encoded_data, padding_mask = None, batch_size = 256):
         """
         Decodes the input data using the decoder if available.
 
@@ -83,7 +83,7 @@ class CooperativeNetwork:
             Tensor: Decoded data.
         """
         if self.encoder:
-            encoded_data = self.encoder.decode(encoded_data, padding_mask)
+            encoded_data = self.encoder.decode(encoded_data, padding_mask, batch_size = batch_size)
         return encoded_data
     
     def _explain(self, input_data, padding_mask=None, batch_size=256):
@@ -192,7 +192,7 @@ class CooperativeNetwork:
         outputs = torch.cat(batched_outputs, dim=0)
         return outputs          
     
-    def explain(self, input_data, padding_mask = None):
+    def explain(self, input_data, padding_mask = None, batch_size=256):
         """
         Generates an explanation for the input data without updating the explainer model.
 
@@ -204,14 +204,14 @@ class CooperativeNetwork:
         """
         with torch.no_grad():
             self.__set_train(False)
-            encoded_input = self.encode(input_data, padding_mask)
+            encoded_input = self.encode(input_data, padding_mask, batch_size = batch_size)
             if self.use_seq:
                 encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
-            explanation = self._explain(encoded_input, padding_mask)
+            explanation = self._explain(encoded_input, padding_mask, batch_size = batch_size)
             self.__set_train(True)
         return explanation
 
-    def infer(self, input_data, padding_mask = None):
+    def infer(self, input_data, padding_mask = None, batch_size=256):
         """
         Infers output from input data using the explainer and reasoner models without updating them.
 
@@ -223,18 +223,18 @@ class CooperativeNetwork:
         """
         with torch.no_grad():
             self.__set_train(False)
-            encoded_input = self.encode(input_data, padding_mask)
+            encoded_input = self.encode(input_data, padding_mask, batch_size = batch_size)
             if self.use_seq:
                 original_dim = len(encoded_input.shape)
                 encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
-            explanation = self._explain(encoded_input, padding_mask)
-            reasoned_output = self._reason(encoded_input, explanation, padding_mask)
+            explanation = self._explain(encoded_input, padding_mask, batch_size = batch_size)
+            reasoned_output = self._reason(encoded_input, explanation, padding_mask, batch_size = batch_size)
             if self.use_seq:
                 reasoned_output = adjust_tensor_dim(reasoned_output, target_dim=original_dim)
             self.__set_train(True)
         return reasoned_output
     
-    def reason(self, input_data, explanation, padding_mask = None):
+    def reason(self, input_data, explanation, padding_mask = None, batch_size=256):
         """
         Uses the explanations and input data to reason about the output without updating the model.
 
@@ -247,17 +247,17 @@ class CooperativeNetwork:
         """
         with torch.no_grad():
             self.__set_train(False)
-            encoded_input = self.encode(input_data, padding_mask)
+            encoded_input = self.encode(input_data, padding_mask, batch_size = batch_size)
             if self.use_seq:
                 original_dim = len(encoded_input.shape)
                 encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
-            reasoned_output = self._reason(encoded_input, explanation, padding_mask)
+            reasoned_output = self._reason(encoded_input, explanation, padding_mask, batch_size = batch_size)
             if self.use_seq:
                 reasoned_output = adjust_tensor_dim(reasoned_output, target_dim=original_dim)
             self.__set_train(True)
         return reasoned_output
             
-    def generate(self, explanation, padding_mask=None):
+    def generate(self, explanation, padding_mask=None, batch_size=256):
         """
         Generates new data based on input explanations with random discrete conditions without updating the producer model.
 
@@ -271,13 +271,13 @@ class CooperativeNetwork:
             self.__set_train(False)
             label_shape = explanation.shape[:-1] + (self.label_size,)
             condition_data = generate_condition_data(label_shape, self.task_type, self.device)
-            generated_output = self._produce(condition_data, explanation, padding_mask)
-            generated_data = self.decode(generated_output, padding_mask)
+            generated_output = self._produce(condition_data, explanation, padding_mask, batch_size = batch_size)
+            generated_data = self.decode(generated_output, padding_mask, batch_size = batch_size)
             self.__set_train(True)
 
         return generated_data, condition_data
 
-    def produce(self, condition_data, explanation, padding_mask = None):
+    def produce(self, condition_data, explanation, padding_mask = None, batch_size = 256):
         """
         Generates new data based on conditions and explanations without updating the producer model.
 
@@ -294,14 +294,14 @@ class CooperativeNetwork:
                 original_dim = len(condition_data.shape)
                 condition_data = adjust_tensor_dim(condition_data, target_dim=3)
                 explanation = adjust_tensor_dim(explanation, target_dim=3)
-            produced_output = self._produce(condition_data, explanation, padding_mask)
+            produced_output = self._produce(condition_data, explanation, padding_mask, batch_size = batch_size)
             if self.use_seq:
                 produced_output = adjust_tensor_dim(produced_output, target_dim=original_dim)
-            produced_data = self.decode(produced_output, padding_mask)
+            produced_data = self.decode(produced_output, padding_mask, batch_size = batch_size)
             self.__set_train(True)
         return produced_data
     
-    def reconstruct(self, input_data, padding_mask = None):
+    def reconstruct(self, input_data, padding_mask = None, batch_size = 256):
         """
         Reconstructs the input data by first explaining, then reasoning, and finally producing the output,
         all without updating the models.
@@ -314,15 +314,15 @@ class CooperativeNetwork:
         """
         with torch.no_grad():
             self.__set_train(False)
-            encoded_input = self.encode(input_data, padding_mask)
+            encoded_input = self.encode(input_data, padding_mask, batch_size = batch_size)
             if self.use_seq:
                 original_dim = len(encoded_input.shape)
                 encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
-            explanation = self._explain(encoded_input, padding_mask)
-            inferred_output = self._reason(encoded_input, explanation, padding_mask)
-            reconstructed_output = self._produce(inferred_output, explanation, padding_mask)
+            explanation = self._explain(encoded_input, padding_mask, batch_size = batch_size)
+            inferred_output = self._reason(encoded_input, explanation, padding_mask, batch_size = batch_size)
+            reconstructed_output = self._produce(inferred_output, explanation, padding_mask, batch_size = batch_size)
             if self.use_seq:
                 reconstructed_output = adjust_tensor_dim(reconstructed_output, target_dim=original_dim)
-            reconstructed_data = self.decode(reconstructed_output, padding_mask)
+            reconstructed_data = self.decode(reconstructed_output, padding_mask, batch_size = batch_size)
             self.__set_train(True)
         return reconstructed_data

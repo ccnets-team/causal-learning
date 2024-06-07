@@ -98,7 +98,7 @@ class CooperativeEncodingNetwork:
             stochastic_variables[i:i+batch_size] = self.reasoner(batch_input, deterministic_variables[i:i+batch_size], padding_mask)
         return stochastic_variables, deterministic_variables
         
-    def encode(self, input_data: torch.Tensor, padding_mask=None) -> torch.Tensor:
+    def encode(self, input_data: torch.Tensor, padding_mask=None, batch_size = 256) -> torch.Tensor:
         """
         Encodes input data into a tensor suitable for prediction tasks, using the explainer and 
         reasoner models. The output tensor contains all necessary variables for target prediction.
@@ -113,11 +113,11 @@ class CooperativeEncodingNetwork:
         
         with torch.no_grad():
             self.__set_train(False)
-            encoded_tensor = self._encode(input_data, padding_mask)
+            encoded_tensor = self._encode(input_data, padding_mask, batch_size = batch_size)
             self.__set_train(True)
         return encoded_tensor
 
-    def decode(self, stochastic_variables: torch.Tensor, deterministic_variables: torch.Tensor, padding_mask = None) -> torch.Tensor:
+    def decode(self, stochastic_variables: torch.Tensor, deterministic_variables: torch.Tensor, padding_mask = None, batch_size = 256) -> torch.Tensor:
         """
         Decodes the encoded tensor using the producer model to reconstruct the input data.
 
@@ -129,11 +129,11 @@ class CooperativeEncodingNetwork:
         """
         with torch.no_grad():
             self.__set_train(False)
-            reconstructed_data = self._decode(stochastic_variables, deterministic_variables, padding_mask)
+            reconstructed_data = self._decode(stochastic_variables, deterministic_variables, padding_mask, batch_size = batch_size)
             self.__set_train(True)
         return reconstructed_data
 
-    def decompose(self, input_data: torch.Tensor, padding_mask = None) -> torch.Tensor:
+    def decompose(self, input_data: torch.Tensor, padding_mask = None, batch_size = 256) -> torch.Tensor:
         """
         Decomposes the input data into deterministic and stochastic variables using the explainer and reasoner models.
 
@@ -147,11 +147,11 @@ class CooperativeEncodingNetwork:
         """
         with torch.no_grad():
             self.__set_train(False)
-            stochastic_variables, deterministic_variables = self._decompose(input_data, padding_mask)
+            stochastic_variables, deterministic_variables = self._decompose(input_data, padding_mask, batch_size = batch_size)
             self.__set_train(True)
         return stochastic_variables, deterministic_variables
         
-    def synthesize(self, input_data: torch.Tensor, padding_mask=None, output_multiplier: int = None) -> torch.Tensor:
+    def synthesize(self, input_data: torch.Tensor, padding_mask=None, output_multiplier: int = None, batch_size = 256) -> torch.Tensor:
         """
         Synthesizes new data by cross-matching stochastic and deterministic variables from the encoded data,
         with options to either repeat or interleave these matches.
@@ -167,7 +167,7 @@ class CooperativeEncodingNetwork:
         """
         with torch.no_grad():
             self.__set_train(False)
-            stochastic_variables, deterministic_variables = self.decompose(input_data, padding_mask)
+            stochastic_variables, deterministic_variables = self.decompose(input_data, padding_mask, batch_size = batch_size)
             
             batch_size = input_data.size(0)
             if output_multiplier is None:
@@ -180,7 +180,7 @@ class CooperativeEncodingNetwork:
             stochastic_expanded = stochastic_variables[indices % stochastic_variables.size(0)]
             deterministic_expanded = deterministic_variables.repeat(output_multiplier, 1)
             
-            synthetic_data = self._decode(stochastic_expanded, deterministic_expanded, padding_mask)
+            synthetic_data = self._decode(stochastic_expanded, deterministic_expanded, padding_mask, batch_size = batch_size)
             
             self.__set_train(True)
         
