@@ -127,8 +127,11 @@ def print_parameters(ml_param_list):
         
         # Iterate through sub-data and display each in detail with italic formatting
         for key, df in sub_data.items():
+            # Remove 'condition_dim' and 'z_dim' columns to prevent repeat if they exist 
+            filtered_df = df.loc[:, ~df.columns.str.contains('condition_dim|z_dim')]
+                
             print(f"\033[3m\nDetailed {key} Configuration:\033[0m")
-            display(df)  # Display each sub-dataFrame
+            display(filtered_df)  # Display each sub-dataFrame
         # print("\n")
 
 # Function to extract data from parameters. It handles user-defined classes and standard data types.
