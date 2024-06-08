@@ -92,8 +92,8 @@ class TrainerHub:
             self.ccnet = None
             self.ccnet_trainer = None
         
-    def train_iteration(self, iters, source_batch, target_batch):
-        self.start_iteration(iters)
+    def train_iteration(self, source_batch, target_batch):
+        self.start_iteration()
         
         source_batch, target_batch, padding_mask = prepare_batches(source_batch, target_batch, self.label_size, self.task_type, self.device)        
         if self.use_encoder:
@@ -118,12 +118,12 @@ class TrainerHub:
             dataloader = get_data_loader(trainset, min(len(trainset), self.batch_size))
 
             # show me the max length of the dataset
-            for iters, (source_batch, target_batch) in enumerate(tqdm_notebook(dataloader, desc='Iterations', leave=False)):
-                ccnet_metric, encoder_metric = self.train_iteration(iters, source_batch, target_batch)
+            for _, (source_batch, target_batch) in enumerate(tqdm_notebook(dataloader, desc='Iterations', leave=False)):
+                ccnet_metric, encoder_metric = self.train_iteration(source_batch, target_batch)
 
                 test_results = self.evaluate(testset)
                     
-                self.helper.finalize_training_step(epoch, iters, len(dataloader), ccnet_metric, encoder_metric, test_results)
+                self.helper.finalize_training_step(epoch, len(dataloader), ccnet_metric, encoder_metric, test_results)
 
     def evaluate(self, dataset):
         if dataset is None or not self.use_ccnet:
@@ -167,8 +167,8 @@ class TrainerHub:
     def should_select_last_sequence(self, padding_mask):
         return self.is_ccnet_seq and padding_mask is not None
         
-    def start_iteration(self, iters):
-        set_random_seed(iters)
+    def start_iteration(self):
+        set_random_seed(self.helper.iters)
         self.helper.init_time_step()
         
     def encode_inputs(self, observation, labels, padding_mask = None):
