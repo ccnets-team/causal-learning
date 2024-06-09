@@ -139,7 +139,7 @@ class TrainerHubHelper:
             save_trainer(save_path, encoder_trainer)
             
     def log_checkpoint_details(self, time_cost, epoch_idx, iter_idx, len_dataloader, wb_image):
-        ccnet_trainer = self.parent.ccnet_trainer
+        trainer = self.parent.ccnet_trainer if self.parent.ccnet_trainer is not None else self.parent.encoder_trainer
         
         """Calculates average metrics over the checkpoints."""
         avg_ccnet_metric = self.ccnet_metrics / float(self.num_checkpoints) if self.use_ccnet else None
@@ -151,7 +151,7 @@ class TrainerHubHelper:
         tensorboard_log_train_metrics(self.tensorboard, self.iters, ccnet_metric=avg_ccnet_metric, encoder_metric=avg_encoder_metric)
         """Logs training data to Weights & Biases if enabled."""
         if self.use_wandb:
-            lr = ccnet_trainer.get_lr() 
+            lr = trainer.get_lr() 
             wandb_log_train_metrics(time_cost, lr=lr, ccnet_metric=avg_ccnet_metric, encoder_metric=avg_encoder_metric, images=wb_image, iters = self.iters)
 
     def reset_metrics(self):
@@ -161,6 +161,3 @@ class TrainerHubHelper:
         self.encoder_metrics.reset()
         self.cnt_checkpoints = 0
         self.cnt_print += 1
-
-
-
