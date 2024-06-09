@@ -22,7 +22,7 @@ def convert_explanation_to_image_shape(explanation, image_shape, explain_size, i
     
     # Handle any remaining elements if the image elements aren't perfectly divisible by explain_size
     remaining_elements = image_elements % explain_size
-    e2 = torch.zeros_like(explanation[:, :remaining_elements])
+    e2 = explanation[:, :remaining_elements]
     
     # Concatenate the repeated and zero-padded parts
     expanded_e = torch.cat([e1, e2], dim=-1)

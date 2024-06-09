@@ -39,6 +39,7 @@ class Reasoner(nn.Module):
         """
         super(Reasoner, self).__init__()
         
+        reasoner_params = modify_network_params(network_params)
         input_shape, d_model, explain_size, output_size = (network_params.obs_shape, 
                                                            network_params.d_model, 
                                                            network_params.z_dim, 
@@ -49,11 +50,8 @@ class Reasoner(nn.Module):
         self.explain_size = explain_size
 
         if self.use_image:
-            extended_obs_shape = extend_obs_shape_channel(input_shape)
-            reasoner_params = modify_network_params(network_params, 'obs_shape', extended_obs_shape)
-            self.image_elements = torch.prod(torch.tensor(extended_obs_shape[1:], dtype=torch.int)).item()
+            self.image_elements = torch.prod(torch.tensor(input_shape[1:], dtype=torch.int)).item()
         else:
-            reasoner_params = modify_network_params(network_params)
             self.joint_layer = JointLayer(d_model, input_shape, explain_size)
 
         self.net = net(reasoner_params)
@@ -74,7 +72,7 @@ class Reasoner(nn.Module):
         """
         if self.use_image:
             image_e = self._convert_explanation_to_image_shape(e)
-            z = torch.cat([obs, image_e], dim=1)
+            z = image_e * obs
         else:
             z = self.joint_layer(obs, e)
         y = self.net(z) if padding_mask is None else self.net(z, padding_mask=padding_mask)
