@@ -326,3 +326,38 @@ class CooperativeNetwork:
             reconstructed_data = self.decode(reconstructed_output, padding_mask, batch_size = batch_size)
             self.__set_train(True)
         return reconstructed_data
+    
+    def CounterGenerate(self, input_data, condition_data, padding_mask=None, batch_size=256):
+        """
+        Generates a new version of the input data by integrating counterfactual conditions. This function performs a
+        three-step process: encoding the input, explaining to generate an explanation vector, and then producing
+        an output conditioned on the counterfactual data. All steps are performed without updating the underlying model weights.
+
+        Args:
+            input_data (Tensor): The original input data tensor that you want to generate counterfactuals for.
+            condition_data (Tensor): The counterfactual condition data tensor that specifies the desired state or conditions
+                                    for generating the counterfactual outcomes.
+            padding_mask (Optional[Tensor]): An optional mask tensor to ignore certain parts of the input data during processing.
+                                            Default is None.
+            batch_size (int): The number of samples to process in a single batch. Default is 256.
+
+        Returns:
+            Tensor: The tensor containing the generated data based on the counterfactual conditions, which hypothetically
+                    represents how the input data might appear under different specified conditions.
+        """
+        with torch.no_grad():
+            self.__set_train(False)
+            encoded_input = self.encode(input_data, padding_mask, batch_size=batch_size)
+            if self.use_seq:
+                original_dim = len(encoded_input.shape)
+                encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
+                condition_data = adjust_tensor_dim(condition_data, target_dim=3)
+            explanation = self._explain(encoded_input, padding_mask, batch_size=batch_size)
+            reconstructed_output = self._produce(condition_data, explanation, padding_mask, batch_size=batch_size)
+            if self.use_seq:
+                reconstructed_output = adjust_tensor_dim(reconstructed_output, target_dim=original_dim)
+            reconstructed_data = self.decode(reconstructed_output, padding_mask, batch_size=batch_size)
+            self.__set_train(True)
+        return reconstructed_data
+
+     
