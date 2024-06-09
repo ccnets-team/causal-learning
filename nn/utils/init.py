@@ -18,7 +18,7 @@ def set_random_seed(seed_val):
     torch.backends.cudnn.benchmark = False
     return
 
-def init_weights(module, reset_pretrained = False):
+def init_weights(module, reset_pretrained = False, init_type = 'xavier_uniform'):
     """
     Applies Xavier uniform initialization to certain layers in a module and its submodules,
     excluding modules where parameters are directly set if the variable name includes "pretrained".
@@ -30,17 +30,32 @@ def init_weights(module, reset_pretrained = False):
         return
 
     if isinstance(module, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
-        nn.init.xavier_uniform_(module.weight)
+        if init_type == 'xavier_uniform':
+            nn.init.xavier_uniform_(module.weight)
+        elif init_type == 'normal':
+            nn.init.normal_(module.weight, mean=0.0, std=1.0)
+        else:
+            raise ValueError(f"Invalid initialization type: {init_type}")
         if module.bias is not None:
             nn.init.zeros_(module.bias)
     elif isinstance(module, nn.MultiheadAttention):
-        nn.init.xavier_uniform_(module.in_proj_weight)
+        if init_type == 'xavier_uniform':
+            nn.init.xavier_uniform_(module.in_proj_weight)
+        elif init_type == 'normal':
+            nn.init.normal_(module.in_proj_weight, mean=0.0, std=1.0)
+        else:
+            raise ValueError(f"Invalid initialization type: {init_type}")
         if module.in_proj_bias is not None:
             nn.init.zeros_(module.in_proj_bias)
     elif isinstance(module, EmbeddingLayer):
-        nn.init.xavier_uniform_(module.weight)
+        if init_type == 'xavier_uniform':
+            nn.init.xavier_uniform_(module.weight)
+        elif init_type == 'normal':
+            nn.init.normal_(module.weight, mean=0.0, std=1.0)
+        else:
+            raise ValueError(f"Invalid initialization type: {init_type}")
         nn.init.zeros_(module.bias)
             
     # Apply recursively to child submodules regardless of the parent's type
     for child in module.children():
-        init_weights(child, reset_pretrained)
+        init_weights(child, reset_pretrained = reset_pretrained, init_type = init_type)

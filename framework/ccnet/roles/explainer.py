@@ -44,9 +44,9 @@ class Explainer(nn.Module):
             self.joint_layer = JointLayer(d_model, input_shape)
 
         self.net = net(explainer_params)
-        self.final_layer = FinalLayer(d_model, output_size, first_act_fn='relu', last_act_fn=act_fn)
                 
-        self.apply(lambda module: init_weights(module, reset_pretrained))
+        self.final_layer = FinalLayer(d_model, output_size, first_act_fn='relu', last_act_fn=act_fn)
+        self.apply(lambda module: init_weights(module, reset_pretrained, init_type='normal'))
 
     def forward(self, x, padding_mask=None):
         """
