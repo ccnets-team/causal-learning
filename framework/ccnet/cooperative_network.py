@@ -327,7 +327,7 @@ class CooperativeNetwork:
             self.__set_train(True)
         return reconstructed_data
     
-    def CounterGenerate(self, input_data, condition_data, padding_mask=None, batch_size=256):
+    def counter_generate(self, input_data, condition_data, padding_mask=None, batch_size=256):
         """
         Generates a new version of the input data by integrating counterfactual conditions. This function performs a
         three-step process: encoding the input, explaining to generate an explanation vector, and then producing
@@ -353,11 +353,11 @@ class CooperativeNetwork:
                 encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
                 condition_data = adjust_tensor_dim(condition_data, target_dim=3)
             explanation = self._explain(encoded_input, padding_mask, batch_size=batch_size)
-            reconstructed_output = self._produce(condition_data, explanation, padding_mask, batch_size=batch_size)
+            counter_output = self._produce(condition_data, explanation, padding_mask, batch_size=batch_size)
             if self.use_seq:
-                reconstructed_output = adjust_tensor_dim(reconstructed_output, target_dim=original_dim)
-            reconstructed_data = self.decode(reconstructed_output, padding_mask, batch_size=batch_size)
+                counter_output = adjust_tensor_dim(counter_output, target_dim=original_dim)
+            counter_generated_data = self.decode(counter_output, padding_mask, batch_size=batch_size)
             self.__set_train(True)
-        return reconstructed_data
+        return counter_generated_data
 
      
