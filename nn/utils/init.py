@@ -7,7 +7,8 @@ import random
 import numpy as np
 from torch import nn
 from nn.utils.final_layer import EmbeddingLayer
-    
+INIT_WEIGHTS_NORMAL_STD = 0.1
+
 def set_random_seed(seed_val):
     random.seed(seed_val)
     np.random.seed(seed_val)
@@ -33,7 +34,7 @@ def init_weights(module, reset_pretrained = False, init_type = 'xavier_uniform')
         if init_type == 'xavier_uniform':
             nn.init.xavier_uniform_(module.weight)
         elif init_type == 'normal':
-            nn.init.normal_(module.weight, mean=0.0, std=1.0)
+            nn.init.normal_(module.weight, mean=0.0, std=INIT_WEIGHTS_NORMAL_STD)
         else:
             raise ValueError(f"Invalid initialization type: {init_type}")
         if module.bias is not None:
@@ -42,7 +43,7 @@ def init_weights(module, reset_pretrained = False, init_type = 'xavier_uniform')
         if init_type == 'xavier_uniform':
             nn.init.xavier_uniform_(module.in_proj_weight)
         elif init_type == 'normal':
-            nn.init.normal_(module.in_proj_weight, mean=0.0, std=1.0)
+            nn.init.normal_(module.in_proj_weight, mean=0.0, std=INIT_WEIGHTS_NORMAL_STD)
         else:
             raise ValueError(f"Invalid initialization type: {init_type}")
         if module.in_proj_bias is not None:
@@ -51,7 +52,7 @@ def init_weights(module, reset_pretrained = False, init_type = 'xavier_uniform')
         if init_type == 'xavier_uniform':
             nn.init.xavier_uniform_(module.weight)
         elif init_type == 'normal':
-            nn.init.normal_(module.weight, mean=0.0, std=1.0)
+            nn.init.normal_(module.weight, mean=0.0, std=INIT_WEIGHTS_NORMAL_STD)
         else:
             raise ValueError(f"Invalid initialization type: {init_type}")
         nn.init.zeros_(module.bias)
