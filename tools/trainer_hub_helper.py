@@ -62,7 +62,7 @@ class TrainerHubHelper:
         if self.use_wandb:
             wandb_init(self.data_config, self.ml_params)
         
-        self.iters, self.cnt_checkpoints, self.cnt_print = 0, 0, 0
+        self.iters, self.cnt_checkpoints, self.cnt_print = 0, 0, 0  
         if self.use_image_debugger:
             self.image_debugger.initialize_(dataset)
     
@@ -98,7 +98,6 @@ class TrainerHubHelper:
         """Handle all operations required at checkpoint: logging, saving, and metrics reset."""
         time_cost = time.time() - self.pivot_time
         wb_image = self.update_image()
-        total_iters = epoch_idx * len_dataloader + iter_idx 
         
         self.log_checkpoint_details(time_cost, epoch_idx, iter_idx, len_dataloader, wb_image)
         self.save_trainers()
@@ -107,7 +106,7 @@ class TrainerHubHelper:
         if self.use_ccnet and test_results is not None:
             self.handle_test_results(test_results)
             if self.use_wandb:
-                wandb_log_eval_data(test_results, wb_image, iters = total_iters)
+                wandb_log_eval_data(test_results, wb_image, iters = self.iters)
                 
     def handle_test_results(self, test_results=None):
         """Print and log test results if core is used."""
@@ -145,7 +144,6 @@ class TrainerHubHelper:
         """Calculates average metrics over the checkpoints."""
         avg_ccnet_metric = self.ccnet_metrics / float(self.num_checkpoints) if self.use_ccnet else None
         avg_encoder_metric = self.encoder_metrics / float(self.num_checkpoints) if self.use_encoder else None
-        total_iters = epoch_idx * len_dataloader + iter_idx 
         
         if self.use_print:
             print_checkpoint_info(self.parent, time_cost, epoch_idx, iter_idx, len_dataloader, avg_ccnet_metric, avg_encoder_metric)
@@ -154,7 +152,7 @@ class TrainerHubHelper:
         """Logs training data to Weights & Biases if enabled."""
         if self.use_wandb:
             lr = ccnet_trainer.get_lr() 
-            wandb_log_train_metrics(time_cost, lr=lr, ccnet_metric=avg_ccnet_metric, encoder_metric=avg_encoder_metric, images=wb_image, iters = total_iters)
+            wandb_log_train_metrics(time_cost, lr=lr, ccnet_metric=avg_ccnet_metric, encoder_metric=avg_encoder_metric, images=wb_image, iters = self.iters)
 
     def reset_metrics(self):
         """resets metrics trackers."""
