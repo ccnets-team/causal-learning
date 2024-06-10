@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torchvision.utils as vutils
 
-def load_images_and_labels(dataset, indices, device, use_core):
+def load_images_and_labels(dataset, label_size, indices, device, use_core):
     images = []
     labels = [] if use_core else None
     
@@ -11,7 +11,10 @@ def load_images_and_labels(dataset, indices, device, use_core):
         images.append(img)
         
         if use_core:
-            lbl = dataset[idx][1].unsqueeze(0).type(torch.float)
+            label = dataset[idx][1]
+            if label_size != len(label):
+                label = torch.nn.functional.one_hot(label, num_classes=label_size).squeeze(-2)
+            lbl = label.unsqueeze(0).type(torch.float)
             labels.append(lbl)
     
     if use_core:
@@ -46,6 +49,12 @@ def add_mnist_labels(draw, font, n_img_w, n_img_h):
     for label, position in zip(labels, positions):
         draw.text(position, label, font=font, fill=(0, 0, 0))
 
+def add_fashion_mnist_labels(draw, font, n_img_w, n_img_h):
+    labels = ["style", "t-shirt", "trouser", "pullover", "dress", "coat", "sandal", "shirt", "sneaker", "bag", "ankle boot"]
+    positions = [(n_img_w // 8, n_img_h // 4 + n_img_h * i) for i in range(len(labels))]
+    for label, position in zip(labels, positions):
+        draw.text(position, label, font=font, fill=(0, 0, 0))
+
 def add_celebA_ukiyoe_labels(draw, font, n_img_w, n_img_h):
     labels = ["Male photo", "Female photo", "Old painting", "Old painting"]
     positions = [(n_img_w // 4, n_img_h // 2 + n_img_h * (i + 1)) for i in range(len(labels))]
@@ -70,6 +79,8 @@ def text_on_image(draw, font, n_img_w, n_img_h, dataset_name, use_core):
             add_celebA_labels(draw, font, n_img_w, n_img_h)
         elif dataset_name == 'mnist':
             add_mnist_labels(draw, font, n_img_w, n_img_h)
+        elif dataset_name == 'fashion_mnist':
+            add_fashion_mnist_labels(draw, font, n_img_w, n_img_h)
         elif dataset_name == 'celebA_ukiyoe':
             add_celebA_ukiyoe_labels(draw, font, n_img_w, n_img_h)
         elif dataset_name == 'celebA_animal':

@@ -34,7 +34,7 @@ class ImageDebugger:
             self.image_save_path = None
 
     def initialize_(self, dataset):
-        self.debug_images, self.debug_labels = load_images_and_labels(dataset, self.show_image_indices, self.device, self.use_ccnet)
+        self.debug_images, self.debug_labels = load_images_and_labels(dataset, self.label_size, self.show_image_indices, self.device, self.use_ccnet)
         self.m_canvas = prepare_canvas(self.n_img_h, self.n_img_w, self.num_images)
 
         for i, image in enumerate(self.debug_images):

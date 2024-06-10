@@ -22,8 +22,7 @@ except ImportError:
                     filtered_num_features.append(nf)
                                 
             self.embedding_layers = nn.ModuleList([nn.Sequential(
-                    nn.Linear(nf, embedding_size),
-                    nn.Tanh()
+                    nn.Linear(nf, embedding_size)
                 ) for nf in filtered_num_features])
             self.final_layer = get_activation_function(act_fn, embedding_size)
 
