@@ -118,12 +118,12 @@ class TrainerHub:
             dataloader = get_data_loader(trainset, min(len(trainset), self.batch_size))
 
             # show me the max length of the dataset
-            for _, (source_batch, target_batch) in enumerate(tqdm_notebook(dataloader, desc='Iterations', leave=False)):
+            for iters, (source_batch, target_batch) in enumerate(tqdm_notebook(dataloader, desc='Iterations', leave=False)):
                 ccnet_metric, encoder_metric = self.train_iteration(source_batch, target_batch)
 
                 test_results = self.evaluate(testset)
                     
-                self.helper.finalize_training_step(epoch, len(dataloader), ccnet_metric, encoder_metric, test_results)
+                self.helper.finalize_training_step(epoch, iters, len(dataloader), ccnet_metric, encoder_metric, test_results)
 
     def evaluate(self, dataset):
         if dataset is None or not self.use_ccnet:

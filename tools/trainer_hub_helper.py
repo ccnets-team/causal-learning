@@ -77,7 +77,7 @@ class TrainerHubHelper:
         """Determine the file path for saving models based on the current count."""
         return self.model_path if self.cnt_print % 2 == 0 else self.temp_path
 
-    def finalize_training_step(self, epoch_idx, len_dataloader, 
+    def finalize_training_step(self, epoch_idx, iter_idx, len_dataloader, 
                                ccnet_metric=None, encoder_metric=None, test_results=None) -> None:
         """Perform end-of-step operations including metrics update and checkpointing."""
 
@@ -88,7 +88,7 @@ class TrainerHubHelper:
             self.encoder_metrics += encoder_metric
         
         if self.should_checkpoint():
-            self.perform_checkpoint_operations(epoch_idx, self.iters, len_dataloader, test_results)
+            self.perform_checkpoint_operations(epoch_idx, iter_idx, len_dataloader, test_results)
 
         """Increment iteration and checkpoint counters."""
         self.iters += 1
