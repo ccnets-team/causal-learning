@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from typing import Tuple, List, Tuple
 from tools.preprocessing.utils import generate_description, remove_process_prefix
-from tools.preprocessing.utils import calculate_num_classes, convert_to_indices, remove_columns, display_statistics
+from tools.preprocessing.utils import calculate_num_classes, convert_to_indices, handle_missing_values, display_statistics
 from tools.preprocessing.scaler import auto_scale_columns
 from tools.preprocessing.encode import one_hot_encode_columns, encode_label_columns
 from tools.preprocessing.datetime import auto_encode_datetime_columns
@@ -59,7 +59,7 @@ def auto_preprocess_dataframe(df: pd.DataFrame, target_columns, drop_columns = N
         convert_to_indices(df, target_columns, drop_columns, encode_columns, no_scale_columns)
 
     # Drop unwanted columns
-    df = remove_columns(df, drop_columns)
+    df = handle_missing_values(df, drop_columns)
     
     # Split DataFrame into feature columns and target columns
     df_x, df_y = df.drop(columns=target_columns), df[target_columns]

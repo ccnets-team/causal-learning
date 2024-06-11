@@ -11,6 +11,7 @@ Author:
 
 import re
 import pandas as pd
+import numpy as np
 from IPython.display import display
 from typing import Optional, List, Union, Tuple
 PROCESSED_PREFIX = "ccnets_processed_"
@@ -37,19 +38,26 @@ def convert_to_indices(df: pd.DataFrame, *columns: Optional[Union[List[str], pd.
         return convert_to_index(columns[0])
     return tuple(convert_to_index(col) for col in columns)
 
-def remove_columns(df: pd.DataFrame, 
+def fill_random(df: pd.DataFrame, column: str):
+    """Fill NaN values in the specified column with random choices from its non-NaN values."""
+    non_missing = df[column].dropna().unique()
+    df[column] = df[column].apply(lambda x: np.random.choice(non_missing) if pd.isna(x) else x)
+
+def handle_missing_values(df: pd.DataFrame, 
                    drop_columns: pd.Index,
-                   exclude_columns: pd.Index = None) -> pd.DataFrame:
+                   exclude_columns: pd.Index = None,
+                   fill_random_columns: list = None) -> pd.DataFrame:
     """
-    Removes specified columns from the DataFrame and drops rows with NaN values.
+    Removes specified columns from the DataFrame, and fills specified columns with random non-NaN values.
     
     Parameters:
     df (pd.DataFrame): The input DataFrame.
     drop_columns (pd.Index): The columns to drop from the DataFrame.
     exclude_columns (pd.Index, optional): Columns to exclude from dropping.
+    fill_random_columns (list, optional): List of columns to fill NaN values with random non-NaN data.
 
     Returns:
-    pd.DataFrame: The cleaned DataFrame with specified columns removed and NaN values dropped.
+    pd.DataFrame: The modified DataFrame with specified columns removed and specified NaNs filled randomly.
     """
     if exclude_columns is not None:
         drop_columns = drop_columns.difference(exclude_columns)
@@ -58,24 +66,12 @@ def remove_columns(df: pd.DataFrame,
         print(f"Dropped columns: {', '.join(drop_columns)}")
         df = df.drop(columns=drop_columns)
 
-    missing_values = df.isnull().sum()
-    missing_columns = missing_values[missing_values > 0]
-    
-    if not missing_columns.empty:
-        print("Number of missing values in each column:")
-        print(missing_columns)
-        
-    rows_before = df.shape[0]
-    
-    df_clean = df.dropna(axis=0).reset_index(drop=True).copy()
-    
-    rows_after = df_clean.shape[0]
-    rows_dropped = rows_before - rows_after
+    if fill_random_columns:
+        for column in fill_random_columns:
+            if column in df.columns:
+                fill_random(df, column)
 
-    if rows_dropped > 0:
-        print(f"Number of rows dropped due to missing values: {rows_dropped}")
-        print()
-    return df_clean
+    return df
 
 def calculate_num_classes(target_df: pd.DataFrame) -> int:
     num_classes = 0
