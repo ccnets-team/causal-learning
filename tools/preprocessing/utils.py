@@ -42,34 +42,35 @@ def fill_random(df: pd.DataFrame, column: str):
     """Fill NaN values in the specified column with random choices from its non-NaN values."""
     non_missing = df[column].dropna().unique()
     df[column] = df[column].apply(lambda x: np.random.choice(non_missing) if pd.isna(x) else x)
+    return df
+
 
 def handle_missing_values(df: pd.DataFrame, 
-                   drop_columns: pd.Index,
-                   exclude_columns: pd.Index = None,
-                   fill_random_columns: list = None) -> pd.DataFrame:
+                          drop_columns: pd.Index,
+                          exclude_columns: pd.Index = None) -> pd.DataFrame:
     """
-    Removes specified columns from the DataFrame, and fills specified columns with random non-NaN values.
+    Automatically detects columns with missing values to fill,
+    removes specified columns from the DataFrame, and fills NaN values with random non-NaN data.
     
     Parameters:
     df (pd.DataFrame): The input DataFrame.
     drop_columns (pd.Index): The columns to drop from the DataFrame.
     exclude_columns (pd.Index, optional): Columns to exclude from dropping.
-    fill_random_columns (list, optional): List of columns to fill NaN values with random non-NaN data.
 
     Returns:
-    pd.DataFrame: The modified DataFrame with specified columns removed and specified NaNs filled randomly.
+    pd.DataFrame: The modified DataFrame with specified columns removed and NaNs filled randomly.
     """
     if exclude_columns is not None:
         drop_columns = drop_columns.difference(exclude_columns)
-    
+        
     if not drop_columns.empty:
         print(f"Dropped columns: {', '.join(drop_columns)}")
         df = df.drop(columns=drop_columns)
 
-    if fill_random_columns:
-        for column in fill_random_columns:
-            if column in df.columns:
-                fill_random(df, column)
+    fill_random_columns = df.columns[df.isna().any()].difference(drop_columns)
+    for column in fill_random_columns:
+        df = fill_random(df, column)
+        print(f"Filled NaN values in column '{column}' with random values.")
 
     return df
 
