@@ -29,7 +29,7 @@ class CooperativeNetwork:
             self.use_seq = True 
         else:
             self.use_seq = False
-        self.task_type, self.label_size, self.label_scale = ccnet.task_type, ccnet.label_size, ccnet.label_scale
+        self.task_type, self.label_size, self.label_scale = data_config.task_type, data_config.label_size, data_config.label_scale
         task_act_fn = determine_activation_by_task_type(self.task_type)
             
         model_name = network_params.model_name
