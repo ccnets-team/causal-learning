@@ -29,8 +29,8 @@ class CooperativeNetwork:
             self.use_seq = True 
         else:
             self.use_seq = False
-        task_type = data_config.task_type
-        task_act_fn = determine_activation_by_task_type(task_type)
+        self.task_type, self.label_size, self.label_scale = ccnet.task_type, ccnet.label_size, ccnet.label_scale
+        task_act_fn = determine_activation_by_task_type(self.task_type)
             
         model_name = network_params.model_name
         # Add model_name prefix to the network names
@@ -47,7 +47,6 @@ class CooperativeNetwork:
         self.label_size = network_params.condition_dim
         self.device = device
         self.task_act_fn = task_act_fn
-        self.task_type = task_type
         self.encoder = encoder
     
     def __set_train(self, train: bool):
