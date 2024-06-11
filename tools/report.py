@@ -121,7 +121,8 @@ def get_test_results(inferred_y, target_y, task_type, num_classes, average='macr
         metrics['precision'] = precision_score(target_y_np, inferred_y_np, average=average, labels=range(num_classes), zero_division=0)
         metrics['recall'] = recall_score(target_y_np, inferred_y_np, average=average, labels=range(num_classes), zero_division=0)
         metrics['f1_score'] = f1_score(target_y_np, inferred_y_np, average=average, labels=range(num_classes), zero_division=0)
-        metrics['roc_auc'] = roc_auc_score(target_y_np, inferred_y_np)
+        if task_type == 'binary_classification':
+            metrics['roc_auc'] = roc_auc_score(target_y_np, inferred_y_np)
            
     elif task_type == 'multi_label_classification':
         inferred_y = (inferred_y > 0.5).float()
