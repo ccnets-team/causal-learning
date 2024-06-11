@@ -39,8 +39,10 @@ class TrainerHub:
         
         self.task_type = self.data_config.task_type
         self.label_size = self.data_config.label_size
+        self.label_scale = self.data_config.label_scale
         
         self.setup_models(ml_params)
+        self.initialize_training_params(ml_params)
         
         print_ml_params("causal_trainer", ml_params, data_config)
         
@@ -117,12 +119,11 @@ class TrainerHub:
         for epoch in tqdm_notebook(range(self.num_epoch), desc='Epochs', leave=False):
             dataloader = get_data_loader(trainset, min(len(trainset), self.batch_size))
 
-            # show me the max length of the dataset
             for iters, (source_batch, target_batch) in enumerate(tqdm_notebook(dataloader, desc='Iterations', leave=False)):
                 ccnet_metric, encoder_metric = self.train_iteration(source_batch, target_batch)
 
                 test_results = self.evaluate(testset)
-                    
+
                 self.helper.finalize_training_step(epoch, iters, len(dataloader), ccnet_metric, encoder_metric, test_results)
 
     def evaluate(self, dataset):
@@ -161,7 +162,7 @@ class TrainerHub:
         all_inferred_batches = torch.cat(all_inferred_batches, dim=0)
         all_target_batches = torch.cat(all_target_batches, dim=0)
         
-        test_metrics = calculate_test_results(all_inferred_batches, all_target_batches, self.data_config)
+        test_metrics = calculate_test_results(all_inferred_batches, all_target_batches, self.task_type, self.label_size, self.label_scale)
         return test_metrics
     
     def should_select_last_sequence(self, padding_mask):
