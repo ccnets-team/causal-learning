@@ -7,9 +7,9 @@ Author:
         
     COPYRIGHT (c) 2024. CCNets. All Rights reserved.
 '''
-from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
-import torch
 import numpy as np
+import torch
+from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score, accuracy_score
 
 def transform_labels_to_original_scale(inferred_y, target_y, task_type, label_size, label_scale):
     if label_scale is not None and 'regression' in task_type:
@@ -21,28 +21,65 @@ def transform_labels_to_original_scale(inferred_y, target_y, task_type, label_si
 
 def calculate_test_results(inferred_y, target_y, task_type, label_size, label_scale):
     inferred_y, target_y = transform_labels_to_original_scale(inferred_y, target_y, task_type, label_size, label_scale)
-    num_classes = label_size
     
     if task_type == 'binary_classification' or task_type == 'multi_class_classification':
         inferred_y = torch.argmax(inferred_y, dim=-1)
         target_y = torch.argmax(target_y, dim=-1)  # Assuming one-hot encoding of target
     elif task_type == "ordinal_regression":
-        inferred_y = torch.round(inferred_y).int().clamp(0, num_classes - 1)
+        inferred_y = torch.round(inferred_y).int().clamp(0, label_size - 1)
         target_y = torch.round(target_y).int()
     
+    if task_type == 'binary_classification':
+        num_classes = 2
+    else:
+        num_classes = label_size
+        
     return get_test_results(inferred_y, target_y, task_type, num_classes)
 
 def convert_to_tensor(values):
+    """
+    Converts input values into a PyTorch tensor with appropriate data type handling.
+    Supports numpy arrays, lists, and other iterable data types, with specific handling based on the data type of the first element in lists.
+    
+    Parameters:
+    - values: The input data to convert. Can be a numpy array, list, or other iterable types.
+    
+    Returns:
+    - A PyTorch tensor converted from the input data.
+    """
+    # First, handle cases where values are already a torch.Tensor
+    if isinstance(values, torch.Tensor):
+        return values
+
+    # For numpy arrays, handle different data types specifically
     if isinstance(values, np.ndarray):
         if values.dtype == np.float32 or values.dtype == np.float64:
-            values = torch.tensor(values, dtype=torch.float32)
+            return torch.tensor(values, dtype=torch.float32)
         elif values.dtype == np.int32 or values.dtype == np.int64:
-            values = torch.tensor(values, dtype=torch.int64)
+            return torch.tensor(values, dtype=torch.int64)
         else:
-            values = torch.tensor(values)
-    else:
-        values = torch.tensor(values)
-    return values
+            return torch.tensor(values)  # This covers other data types like boolean, etc.
+    
+    # For lists or other iterable types, check the data type of the first element
+    if isinstance(values, (list, tuple)):
+        if values:  # Check if the list/tuple is not empty
+            first_element = values[0]
+            if isinstance(first_element, float):
+                return torch.tensor(values, dtype=torch.float32)
+            elif isinstance(first_element, int):
+                return torch.tensor(values, dtype=torch.int64)
+            elif isinstance(first_element, bool):
+                return torch.tensor(values, dtype=torch.bool)
+            else:
+                return torch.tensor(values)  # Default case for other types
+        else:
+            raise ValueError("Empty list or tuple provided; cannot determine tensor dtype.")
+
+    # Catch-all for other data types that are directly convertible
+    try:
+        return torch.tensor(values)
+    except ValueError as e:
+        raise ValueError(f"Unsupported data type for tensor conversion: {type(values)}. Error: {e}")
 
 def get_test_results(inferred_y, target_y, task_type, num_classes, average='macro'):
     """
@@ -62,6 +99,7 @@ def get_test_results(inferred_y, target_y, task_type, num_classes, average='macr
     # Check inferred_y is tensor
     if not isinstance(inferred_y, torch.Tensor):
         inferred_y = convert_to_tensor(inferred_y)
+        print("inferred_y is not tensor")
     if not isinstance(target_y, torch.Tensor):
         target_y = convert_to_tensor(target_y)
 
@@ -83,7 +121,8 @@ def get_test_results(inferred_y, target_y, task_type, num_classes, average='macr
         metrics['precision'] = precision_score(target_y_np, inferred_y_np, average=average, labels=range(num_classes), zero_division=0)
         metrics['recall'] = recall_score(target_y_np, inferred_y_np, average=average, labels=range(num_classes), zero_division=0)
         metrics['f1_score'] = f1_score(target_y_np, inferred_y_np, average=average, labels=range(num_classes), zero_division=0)
-        
+        metrics['roc_auc'] = roc_auc_score(target_y_np, inferred_y_np)
+           
     elif task_type == 'multi_label_classification':
         inferred_y = (inferred_y > 0.5).float()
         accuracy = accuracy_score(target_y.numpy().reshape(-1), inferred_y.numpy().reshape(-1), normalize=True)
