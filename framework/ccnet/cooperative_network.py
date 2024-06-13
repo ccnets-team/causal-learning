@@ -37,10 +37,10 @@ class CooperativeNetwork:
         network_names = ["explainer", "reasoner", "producer"]
         self.model_name = model_name
         self.network_names = [f"{model_name}_{name}" for name in network_names]
-        reset_pretrained = algorithm_params.reset_pretrained
-        self.explainer =  Explainer(model_networks[0], network_params, reset_pretrained, act_fn=data_config.explain_layer).to(device)
-        self.reasoner =  Reasoner(model_networks[1], network_params, reset_pretrained, act_fn=task_act_fn).to(device)
-        self.producer =  Producer(model_networks[2], network_params, reset_pretrained, act_fn="none").to(device)
+        network_params.reset_pretrained = algorithm_params.reset_pretrained
+        self.explainer =  Explainer(model_networks[0], network_params, act_fn=data_config.explain_layer).to(device)
+        self.reasoner =  Reasoner(model_networks[1], network_params, act_fn=task_act_fn).to(device)
+        self.producer =  Producer(model_networks[2], network_params, act_fn="none").to(device)
         self.networks = [self.explainer, self.reasoner, self.producer]
         
         self.explain_size = network_params.z_dim

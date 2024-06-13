@@ -29,6 +29,8 @@ class ModelConfig:
     obs_shape: list = field(default_factory=list)
     condition_dim: int = None
     z_dim: int = None
+    
+    reset_pretrained: bool = False
 
     def __post_init__(self):
         if self.model_name.lower() == 'none':
@@ -39,6 +41,7 @@ class ModelConfig:
             self.obs_shape = []
             self.condition_dim = None
             self.z_dim = None
+            self.reset_pretrained = False
     
 @dataclass
 class ModelParameters:

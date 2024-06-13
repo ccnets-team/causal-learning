@@ -133,7 +133,7 @@ class Generator(nn.Module):
         self.height = height
         self.width = width
 
-    def forward(self, z):
+    def forward(self, z, padding_mask=None):
         style = self.mapping_network(z)
         batch_size = z.shape[0]
         # Start with a small spatial dimension that will be scaled up to the desired size
@@ -170,7 +170,7 @@ class Discriminator(nn.Module):
         final = [nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(in_channels, self.d_model)]
         self.final = nn.Sequential(*final)
 
-    def forward(self, img):
+    def forward(self, img, padding_mask=None):
         x = img
         for block in self.blocks:
             x = block(x)
@@ -199,7 +199,7 @@ class ConditionalDiscriminator(nn.Module):
         final = [nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(out_channels, self.d_model)]
         self.final = nn.Sequential(*final)
 
-    def forward(self, img, e):
+    def forward(self, img, e, padding_mask=None):
         x = img
         # Generate style codes from the condition vector
         style = self.mapping_network(e)

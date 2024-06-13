@@ -10,10 +10,10 @@ from .roles.producer import Producer
 class CooperativeEncodingNetwork:
     def __init__(self, model_networks, network_params, algorithm_params, data_config, device):
         # Initialize model names and configurations.
-        reset_pretrained = algorithm_params.reset_pretrained
-        self.explainer = Explainer(model_networks[0], network_params, reset_pretrained, act_fn="layer_norm").to(device)
-        self.reasoner = Reasoner(model_networks[1], network_params, reset_pretrained, act_fn="tanh").to(device)
-        self.producer = Producer(model_networks[2], network_params, reset_pretrained, act_fn="none").to(device)
+        network_params.reset_pretrained = algorithm_params.reset_pretrained
+        self.explainer = Explainer(model_networks[0], network_params, act_fn="layer_norm").to(device)
+        self.reasoner = Reasoner(model_networks[1], network_params, act_fn="tanh").to(device)
+        self.producer = Producer(model_networks[2], network_params, act_fn="none").to(device)
 
         model_name = network_params.model_name
         # Add model_name prefix to the network names

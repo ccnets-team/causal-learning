@@ -35,7 +35,7 @@ class ResBlock(nn.Module):
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(dropout)
         
-    def forward(self, x):
+    def forward(self, x, padding_mask = None):
         residual = x
         out = self.linear1(x)
         out = self.relu(out)

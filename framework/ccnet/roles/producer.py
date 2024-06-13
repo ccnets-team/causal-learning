@@ -6,9 +6,9 @@
 import torch
 import torch.nn as nn
 from nn.utils.init import init_weights
-from nn.utils.joint_layer import JointLayer
-from nn.utils.final_layer import FinalLayer
 from tools.setting.ml_config import modify_network_params
+from nn.utils.joint_layer import JointLayer
+from nn.utils.transform_layer import TransformLayer
 
 class Producer(nn.Module):
     """
@@ -22,7 +22,7 @@ class Producer(nn.Module):
         final_layer (nn.Module): The final transformation layer to produce the desired output size.
     """
 
-    def __init__(self, net, network_params, reset_pretrained, act_fn='none'):
+    def __init__(self, net, network_params, act_fn='none'):
         """
         Initializes the Producer module with network architecture and parameters.
 
@@ -35,21 +35,22 @@ class Producer(nn.Module):
         
         producer_params = modify_network_params(network_params, None)
         
-        output_shape, d_model, explain_size, condition_size = (producer_params.obs_shape, 
-                                                               producer_params.d_model, 
-                                                               producer_params.z_dim, 
-                                                               producer_params.condition_dim)
-
+        output_shape, d_model, explain_size, condition_size, reset_pretrained = (producer_params.obs_shape, 
+                                                                                 producer_params.d_model, 
+                                                                                 producer_params.z_dim, 
+                                                                                 producer_params.condition_dim,
+                                                                                 producer_params.reset_pretrained)
+        self.__model_name = self._get_name()
+        
         # Embedding layer for combined condition and explanation inputs
-        self.joint_layer = JointLayer(d_model, condition_size, explain_size)
-
+        self.embedding_layer = JointLayer(self.__model_name, d_model, condition_size, explain_size)
+        
         # Initialize the main network module
         self.net = net(producer_params)
 
         self.use_image = len(output_shape) != 1
         
-        if not self.use_image:
-            self.final_layer = FinalLayer(d_model, output_shape, first_act_fn='relu', last_act_fn=act_fn)
+        self.final_layer = TransformLayer(self.__model_name, d_model, output_shape, first_act_fn='relu', last_act_fn=act_fn)
 
         # Apply initial weights
         self.apply(lambda module: init_weights(module, reset_pretrained))
@@ -66,14 +67,13 @@ class Producer(nn.Module):
         Returns:
             Tensor: The output tensor after processing through the network.
         """
-        z = self.joint_layer(labels, explains)
-        if self.use_image:
-            return self.net(z)
-        else:
-            reversed_z, reversed_padding_mask = self.flip_tensor(z, padding_mask)
-            reversed_x = self.net(reversed_z) if reversed_padding_mask is None else self.net(reversed_z, padding_mask=reversed_padding_mask)
-            x, _ = self.flip_tensor(reversed_x)
-            return self.final_layer(x)
+        z = self.embedding_layer(labels, explains)
+
+        reversed_z, reversed_padding_mask = self.flip_tensor(z, padding_mask)
+        reversed_x = self.net(reversed_z, padding_mask=reversed_padding_mask)
+        x, _ = self.flip_tensor(reversed_x)
+        
+        return self.final_layer(x)
     
     def flip_tensor(self, tensor, padding_mask=None):
         """
@@ -86,6 +86,9 @@ class Producer(nn.Module):
         Returns:
             Tuple[Tensor, Tensor]: The reversed tensor and the reversed padding mask.
         """
+        if self.use_image:
+            return tensor, padding_mask
+        
         reversed_tensor = torch.flip(tensor, dims=[1])
         if padding_mask is not None:
             reversed_padding_mask = torch.flip(padding_mask, dims=[1])

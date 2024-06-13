@@ -37,7 +37,7 @@ class ResNet(nn.Module):
             init_weights(self.pretrained_model.conv1)
         init_weights(self.pretrained_model.fc)
 
-    def forward(self, x):
+    def forward(self, x, padding_mask=None):
         x = self.pretrained_model(x)
         return x
     

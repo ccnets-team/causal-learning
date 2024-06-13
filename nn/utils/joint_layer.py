@@ -4,30 +4,33 @@
 
 import torch
 from torch import nn
-from nn.utils.final_layer import get_activation_function
+from nn.utils.transform_layer import get_activation_function
 
 try:
     from nn.utils.test import JointLayer
 except ImportError:
     class JointLayer(nn.Module):
-        def __init__(self, embedding_size, *num_features, act_fn='tanh'):
+        def __init__(self, parent_name, output_shape, *input_shapes, act_fn='tanh'):
             super(JointLayer, self).__init__()
-        
-            # Process num_features to take out the last element of sublists
-            filtered_num_features = []
-            for nf in num_features:
+            output_size = output_shape[-1] if isinstance(output_shape, list) else output_shape
+            
+            input_sizes = []
+            for nf in input_shapes:
                 if isinstance(nf, list):
-                    filtered_num_features.append(nf[-1])  # Take all but the last element
+                    input_sizes.append(nf[-1])
                 else:
-                    filtered_num_features.append(nf)
+                    input_sizes.append(nf)
                                 
             self.embedding_layers = nn.ModuleList([nn.Sequential(
-                    nn.Linear(nf, embedding_size)
-                ) for nf in filtered_num_features])
-            self.final_layer = get_activation_function(act_fn, embedding_size)
+                    nn.Linear(input_size, output_size)
+                ) for input_size in input_sizes])
+            
+            self.final_layer = get_activation_function(act_fn, output_size)
+            self.parent_name = parent_name
+            self.output_size = output_size
 
         def forward(self, *features):
-            processed_features_list = [emb_layer(feature) for emb_layer, feature in zip(self.embedding_layers, features)]
-            processed_features = torch.prod(torch.stack(processed_features_list), dim=0)
-            return self.final_layer(processed_features)
+            embeded_features = [emb_layer(feature) for emb_layer, feature in zip(self.embedding_layers, features)]
+            prod_feature = torch.prod(torch.stack(embeded_features), dim=0)
+            return self.final_layer(prod_feature)
         
