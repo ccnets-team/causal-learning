@@ -115,7 +115,7 @@ class OptimizationParameters:
         clip_grad_range (tuple, optional): Tuple specifying the minimum and maximum range for gradient clipping.
         max_grad_norm (float): Maximum allowable L2 norm for gradients to prevent gradient explosion.
     """
-    learning_rate: float = 2e-4
+    learning_rate: float = 1e-3
     decay_rate_100k: float = 0.05
     scheduler_type: str = 'exponential'
     clip_grad_range: tuple = field(default=None)
