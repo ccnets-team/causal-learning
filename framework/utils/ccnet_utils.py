@@ -48,7 +48,9 @@ def determine_activation_by_task_type(task_type):
     Raises:
     - ValueError: If an unsupported task type is provided.
     """
-    if task_type in ["binary_classification", "multi_class_classification", "compositional_regression"]: # binary classification is one-hot encoded
+    if task_type in ["binary_classification"]: # binary classification is one-hot encoded
+        return 'none'
+    elif task_type in ["multi_class_classification", "compositional_regression"]: # binary classification is one-hot encoded
         return 'softmax'
     elif task_type in ["multi_label_classification"]:
         return 'sigmoid'  # Multiple independent binary classifications
