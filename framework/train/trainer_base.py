@@ -14,7 +14,7 @@ import torch
 
 # Base class for trainers
 class TrainerBase(OptimizationManager):
-    def __init__(self, networks, algorithm_params, optimization_params, task_type, device):
+    def __init__(self, networks, algorithm_params, optimization_params, data_config, device):
         self.train_iter = 0
         learning_params = [
             {'lr': optimization_params.learning_rate, 
@@ -31,7 +31,7 @@ class TrainerBase(OptimizationManager):
         self.error_function = algorithm_params.error_function
         
         self.device = device
-        self.task_type = task_type
+        self.task_type = data_config.task_type
         self.noise_diffuser = NoiseDiffuser(device = device) if self.enable_diffusion else None
 
     def prepare_data(self, x, y = None):
