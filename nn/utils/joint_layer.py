@@ -5,6 +5,7 @@
 import torch
 from torch import nn
 from nn.utils.transform_layer import get_activation_function
+from framework.utils.ccnet_utils import convert_shape_to_size
 
 try:
     from nn.utils.test import JointLayer
@@ -12,14 +13,8 @@ except ImportError:
     class JointLayer(nn.Module):
         def __init__(self, parent_name, output_shape, *input_shapes, act_fn='tanh'):
             super(JointLayer, self).__init__()
-            output_size = output_shape[-1] if isinstance(output_shape, list) else output_shape
-            
-            input_sizes = []
-            for nf in input_shapes:
-                if isinstance(nf, list):
-                    input_sizes.append(nf[-1])
-                else:
-                    input_sizes.append(nf)
+            input_sizes = convert_shape_to_size(input_shapes)
+            output_size = convert_shape_to_size(output_shape) 
                                 
             self.embedding_layers = nn.ModuleList([nn.Sequential(
                     nn.Linear(input_size, output_size)

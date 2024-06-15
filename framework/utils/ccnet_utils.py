@@ -1,7 +1,6 @@
 import torch
 import torch.nn.functional as F
 from tools.setting.ml_config import modify_network_params
-from nn.utils.joint_layer import JointLayer
 
 def convert_explanation_to_image_shape(explanation, image_shape, explain_size, image_elements):
     """
@@ -58,36 +57,6 @@ def determine_activation_by_task_type(task_type):
         return 'linear'  # Typically no activation function (i.e., linear) is used for regression outputs
     else:
         raise ValueError(f"Invalid task type: {task_type}")
-
-def generate_condition_data(label_shape, task_type, device, enable_discrete_conditions=False):
-    """
-    Generates task-specific condition data for different types of machine learning tasks,
-    ensuring the condition data matches the label shape and appropriate data type.
-
-    Args:
-    - label_shape (tuple): The shape of the output tensor expected to match label specifications.
-    - task_type (str): Specifies the machine learning task type.
-    - device (str): Specifies the device for tensor operations.
-
-    Returns:
-    - Tensor: A tensor of condition data appropriate for the specified task type, all in float dtype.
-    """
-    logits = torch.randn(label_shape).to(device)
-    if task_type in ["binary_classification", "multi_class_classification", "compositional_regression"]: # binary classification is one-hot encoded
-        # Generate indices and convert to one-hot encoding to maintain dimensionality
-        class_indices = torch.argmax(logits, dim=-1)
-        condition_data = F.one_hot(class_indices, num_classes=logits.shape[-1])
-    elif task_type in ["multi_label_classification"]:
-        # Generate binary labels and convert to float
-        condition_data = (torch.sigmoid(logits) > 0.5)
-    elif task_type in ["regression", "ordinal_regression"]:
-        # Directly use continuous values for regression
-        condition_data = logits
-    else:
-        # Use random noise for unknown task types, ensuring it's in float dtype
-        condition_data = logits
-
-    return condition_data.float()
 
 def generate_condition_data(label_shape, task_type, device):
     """
@@ -149,4 +118,36 @@ def reduce_tensor(input_tensor, padding_mask, dim):
     
     return reduced_tensor
 
+def convert_shape_to_size(feature_shapes):
+    """
+    Convert feature shapes to their respective sizes.
+    
+    Parameters:
+    - feature_shapes (list or tuple): A list or tuple of feature shapes. Each shape can be an integer, 
+      a list of integers, a torch.Size object, or a nested list.
 
+    Returns:
+    - list: A list of sizes corresponding to the feature shapes.
+    """
+    feature_sizes = []
+
+    def extract_size(shape):
+        """Extract the size from various types of shape representations."""
+        if isinstance(shape, (list, tuple, torch.Size)):
+            # If it's a list, tuple, or torch.Size, take the last dimension
+            if isinstance(shape[-1], (list, tuple)):
+                raise ValueError(f"Unsupported shape type: {type(shape)}")
+            else:
+                return shape[-1]
+        elif isinstance(shape, int):
+            return shape
+        else:
+            raise ValueError(f"Unsupported shape type: {type(shape)}")
+
+    if isinstance(feature_shapes, (list, tuple)):
+        for nf in feature_shapes:
+            feature_sizes.append(extract_size(nf))
+    else:
+        return extract_size(feature_shapes)
+    
+    return feature_sizes
