@@ -1,13 +1,14 @@
 import torch.nn as nn
 import torchvision.models as models
 from nn.utils.init import init_weights
+from nn.utils.transform_layer import TransformLayer
 
 class ResNet(nn.Module):
-    def __init__(self, network_params, pretrained_model):
+    def __init__(self, network_config, pretrained_model):
         super(ResNet, self).__init__()
-        d_model = network_params.d_model
-        num_layers = network_params.num_layers
-        num_channels, height, width = network_params.obs_shape
+        d_model = network_config.d_model
+        num_layers = network_config.num_layers
+        num_channels, height, width = network_config.input_shape
         
         # Replace the initial conv1 layer if num_channels do not match
         if num_channels != pretrained_model.conv1.in_channels:
@@ -31,6 +32,8 @@ class ResNet(nn.Module):
                 num_ftrs //= 2  # Halve the number of input features to the next layer or function
         
         pretrained_model.fc = nn.Linear(num_ftrs, d_model)  # Replace it with a new fc layer with d_model output features
+        self.final_layer = TransformLayer(d_model, network_config.output_shape, first_act_fn='relu', last_act_fn=network_config.act_fn)
+        
         self.pretrained_model = pretrained_model
         
         if num_channels != pretrained_model.conv1.in_channels:
@@ -39,14 +42,14 @@ class ResNet(nn.Module):
 
     def forward(self, x, padding_mask=None):
         x = self.pretrained_model(x)
-        return x
+        return self.final_layer(x)
     
-def ResNet18(network_params):
-    return ResNet(network_params, models.resnet18(pretrained=True))
+def ResNet18(network_config):
+    return ResNet(network_config, models.resnet18(pretrained=True))
 
-def ResNet34(network_params):
-    return ResNet(network_params, models.resnet34(pretrained=True))
+def ResNet34(network_config):
+    return ResNet(network_config, models.resnet34(pretrained=True))
 
-def ResNet50(network_params):
-    return ResNet(network_params, models.resnet50(pretrained=True))
+def ResNet50(network_config):
+    return ResNet(network_config, models.resnet50(pretrained=True))
 

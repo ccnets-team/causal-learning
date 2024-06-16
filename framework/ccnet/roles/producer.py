@@ -6,9 +6,8 @@
 import torch
 import torch.nn as nn
 from nn.utils.init import init_weights
-from tools.setting.ml_config import modify_network_params
 from nn.utils.joint_layer import JointLayer
-from nn.utils.transform_layer import TransformLayer
+from tools.setting.ml_params import CCNetConfig
 
 class Producer(nn.Module):
     """
@@ -33,25 +32,23 @@ class Producer(nn.Module):
         """
         super(Producer, self).__init__()
         
-        producer_params = modify_network_params(network_params, None)
-        
-        output_shape, d_model, explain_size, condition_size, reset_pretrained = (producer_params.obs_shape, 
-                                                                                 producer_params.d_model, 
-                                                                                 producer_params.z_dim, 
-                                                                                 producer_params.condition_dim,
-                                                                                 producer_params.reset_pretrained)
+        output_shape, d_model, explain_size, condition_size, reset_pretrained = (network_params.obs_shape, 
+                                                                                 network_params.d_model, 
+                                                                                 network_params.z_dim, 
+                                                                                 network_params.condition_dim,
+                                                                                 network_params.reset_pretrained)
         self.__model_name = self._get_name()
         
         # Embedding layer for combined condition and explanation inputs
         self.embedding_layer = JointLayer(self.__model_name, d_model, condition_size, explain_size)
         
+        producer_config = CCNetConfig(network_params, self.__model_name, d_model, output_shape, act_fn)
+        
         # Initialize the main network module
-        self.net = net(producer_params)
+        self.net = net(producer_config)
 
         self.use_image = len(output_shape) != 1
         
-        self.final_layer = TransformLayer(self.__model_name, d_model, output_shape, first_act_fn='relu', last_act_fn=act_fn)
-
         # Apply initial weights
         self.apply(lambda module: init_weights(module, reset_pretrained))
 
@@ -73,7 +70,7 @@ class Producer(nn.Module):
         reversed_x = self.net(reversed_z, padding_mask=reversed_padding_mask)
         x, _ = self.flip_tensor(reversed_x)
         
-        return self.final_layer(x)
+        return x
     
     def flip_tensor(self, tensor, padding_mask=None):
         """

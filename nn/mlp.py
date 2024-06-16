@@ -26,6 +26,7 @@ References:
 """
 
 from torch import nn
+from nn.utils.transform_layer import TransformLayer
 
 class ResBlock(nn.Module):
     def __init__(self, hidden_size, dropout):
@@ -46,16 +47,17 @@ class ResBlock(nn.Module):
         return out
 
 class ResMLP(nn.Module):
-    def __init__(self, network_params):
-        hidden_size, num_layers, dropout = network_params.d_model, network_params.num_layers, network_params.dropout
+    def __init__(self, network_config):
+        hidden_size, num_layers, dropout = network_config.d_model, network_config.num_layers, network_config.dropout
         super(ResMLP, self).__init__()
         self.layers = nn.Sequential(
             *(ResBlock(hidden_size, dropout=dropout) for _ in range(num_layers))
         )
-    
+        self.final_layer = TransformLayer(hidden_size, network_config.output_shape, first_act_fn='relu', last_act_fn=network_config.act_fn)
+
     def forward(self, x, padding_mask = None):
         out = self.layers(x)
-        return out
+        return self.final_layer(out)
     
 class MLP(nn.Module):
     def create_deep_modules(self, layers_size, dropout = 0.0):
@@ -66,12 +68,13 @@ class MLP(nn.Module):
             deep_modules.append(nn.Dropout(dropout))
         return nn.Sequential(*deep_modules)
 
-    def __init__(self, network_params):
-        hidden_size, num_layer, dropout = network_params.d_model, network_params.num_layers, network_params.dropout
+    def __init__(self, network_config):
+        hidden_size, num_layer, dropout = network_config.d_model, network_config.num_layers, network_config.dropout
         super(MLP, self).__init__()   
         self.deep = self.create_deep_modules([hidden_size] + [int(hidden_size) for i in range(num_layer)], dropout)
+        self.final_layer = TransformLayer(hidden_size, network_config.output_shape, first_act_fn='relu', last_act_fn=network_config.act_fn)
                 
     def forward(self, x, padding_mask = None):
         x = self.deep(x)
-        return x
+        return self.final_layer(x)
     

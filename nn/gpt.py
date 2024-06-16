@@ -23,6 +23,7 @@ References:
 
 import torch.nn as nn
 from transformers import GPT2Model, GPT2Config
+from nn.utils.transform_layer import TransformLayer
 
 class _GPTBase(nn.Module):
     def __init__(self, num_layer, d_model, num_heads, dropout):
@@ -40,14 +41,17 @@ class _GPTBase(nn.Module):
         self.net = GPT2Model(config)
 
 class GPT(_GPTBase):
-    def __init__(self, network_params, num_heads: int = 8):
-        num_layers = network_params.num_layers
-        d_model = network_params.d_model
-        dropout = network_params.dropout
+    def __init__(self, network_config, num_heads: int = 8):
+        num_layers = network_config.num_layers
+        d_model = network_config.d_model
+        dropout = network_config.dropout
         super(GPT, self).__init__(num_layers, d_model, num_heads, dropout)
+        
+        self.final_layer = TransformLayer(d_model, network_config.output_shape, first_act_fn='relu', last_act_fn=network_config.act_fn)
 
     def forward(self, input_tensor, padding_mask=None):
         attention_mask = padding_mask.long() if padding_mask is not None else None
         output = self.net(inputs_embeds=input_tensor, attention_mask=attention_mask)
         output_tensor = output.last_hidden_state
+        output_tensor = self.final_layer(output_tensor)
         return output_tensor

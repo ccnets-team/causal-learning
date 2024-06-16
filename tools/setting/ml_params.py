@@ -1,11 +1,11 @@
 import pandas as pd
 from nn.gpt import GPT
-from nn.custom_style_gan import Discriminator, Generator
 from nn.resnet import ResNet18, ResNet34, ResNet50
 from nn.transpose_resnet import TransposeResnet
 from nn.mlp import MLP
-from nn.tabnet import TabNet
+from nn.tabnet import EncoderTabNet, DecoderTabNet
 from dataclasses import dataclass, field
+import torch
 
 GPT_COOPERATIVE_NETWORK = [GPT, GPT, GPT]
 
@@ -13,10 +13,8 @@ RESNET18_COOPERATIVE_NETWORK = [ResNet18, ResNet18, TransposeResnet]
 RESNET34_COOPERATIVE_NETWORK = [ResNet34, ResNet34, TransposeResnet]
 RESNET50_COOPERATIVE_NETWORK = [ResNet50, ResNet50, TransposeResnet]
 
-STYLEGAN_COOPERATIVE_NETWORK = [Discriminator, Discriminator, Generator]
-
 MLP_COOPERATIVE_NETWORK = [MLP, MLP, MLP]
-TABNET_COOPERATIVE_NETWORK = [TabNet, TabNet, TabNet]
+TABNET_COOPERATIVE_NETWORK = [EncoderTabNet, EncoderTabNet, DecoderTabNet]
 
 @dataclass
 class ModelConfig:
@@ -43,6 +41,21 @@ class ModelConfig:
             self.z_dim = None
             self.reset_pretrained = False
     
+class CCNetConfig:
+    def __init__(self, model_config: ModelConfig, role_name, input_shape, output_shape, act_fn):
+        super(CCNetConfig, self).__init__()
+        self.role_name = role_name
+
+        # if input_shape is not a list, torch.Size, or tuple, convert it to a list
+        self.input_shape = input_shape if isinstance(input_shape, (list, torch.Size, tuple)) else [input_shape]
+        self.output_shape = output_shape if isinstance(output_shape, (list, torch.Size, tuple)) else [output_shape]
+        self.act_fn = act_fn
+
+        self.d_model = model_config.d_model
+        self.dropout = model_config.dropout
+        self.num_layers = model_config.num_layers
+        self.reset_pretrained = model_config.reset_pretrained
+        
 @dataclass
 class ModelParameters:
     """

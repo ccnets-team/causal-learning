@@ -1,8 +1,9 @@
 from tools.setting.ml_params import GPT_COOPERATIVE_NETWORK
 from tools.setting.ml_params import MLP_COOPERATIVE_NETWORK, TABNET_COOPERATIVE_NETWORK
 from tools.setting.ml_params import RESNET18_COOPERATIVE_NETWORK, RESNET34_COOPERATIVE_NETWORK, RESNET50_COOPERATIVE_NETWORK
-from tools.setting.ml_params import STYLEGAN_COOPERATIVE_NETWORK
 from copy import deepcopy
+from tools.setting.ml_params import ModelConfig
+import torch
 
 def configure_model(model_name, params, obs_shape, condition_dim, z_dim):
     cooperative_network = None
@@ -20,8 +21,6 @@ def configure_model(model_name, params, obs_shape, condition_dim, z_dim):
         cooperative_network = RESNET34_COOPERATIVE_NETWORK
     elif model_name == 'resnet50':
         cooperative_network = RESNET50_COOPERATIVE_NETWORK
-    elif model_name == 'stylegan':
-        cooperative_network = STYLEGAN_COOPERATIVE_NETWORK
     else:
         raise ValueError(f"Model name '{model_name}' is not supported.")
         

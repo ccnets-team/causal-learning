@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class TransposeResnet(nn.Module):
-    def __init__(self, network_params):
+    def __init__(self, network_config):
         super(TransposeResnet, self).__init__()
 
         try:
@@ -12,8 +12,8 @@ class TransposeResnet(nn.Module):
         except ImportError:
             raise ImportError("Error: segmentation_models_pytorch library is not installed. Please install it using 'pip install segmentation-models-pytorch'.")
 
-        self.d_model = network_params.d_model
-        self.num_channels, self.height, self.width = network_params.obs_shape
+        self.d_model = network_config.d_model
+        self.num_channels, self.height, self.width = network_config.output_shape
 
         # Calculate the maximum number of layers based on the image size
         max_layers_height = math.ceil(math.log2(self.height))
@@ -21,7 +21,7 @@ class TransposeResnet(nn.Module):
         max_layers = min(max_layers_height, max_layers_width)
 
         # Ensure the number of layers does not exceed the maximum possible layers
-        num_layers = min(network_params.num_layers, max_layers)
+        num_layers = min(network_config.num_layers, max_layers)
 
         self.initial_w = max(math.ceil(self.width / 2**num_layers), 1)
         self.initial_h = max(math.ceil(self.height / 2**num_layers), 1)

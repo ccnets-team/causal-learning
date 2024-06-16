@@ -1,34 +1,78 @@
 
 import torch
 import torch.nn as nn
+from nn.utils.transform_layer import TransformLayer
 
-class TabNet(nn.Module):
-    def __init__(self, network_params):
+class EncoderTabNet(nn.Module):
+    def __init__(self, network_config):
         # Check and import pytorch_tabnet if installed, else show an error message
         try:
-            from pytorch_tabnet.tab_network import TabNetEncoder as TabNetwork
+            from pytorch_tabnet.tab_network import TabNetEncoder
         except ImportError:
             print("Error: pytorch-tabnet library is not installed. Please install it using 'pip install pytorch-tabnet'.")
             raise
         
-        super(TabNet, self).__init__()
-        d_model = network_params.d_model
-        num_layers = network_params.num_layers
+        super(EncoderTabNet, self).__init__()
+        d_model = network_config.d_model
+        num_layers = network_config.num_layers
+        output_size = network_config.output_shape[-1]
+        n_v = max(output_size, 8, d_model // 16)
         
         # Initialize group attention matrix with ones and move to appropriate device
-        group_attention_matrix = torch.ones(1, d_model).to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
-
-        self.network = TabNetwork(
+        group_attention_matrix = torch.ones(1, network_config.d_model).to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+        
+        self.network = TabNetEncoder(
             input_dim=d_model,
             output_dim=d_model,
-            n_d = d_model,
-            n_a = d_model,
+            n_d = n_v,
+            n_a = n_v,
             n_steps = num_layers,
             group_attention_matrix = group_attention_matrix
         )
+        self.final_layer = TransformLayer(n_v, output_size, first_act_fn='relu', last_act_fn=network_config.act_fn)
+        
+        self.d_model = d_model
+        self.n_div = self.d_model // n_v
+        self.n_rest = self.d_model % n_v
 
     def forward(self, x, padding_mask=None):
         steps_output, _ = self.network(x)
         # steps_output is a list of tensors
         res = torch.sum(torch.stack(steps_output, dim=0), dim=0)
-        return res
+        
+        # res = torch.cat([res.repeat_interleave(self.n_div, dim=-1), res[:, ..., :self.n_rest]], dim=-1)
+        return self.final_layer(res)
+    
+class DecoderTabNet(nn.Module):
+    def __init__(self, network_config):
+        
+        # Check if PyTorch-TabNet is installed
+        try:
+            from pytorch_tabnet.tab_network import TabNetDecoder
+        except ImportError:
+            raise ImportError("pytorch-tabnet library is not installed. Please install it using 'pip install pytorch-tabnet'.")
+
+        super(DecoderTabNet, self).__init__()
+
+        d_model = network_config.d_model
+        num_layers = network_config.num_layers
+        
+        self.decoder = TabNetDecoder(
+            input_dim=d_model,
+            n_d=d_model,
+            n_steps=num_layers
+        )
+        self.num_layers = num_layers
+        self.final_layer = TransformLayer(d_model, network_config.output_shape, first_act_fn='relu', last_act_fn=network_config.act_fn)
+
+    def forward(self, x, padding_mask=None):
+        res = []
+        for i in range(self.num_layers):
+            res.append(x.unsqueeze(0))  # Add dimension [1, batch_size, features]
+        
+        res = torch.cat(res, dim=0)  # [num_layers, batch_size, split_size]
+
+        # Forward pass through the decoder
+        reconstructed_input = self.decoder(res)
+        
+        return self.final_layer(reconstructed_input)

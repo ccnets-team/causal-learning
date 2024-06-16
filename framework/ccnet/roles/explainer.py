@@ -6,7 +6,7 @@
 
 import torch.nn as nn
 from nn.utils.init import init_weights
-from tools.setting.ml_config import modify_network_params
+from tools.setting.ml_params import CCNetConfig
 from nn.utils.transform_layer import TransformLayer
 
 class Explainer(nn.Module):
@@ -33,17 +33,16 @@ class Explainer(nn.Module):
         super(Explainer, self).__init__()
         
         self.__model_name = self._get_name()
-        explainer_params = modify_network_params(network_params, None)
-        input_shape, d_model, output_size, reset_pretrained = (explainer_params.obs_shape, 
-                                                               explainer_params.d_model, 
-                                                               explainer_params.z_dim,
-                                                               explainer_params.reset_pretrained)
 
-        self.embedding_layer = TransformLayer(self.__model_name, input_shape, d_model, last_act_fn='tanh')
+        input_shape, d_model, output_size, reset_pretrained = (network_params.obs_shape, 
+                                                               network_params.d_model, 
+                                                               network_params.z_dim,
+                                                               network_params.reset_pretrained)
 
-        self.net = net(explainer_params)
-                
-        self.final_layer = TransformLayer(self.__model_name, d_model, output_size, first_act_fn='relu', last_act_fn=act_fn)
+        self.embedding_layer = TransformLayer(input_shape, d_model, last_act_fn='tanh')
+        explainer_config = CCNetConfig(network_params, self.__model_name, self.embedding_layer.output_shape, output_size, act_fn)
+
+        self.net = net(explainer_config)
         
         self.apply(lambda module: init_weights(module, reset_pretrained, init_type='normal'))
 
@@ -62,5 +61,4 @@ class Explainer(nn.Module):
         
         e = self.net(embeddding, padding_mask=padding_mask)
 
-        e = self.final_layer(e)
         return e

@@ -47,19 +47,19 @@ class TransformLayer(nn.Module):
     Final layer that configures an input layer with optional pre- and post-activation functions
     and an embedding layer in between.
     """
-    def __init__(self, parent_name, input_shape, output_shape, first_act_fn="none", last_act_fn="none"):
+    def __init__(self, input_shape, output_shape, first_act_fn="none", last_act_fn="none"):
         super(TransformLayer, self).__init__()
         # Determine if the input or output shapes suggest the use of image processing
         use_image = (
-            (isinstance(input_shape, (list, torch.Size)) and len(input_shape) != 1) or
-            (isinstance(output_shape, (list, torch.Size)) and len(output_shape) != 1)
+            (isinstance(input_shape, (list, torch.Size, tuple)) and len(input_shape) != 1) or
+            (isinstance(output_shape, (list, torch.Size, tuple)) and len(output_shape) != 1)
         )
         # Build layers
         layers = []
         if not use_image:
             # Extract sizes from shapes if not using images
-            input_size = input_shape[-1] if isinstance(input_shape, (list, torch.Size)) else input_shape
-            output_size = output_shape[-1] if isinstance(output_shape, (list, torch.Size)) else output_shape
+            input_size = input_shape[-1] if isinstance(input_shape, (list, torch.Size, tuple)) else input_shape
+            output_size = output_shape[-1] if isinstance(output_shape, (list, torch.Size, tuple)) else output_shape
 
             # Add the first activation layer if it's not Identity
             first_activation_layer = get_activation_function(first_act_fn, input_size)
@@ -75,9 +75,11 @@ class TransformLayer(nn.Module):
             last_activation_layer = get_activation_function(last_act_fn, output_size)
             if not isinstance(last_activation_layer, nn.Identity):
                 layers.append(last_activation_layer)
-
+            self.output_shape = output_size
+        else:
+            self.output_shape = input_shape
+        self.input_shape = input_shape
         self.layers = nn.Sequential(*layers)
-        self.parent_name = parent_name
-            
+        
     def forward(self, features):
         return self.layers(features)

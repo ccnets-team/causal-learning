@@ -8,9 +8,9 @@
 import torch
 import torch.nn as nn
 from nn.utils.init import init_weights
-from nn.utils.transform_layer import TransformLayer
 from nn.utils.joint_layer import JointLayer
-from framework.utils.ccnet_utils import modify_network_params, extend_obs_shape_channel, convert_explanation_to_image_shape
+from framework.utils.ccnet_utils import extend_obs_shape_channel, convert_explanation_to_image_shape
+from tools.setting.ml_params import CCNetConfig
 
 class Reasoner(nn.Module):
     """
@@ -38,17 +38,11 @@ class Reasoner(nn.Module):
         super(Reasoner, self).__init__()
 
         self.__model_name = self._get_name()
-        d_model, output_size, reset_pretrained = (network_params.d_model,
-                                                  network_params.condition_dim,
-                                                  network_params.reset_pretrained)
+        reset_pretrained = network_params.reset_pretrained
 
-        self.embedding_layer, reasoner_params = self._create_embedding_layer(network_params)
+        self.embedding_layer, reasoner_config = self._create_embedding_layer(network_params, act_fn)
 
-        self.net = net(reasoner_params)
-        
-        self.final_layer = TransformLayer(
-            self.__model_name, d_model, output_size, first_act_fn='relu', last_act_fn=act_fn
-        )
+        self.net = net(reasoner_config)
         
         self.apply(lambda module: init_weights(module, reset_pretrained))
 
@@ -66,10 +60,9 @@ class Reasoner(nn.Module):
         """
         z = self.embedding_layer(obs, e)
         y = self.net(z, padding_mask=padding_mask)
-        y = self.final_layer(y)
         return y
 
-    def _create_embedding_layer(self, network_params):
+    def _create_embedding_layer(self, network_params, act_fn):
         """
         Creates the embedding layer based on the input data type and modifies network parameters accordingly.
 
@@ -88,11 +81,12 @@ class Reasoner(nn.Module):
         input_shape = network_params.obs_shape
         d_model = network_params.d_model
         explain_size = network_params.z_dim
+        output_size = network_params.condition_dim
 
         if len(input_shape) != 1:  # Handle image data
             extended_obs_shape = extend_obs_shape_channel(input_shape)
-            reasoner_params = modify_network_params(network_params, 'obs_shape', extended_obs_shape)
             image_elements = torch.prod(torch.tensor(extended_obs_shape[1:], dtype=torch.int)).item()
+            reasoner_config = CCNetConfig(network_params, self.__model_name, extended_obs_shape, output_size, act_fn)
 
             def embedding_layer_with_image(obs, e):
                 image_e = convert_explanation_to_image_shape(
@@ -103,9 +97,9 @@ class Reasoner(nn.Module):
                 )
                 return torch.cat([obs, image_e], dim=1)
 
-            return embedding_layer_with_image, reasoner_params
+            return embedding_layer_with_image, reasoner_config
 
         else:  # Handle non-image data
-            reasoner_params = modify_network_params(network_params)
-            embedding_layer = JointLayer('Reasoner', d_model, input_shape, explain_size)
-            return embedding_layer, reasoner_params
+            embedding_layer = JointLayer(self.__model_name, d_model, input_shape, explain_size)
+            reasoner_config = CCNetConfig(network_params, self.__model_name, d_model, output_size, act_fn)
+            return embedding_layer, reasoner_config
