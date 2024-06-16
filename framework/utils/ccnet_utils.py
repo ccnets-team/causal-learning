@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+import numpy as np
 from tools.setting.ml_config import modify_network_params
 
 def convert_explanation_to_image_shape(explanation, image_shape, explain_size, image_elements):
@@ -136,11 +137,12 @@ def convert_shape_to_size(feature_shapes):
         if isinstance(shape, (list, tuple, torch.Size)):
             # If it's a list, tuple, or torch.Size, take the last dimension
             if isinstance(shape[-1], (list, tuple)):
-                raise ValueError(f"Unsupported shape type: {type(shape)}")
+                raise ValueError(f"Unsupported nested shape type: {type(shape)}")
             else:
                 return shape[-1]
-        elif isinstance(shape, int):
-            return shape
+        elif isinstance(shape, (int, np.integer)):
+            # Handle both Python and numpy integers
+            return int(shape)
         else:
             raise ValueError(f"Unsupported shape type: {type(shape)}")
 
