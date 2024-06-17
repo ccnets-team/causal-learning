@@ -19,7 +19,7 @@ from torch.utils.data import Dataset
 
 from tools.loader import get_data_loader, get_test_loader, _load_trainer
 from nn.utils.init import set_random_seed
-from tools.wandb_logger import wandb_end
+from tools.wandb_logger import wandb_end, wandb_log_test_data
 from tools.report import calculate_test_results
 from tools.print import print_ml_params, DEFAULT_PRINT_INTERVAL
 
@@ -122,9 +122,11 @@ class TrainerHub:
             for iters, (source_batch, target_batch) in enumerate(tqdm_notebook(dataloader, desc='Iterations', leave=False)):
                 ccnet_metric, encoder_metric = self.train_iteration(source_batch, target_batch)
 
+                train_results = self.evaluate(trainset)
+                
                 test_results = self.evaluate(testset)
 
-                self.helper.finalize_training_step(epoch, iters, len(dataloader), ccnet_metric, encoder_metric, test_results)
+                self.helper.finalize_training_step(epoch, iters, len(dataloader), ccnet_metric, encoder_metric, train_results, test_results)
 
     def evaluate(self, dataset):
         if dataset is None or not self.use_ccnet:
@@ -142,8 +144,13 @@ class TrainerHub:
         if batch_size is None:
             batch_size = self.test_batch_size
         dataloader = get_test_loader(dataset, min(len(dataset), batch_size))
-        return self.validate_performance(dataloader)
+    
+        test_metrics = self.validate_performance(dataloader)
+        
+        wandb_log_test_data(test_metrics, iters=self.helper.iters)
 
+        return test_metrics
+        
     def validate_performance(self, dataloader):
         all_inferred_batches = []
         all_target_batches = []
@@ -162,7 +169,7 @@ class TrainerHub:
         all_inferred_batches = torch.cat(all_inferred_batches, dim=0)
         all_target_batches = torch.cat(all_target_batches, dim=0)
         
-        test_metrics = calculate_test_results(all_inferred_batches, all_target_batches, self.task_type, self.label_size, self.label_scale)
+        test_metrics = calculate_test_results(all_inferred_batches, all_target_batches, self.task_type, self.label_size, self.label_scale, is_analyze=False)
         return test_metrics
     
     def should_select_last_sequence(self, padding_mask):

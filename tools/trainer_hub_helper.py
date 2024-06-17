@@ -1,9 +1,9 @@
 import time
 from tools.wandb_logger import wandb_init 
 from tools.loader import save_trainer, setup_directories
-from tools.logger import tensorboard_log_train_metrics, log_test_results
-from tools.print import print_checkpoint_info, print_test_results
-from tools.wandb_logger import wandb_log_train_metrics, wandb_log_eval_data, wandb_image
+from tools.logger import tensorboard_log_train_metrics, log_eval_results
+from tools.print import print_checkpoint_info, print_results
+from tools.wandb_logger import wandb_log_train_metrics, wandb_log_train_data, wandb_log_eval_data, wandb_image
 from tools.image_debugger import ImageDebugger
 from tools.logger import get_log_name
 import logging
@@ -76,7 +76,7 @@ class TrainerHubHelper:
         return self.model_path if self.cnt_print % 2 == 0 else self.temp_path
 
     def finalize_training_step(self, epoch_idx, iter_idx, len_dataloader, 
-                               ccnet_metric=None, encoder_metric=None, test_results=None) -> None:
+                               ccnet_metric=None, encoder_metric=None, train_results = None, test_results=None) -> None:
         """Perform end-of-step operations including metrics update and checkpointing."""
 
         """Update training metrics if available."""
@@ -86,31 +86,34 @@ class TrainerHubHelper:
             self.encoder_metrics += encoder_metric
         
         if self.should_checkpoint():
-            self.perform_checkpoint_operations(epoch_idx, iter_idx, len_dataloader, test_results)
+            self.perform_checkpoint_operations(epoch_idx, iter_idx, len_dataloader, train_results, test_results)
 
         """Increment iteration and checkpoint counters."""
         self.iters += 1
         self.cnt_checkpoints += 1
 
-    def perform_checkpoint_operations(self, epoch_idx, iter_idx, len_dataloader, test_results=None):
+    def perform_checkpoint_operations(self, epoch_idx, iter_idx, len_dataloader, train_results=None, test_results=None):
         """Handle all operations required at checkpoint: logging, saving, and metrics reset."""
         time_cost = time.time() - self.pivot_time
         wb_image = self.update_image()
         
-        self.log_checkpoint_details(time_cost, epoch_idx, iter_idx, len_dataloader, wb_image)
+        self.log_checkpoint_details(time_cost, epoch_idx, iter_idx, len_dataloader, train_results, wb_image)
         self.save_trainers()
         self.reset_metrics()
 
+        if self.use_ccnet and train_results is not None and self.use_wandb:
+            wandb_log_train_data(train_results, wb_image, iters = self.iters)
+                
         if self.use_ccnet and test_results is not None:
-            self.handle_test_results(test_results)
+            self.handle_results(test_results)
             if self.use_wandb:
                 wandb_log_eval_data(test_results, wb_image, iters = self.iters)
                 
-    def handle_test_results(self, test_results=None):
+    def handle_results(self, test_results=None):
         """Print and log test results if core is used."""
         if self.use_print:
-            print_test_results(test_results)
-        log_test_results(self.tensorboard, self.iters, test_results)
+            print_results(test_results, is_eval=True)
+        log_eval_results(self.tensorboard, self.iters, test_results)
 
     def update_image(self):
         if self.use_image_debugger:
@@ -136,7 +139,7 @@ class TrainerHubHelper:
         if self.use_encoder:
             save_trainer(save_path, encoder_trainer)
             
-    def log_checkpoint_details(self, time_cost, epoch_idx, iter_idx, len_dataloader, wb_image):
+    def log_checkpoint_details(self, time_cost, epoch_idx, iter_idx, len_dataloader, train_results, wb_image):
         trainer = self.parent.ccnet_trainer if self.parent.ccnet_trainer is not None else self.parent.encoder_trainer
         
         """Calculates average metrics over the checkpoints."""
@@ -144,7 +147,7 @@ class TrainerHubHelper:
         avg_encoder_metric = self.encoder_metrics / float(self.num_checkpoints) if self.use_encoder else None
         
         if self.use_print:
-            print_checkpoint_info(self.parent, time_cost, epoch_idx, iter_idx, len_dataloader, avg_ccnet_metric, avg_encoder_metric)
+            print_checkpoint_info(self.parent, time_cost, epoch_idx, iter_idx, len_dataloader, avg_ccnet_metric, avg_encoder_metric, train_results)
 
         tensorboard_log_train_metrics(self.tensorboard, self.iters, ccnet_metric=avg_ccnet_metric, encoder_metric=avg_encoder_metric)
         """Logs training data to Weights & Biases if enabled."""

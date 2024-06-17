@@ -155,6 +155,15 @@ def wandb_log_train_metrics(time_cost, lr, ccnet_metric=None, encoder_metric=Non
     train_metrics = {**ccnet_metric, **encoder_metric}
     _wandb_log_data(train_metrics, log_data, iters = iters)
 
+def wandb_log_train_data(metrics, images, iters):
+    additional_logs = {}
+    if images is not None:
+        additional_logs["WB Images"] = images
+        
+    log_data = {**additional_logs}
+    train_metrics = {"Training": metrics}
+    _wandb_log_data(train_metrics, log_data=log_data, iters = iters)
+    
 def wandb_log_eval_data(metrics, images, iters):
     additional_logs = {}
     if images is not None:
@@ -163,6 +172,15 @@ def wandb_log_eval_data(metrics, images, iters):
     log_data = {**additional_logs}
     eval_metrics = {"Evaluate": metrics}
     _wandb_log_data(eval_metrics, log_data=log_data, iters = iters)
+
+def wandb_log_test_data(metrics, iters, images=None):
+    additional_logs = {}
+    if images is not None:
+        additional_logs["WB Images"] = images
+        
+    log_data = {**additional_logs}
+    test_metrics = {"Test": metrics}
+    _wandb_log_data(test_metrics, log_data=log_data, iters = iters)
 
 def wandb_image(image):
     return wandb.Image(image)

@@ -97,7 +97,7 @@ def tensorboard_log_train_metrics(tensorboard, iteration: int, ccnet_metric: Opt
 
     tensorboard.flush()  # Ensure all metrics are written out
 
-def log_test_results(tensorboard, iters, results):
+def log_eval_results(tensorboard, iters, results):
     """
         Log Test metric into tensorboard.
 
@@ -115,5 +115,5 @@ def log_test_results(tensorboard, iters, results):
     """
     if tensorboard is not None:
         for metric_name, metric_value in results.items():
-            tensorboard.add_scalar(f"Test/{metric_name}", metric_value, iters)
+            tensorboard.add_scalar(f"Eval/{metric_name}", metric_value, iters)
         tensorboard.flush()

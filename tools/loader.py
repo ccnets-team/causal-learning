@@ -2,7 +2,7 @@ import os
 import torch.utils.data
 from torch.nn.utils.rnn import pad_sequence
 
-def setup_directories(base_path = '../'):
+def setup_directories(base_path = '../../'):
     set_model_path = os.path.join(base_path, "models")
     set_temp_path = os.path.join(base_path, "models/temp")
     set_log_path = os.path.join(base_path, "logs")

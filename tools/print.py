@@ -13,6 +13,7 @@ COPYRIGHT (c) 2022. CCNets. All Rights reserved.
 DEFAULT_PRINT_INTERVAL = 100
 
 import pandas as pd
+import numpy as np
 from IPython.display import display
 from tools.setting.ml_params import MLParameters
 from tools.setting.data_config import DataConfig
@@ -43,7 +44,7 @@ def print_lr(*_optimizers):
             for optimizer in optimizers_group:
                 print(f'Opt-{type(optimizer).__name__} LR: {optimizer.param_groups[0]["lr"]}')
 
-def print_test_results(metrics):
+def print_results(metrics, is_eval=False):
     """
         Create and print string of test metrics.
         
@@ -68,15 +69,21 @@ def print_test_results(metrics):
             txt : str
                 Returns a string containing metrics information.
     """
-    print('--------------------Test Metrics------------------------')
+    if is_eval==False:
+        print()
+    else:
+        print('=====================Eval Metrics========================')
+
     for label_type, metric in metrics.items():
-        text = (f'{label_type}: %.4f'
-            % metric)
-        print(text)
+        if np.isscalar(metric):
+            text = (f'{label_type}: %.4f'
+                % metric)
+            print(text)
+
     print()
     
 def print_checkpoint_info(parent, time_cost, epoch_idx, iter_idx, len_dataloader, 
-                            ccnet_metric = None, encoder_metric = None):
+                            ccnet_metric = None, encoder_metric = None, train_metrics=None):
     """Prints formatted information about the current checkpoint."""
     ccnet = parent.ccnet
     encoder = parent.encoder
@@ -92,7 +99,8 @@ def print_checkpoint_info(parent, time_cost, epoch_idx, iter_idx, len_dataloader
         print_lr(ccnet_trainer.optimizers)
     elif encoder_metric is not None:
         print_lr(encoder_trainer.optimizers)
-    print('--------------------Training Metrics--------------------')
+    print('=====================Train Metrics=======================')
+    
     if use_encoder and encoder_metric is not None:
         encoder_type = "Encoder" 
         encoder_network_name = encoder.model_name.capitalize()
@@ -101,6 +109,8 @@ def print_checkpoint_info(parent, time_cost, epoch_idx, iter_idx, len_dataloader
         ccnet_type = "CCNet" 
         ccnet_name = ccnet.model_name.capitalize()
         print_trainer(ccnet_type, ccnet_name, ccnet_metric)
+    if train_metrics is not None:
+        print_results(train_metrics, is_eval=False)
 
 # Main function to print all configurations including ML parameters and data configurations.
 def print_ml_params(trainer_name, ml_params: MLParameters, data_config: DataConfig):
@@ -179,3 +189,51 @@ def print_dataconfig(data_config):
     
     display(df)  # Use IPython.display to render the DataFrame cleanly
     print("\n")
+
+
+# Function to print CCNetAnalysis results.
+def print_analysis_result(task_type, label_size, metrics, label_scale=None):
+    label_names = list(range(label_size))
+    label_names = [str(num) for num in label_names]
+
+    if 'confusion_matrix' in metrics:
+        conf_matrix = metrics.pop('confusion_matrix')
+    else:
+        conf_matrix = [[0, 0], [0, 0]] # Default confusion matrix 
+
+    # 최대 길이 계산
+    max_metric_key_length = max(len(key) for key in metrics.keys())
+    max_value_length = max(len(f"{value:.4f}") for value in metrics.values())
+    metric_header_length = max_metric_key_length + max_value_length + 3
+    matrix_header_length = 3 * len(label_names) * 5  
+    
+    # 헤더 줄
+    print("Analysis Results")
+    print("Task Type:", task_type)
+    print("Label Size:", label_size)
+    print("=" * metric_header_length + "=" * 5 + "=" * matrix_header_length)
+    print()
+    print("Performance Metrics".ljust(metric_header_length) + " " * 5 + "Confusion Matrix".center(matrix_header_length))
+    print("=" * metric_header_length + " " * 5 + "=" * matrix_header_length)
+    print(f"{'Metric':<{max_metric_key_length}} | {'Value':>{max_value_length}}", end=" " * 5)
+    table_header = 'True\Pred'
+    print(f"{table_header:>{10}} | {' '.join([name.center(10) for name in label_names])}")
+    print("-" * metric_header_length + " " * 5 + "-" * matrix_header_length)
+
+    if task_type == 'binary_classification' or task_type == 'multi_class_classification':
+        metrics_list = list(metrics.items())
+        for i in range(max(len(metrics_list), len(conf_matrix))):
+            metric_line = " " * metric_header_length
+            conf_line = " " * matrix_header_length
+
+            if i < len(metrics_list):
+                metric, value = metrics_list[i]
+                metric_line = f"{metric:<{max_metric_key_length}} | {value:>{max_value_length}.4f}"
+
+            if i < len(conf_matrix):
+                conf_line = f"{label_names[i]:>{10}} | {' '.join(f'{num:^10}' for num in conf_matrix[i])}"
+
+            print(metric_line + " " * 5 + conf_line)
+
+        print("=" * metric_header_length + "=" * 5 + "=" * matrix_header_length)
+
