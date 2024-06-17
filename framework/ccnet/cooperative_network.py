@@ -326,7 +326,7 @@ class CooperativeNetwork:
             self.__set_train(True)
         return reconstructed_data
     
-    def counter_generate(self, input_data, condition_data, padding_mask=None, batch_size=256):
+    def causal_generate(self, input_data, desired_target, padding_mask=None, batch_size=256):
         """
         Generates a new version of the input data by integrating counterfactual conditions. This function performs a
         three-step process: encoding the input, explaining to generate an explanation vector, and then producing
@@ -334,7 +334,7 @@ class CooperativeNetwork:
 
         Args:
             input_data (Tensor): The original input data tensor that you want to generate counterfactuals for.
-            condition_data (Tensor): The counterfactual condition data tensor that specifies the desired state or conditions
+            desired_target (Tensor): The counterfactual condition data tensor that specifies the desired state or conditions
                                     for generating the counterfactual outcomes.
             padding_mask (Optional[Tensor]): An optional mask tensor to ignore certain parts of the input data during processing.
                                             Default is None.
@@ -349,14 +349,14 @@ class CooperativeNetwork:
             encoded_input = self.encode(input_data, padding_mask, batch_size=batch_size)
             if self.use_seq:
                 original_dim = len(encoded_input.shape)
-                encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
-                condition_data = adjust_tensor_dim(condition_data, target_dim=3)
+                encoded_input = adjust_tensor_dim(encoded_input, desired_target_dim=3)
+                desired_target = adjust_tensor_dim(desired_target, desired_target_dim=3)
             explanation = self._explain(encoded_input, padding_mask, batch_size=batch_size)
-            counter_output = self._produce(condition_data, explanation, padding_mask, batch_size=batch_size)
+            counter_output = self._produce(desired_target, explanation, padding_mask, batch_size=batch_size)
             if self.use_seq:
                 counter_output = adjust_tensor_dim(counter_output, target_dim=original_dim)
-            counter_generated_data = self.decode(counter_output, padding_mask, batch_size=batch_size)
+            causal_generated_data = self.decode(counter_output, padding_mask, batch_size=batch_size)
             self.__set_train(True)
-        return counter_generated_data
+        return causal_generated_data
 
      
