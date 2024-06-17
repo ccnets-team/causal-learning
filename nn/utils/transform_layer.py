@@ -6,16 +6,6 @@ import torch
 from torch import nn
 from nn.utils.init import get_activation_function
 
-class ScaleTransformLayer(nn.Module):
-    def __init__(self, feature_size):
-        super(ScaleTransformLayer, self).__init__()
-        self.weight = nn.Parameter(torch.ones(feature_size))
-        self.bias = nn.Parameter(torch.zeros(feature_size))
-
-    def forward(self, x):
-        tranformed_x = x * self.weight + self.bias
-        return tranformed_x
-    
 class FeatureTransformLayer(nn.Module):
     """ Layer that applies a linear transformation to the input features """
     def __init__(self, input_features, output_features):
@@ -60,16 +50,15 @@ class TransformLayer(nn.Module):
             # Extract sizes from shapes if not using images
             input_size = input_shape[-1] if isinstance(input_shape, (list, torch.Size, tuple)) else input_shape
             output_size = output_shape[-1] if isinstance(output_shape, (list, torch.Size, tuple)) else output_shape
+            
+            if input_size != output_size:
+                # Add the first activation layer if it's not Identity
+                first_activation_layer = get_activation_function(first_act_fn, input_size)
+                if not isinstance(first_activation_layer, nn.Identity):
+                    layers.append(first_activation_layer)
 
-            # Add the first activation layer if it's not Identity
-            first_activation_layer = get_activation_function(first_act_fn, input_size)
-            if not isinstance(first_activation_layer, nn.Identity):
-                layers.append(first_activation_layer)
-
-            # Add transformation and scale layers
-            layers.append(FeatureTransformLayer(input_size, output_size))
-            if last_act_fn == "none":
-                layers.append(ScaleTransformLayer(output_size))
+                # Add transformation and scale layers
+                layers.append(FeatureTransformLayer(input_size, output_size))
 
             # Add the last activation layer if it's not Identity
             last_activation_layer = get_activation_function(last_act_fn, output_size)

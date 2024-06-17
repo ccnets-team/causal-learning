@@ -36,7 +36,7 @@ class Explainer(nn.Module):
 
         input_shape, d_model, output_size, reset_pretrained = (network_params.obs_shape, 
                                                                network_params.d_model, 
-                                                               network_params.z_dim,
+                                                               network_params.e_dim,
                                                                network_params.reset_pretrained)
 
         self.embedding_layer = TransformLayer(input_shape, d_model, last_act_fn='tanh')

@@ -2,10 +2,8 @@ from tools.setting.ml_params import GPT_COOPERATIVE_NETWORK
 from tools.setting.ml_params import MLP_COOPERATIVE_NETWORK, TABNET_COOPERATIVE_NETWORK
 from tools.setting.ml_params import RESNET18_COOPERATIVE_NETWORK, RESNET34_COOPERATIVE_NETWORK, RESNET50_COOPERATIVE_NETWORK
 from copy import deepcopy
-from tools.setting.ml_params import ModelConfig
-import torch
 
-def configure_model(model_name, params, obs_shape, condition_dim, z_dim):
+def configure_model(model_name, params, obs_shape, y_dim, e_dim):
     cooperative_network = None
     if  model_name == 'gpt':
         cooperative_network = GPT_COOPERATIVE_NETWORK
@@ -26,8 +24,8 @@ def configure_model(model_name, params, obs_shape, condition_dim, z_dim):
         
     params.model_name = model_name
     params.obs_shape = obs_shape
-    params.condition_dim = condition_dim    
-    params.z_dim = z_dim    
+    params.y_dim = y_dim    
+    params.e_dim = e_dim    
     return cooperative_network, params
 
 def configure_encoder_network(model_name, model_config, data_config):
@@ -37,7 +35,7 @@ def configure_encoder_network(model_name, model_config, data_config):
         data_config.state_size = det_size
     else:
         stoch_size, det_size = data_config.state_size, data_config.state_size
-    return configure_model(model_name, model_config, obs_shape, condition_dim=stoch_size, z_dim=det_size)
+    return configure_model(model_name, model_config, obs_shape, y_dim=stoch_size, e_dim=det_size)
     
 def configure_ccnet_network(model_name, model_config, data_config, use_encoder):
     obs_shape = data_config.obs_shape if data_config.state_size is None else [data_config.state_size]
@@ -62,7 +60,7 @@ def configure_ccnet_network(model_name, model_config, data_config, use_encoder):
         data_config.explain_size = explain_size
     else:
         explain_size = data_config.explain_size
-    return configure_model(model_name, model_config, obs_shape, condition_dim=label_size, z_dim=explain_size)
+    return configure_model(model_name, model_config, obs_shape, y_dim=label_size, e_dim=explain_size)
 
 def modify_network_params(network_params, attribute=None, value=None):
     """

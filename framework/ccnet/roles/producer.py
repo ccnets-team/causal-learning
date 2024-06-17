@@ -32,15 +32,15 @@ class Producer(nn.Module):
         """
         super(Producer, self).__init__()
         
-        output_shape, d_model, explain_size, condition_size, reset_pretrained = (network_params.obs_shape, 
+        output_shape, d_model, explain_size, target_size, reset_pretrained = (network_params.obs_shape, 
                                                                                  network_params.d_model, 
-                                                                                 network_params.z_dim, 
-                                                                                 network_params.condition_dim,
+                                                                                 network_params.e_dim, 
+                                                                                 network_params.y_dim,
                                                                                  network_params.reset_pretrained)
         self.__model_name = self._get_name()
         
         # Embedding layer for combined condition and explanation inputs
-        self.embedding_layer = JointLayer(self.__model_name, d_model, condition_size, explain_size)
+        self.embedding_layer = JointLayer(self.__model_name, d_model, target_size, explain_size)
         
         producer_config = CCNetConfig(network_params, self.__model_name, d_model, output_shape, act_fn)
         

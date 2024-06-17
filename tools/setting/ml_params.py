@@ -25,8 +25,8 @@ class ModelConfig:
     dropout: float = 0.05
     
     obs_shape: list = field(default_factory=list)
-    condition_dim: int = None
-    z_dim: int = None
+    y_dim: int = None
+    e_dim: int = None
     
     reset_pretrained: bool = False
 
@@ -37,8 +37,8 @@ class ModelConfig:
             self.d_model = 0
             self.dropout = 0
             self.obs_shape = []
-            self.condition_dim = None
-            self.z_dim = None
+            self.y_dim = None
+            self.e_dim = None
             self.reset_pretrained = False
     
 class CCNetConfig:

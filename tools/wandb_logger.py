@@ -54,7 +54,7 @@ def wandb_init(data_config, ml_params):
     
     data_config_dict = convert_to_dict(data_config)
     
-    delete_keys = ['obs_shape', 'condition_dim', 'z_dim']
+    delete_keys = ['obs_shape', 'y_dim', 'e_dim']
     if ml_params.ccnet_config is not None:
         ccnet_config_dict = convert_to_dict(ml_params.ccnet_config)
         ml_params.ccnet_config = remove_fields(ccnet_config_dict, delete_keys)

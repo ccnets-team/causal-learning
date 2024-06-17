@@ -43,8 +43,8 @@ class CooperativeNetwork:
         self.producer =  Producer(model_networks[2], network_params, act_fn="none").to(device)
         self.networks = [self.explainer, self.reasoner, self.producer]
         
-        self.explain_size = network_params.z_dim
-        self.label_size = network_params.condition_dim
+        self.explain_size = network_params.e_dim
+        self.label_size = network_params.y_dim
         self.device = device
         self.task_act_fn = task_act_fn
         self.encoder = encoder

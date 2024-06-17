@@ -23,8 +23,8 @@ class CooperativeEncodingNetwork:
         self.networks = [self.explainer, self.reasoner, self.producer]
 
         self.obs_shape = network_params.obs_shape
-        self.det_size = network_params.z_dim
-        self.stoch_size = network_params.condition_dim
+        self.det_size = network_params.e_dim
+        self.stoch_size = network_params.y_dim
         self.device = device
         self.task_type = data_config.task_type 
         

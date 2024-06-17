@@ -80,8 +80,8 @@ class Reasoner(nn.Module):
         """
         input_shape = network_params.obs_shape
         d_model = network_params.d_model
-        explain_size = network_params.z_dim
-        output_size = network_params.condition_dim
+        explain_size = network_params.e_dim
+        output_size = network_params.y_dim
 
         if len(input_shape) != 1:  # Handle image data
             extended_obs_shape = extend_obs_shape_channel(input_shape)
