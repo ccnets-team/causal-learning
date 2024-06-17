@@ -16,24 +16,19 @@ class EncoderTabNet(nn.Module):
         d_model = network_config.d_model
         num_layers = network_config.num_layers
         output_size = network_config.output_shape[-1]
-        n_v = max(output_size, 8)
         
         # Initialize group attention matrix with ones and move to appropriate device
-        group_attention_matrix = torch.ones(1, network_config.d_model).to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+        group_attention_matrix = torch.ones(1, d_model).to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
         
         self.network = TabNetEncoder(
             input_dim=d_model,
             output_dim=d_model,
-            n_d = n_v,
-            n_a = n_v,
+            n_d = d_model,
+            n_a = d_model,
             n_steps = num_layers,
             group_attention_matrix = group_attention_matrix
         )
-        self.final_layer = TransformLayer(n_v, output_size, first_act_fn='relu', last_act_fn=network_config.act_fn)
-        
-        self.d_model = d_model
-        self.n_div = self.d_model // n_v
-        self.n_rest = self.d_model % n_v
+        self.final_layer = TransformLayer(d_model, output_size, first_act_fn='relu', last_act_fn=network_config.act_fn)
 
     def forward(self, x, padding_mask=None):
         steps_output, _ = self.network(x)
