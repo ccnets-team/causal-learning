@@ -49,7 +49,7 @@ def determine_activation_by_task_type(task_type):
     - ValueError: If an unsupported task type is provided.
     """
     if task_type in ["binary_classification"]: # binary classification is one-hot encoded
-        return 'none'
+        return 'sigmoid'
     elif task_type in ["multi_class_classification", "compositional_regression"]: # binary classification is one-hot encoded
         return 'softmax'
     elif task_type in ["multi_label_classification"]:
@@ -73,7 +73,10 @@ def generate_condition_data(label_shape, task_type, device):
     Returns:
     - Tensor: A tensor of condition data appropriate for the specified task type, all in float dtype.
     """
-    if task_type in ["binary_classification", "multi_class_classification", "compositional_regression"]: # binary classification is one-hot encoded
+    if task_type in ["binary_classification"]:
+        condition_data = torch.rand(label_shape).to(device)
+        condition_data = (condition_data > 0.5).float()
+    elif task_type in ["multi_class_classification", "compositional_regression"]: 
         logits = torch.randn(label_shape).to(device)
         # Use softmax to simulate probabilities across classes
         condition_data = torch.softmax(logits, dim=-1)

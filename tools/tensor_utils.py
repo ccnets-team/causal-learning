@@ -161,17 +161,10 @@ def convert_to_one_hot(target_batch, label_size, task_type):
     if target_batch is None or label_size is None or task_type is None:
         return None
     
-    # Mask to identify locations with -1 which should remain unchanged after encoding
-    target_label_size = None
-    if task_type == 'binary_classification':
-        target_label_size = 2
-    elif task_type == 'multi_class_classification':
-        target_label_size = label_size
-
-    if target_label_size is not None and target_batch.shape[-1] != target_label_size:
+    if task_type == 'multi_class_classification' and target_batch.shape[-1] != label_size:
         mask = target_batch == -1
         target_batch[mask] = 0
-        target_batch = torch.nn.functional.one_hot(target_batch.long(), num_classes=target_label_size).float().squeeze(-2)
+        target_batch = torch.nn.functional.one_hot(target_batch.long(), num_classes=label_size).float().squeeze(-2)
         expanded_mask = mask.expand_as(target_batch)    
         target_batch[expanded_mask] = -1
     return target_batch

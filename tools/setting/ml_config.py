@@ -43,7 +43,7 @@ def configure_ccnet_network(model_name, model_config, data_config, use_encoder):
     if data_config.task_type == 'ordinal_regression':
         label_size = 1
     elif data_config.task_type == 'binary_classification':        
-        label_size = 2
+        label_size = 1
     else:
         label_size = data_config.label_size
     if data_config.explain_size is None:

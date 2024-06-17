@@ -21,8 +21,11 @@ def transform_labels_to_original_scale(inferred_y, target_y, task_type, label_si
 
 def calculate_test_results(inferred_y, target_y, task_type, label_size, label_scale):
     inferred_y, target_y = transform_labels_to_original_scale(inferred_y, target_y, task_type, label_size, label_scale)
-    
-    if task_type == 'binary_classification' or task_type == 'multi_class_classification':
+        
+    if task_type == 'binary_classification':
+        inferred_y = (inferred_y > 0.5).int()
+        target_y = (target_y > 0.5).int()
+    elif task_type == 'multi_class_classification':
         inferred_y = torch.argmax(inferred_y, dim=-1)
         target_y = torch.argmax(target_y, dim=-1)  # Assuming one-hot encoding of target
     elif task_type == "ordinal_regression":
@@ -102,7 +105,7 @@ def get_test_results(inferred_y, target_y, task_type, num_classes, average='macr
         print("inferred_y is not tensor")
     if not isinstance(target_y, torch.Tensor):
         target_y = convert_to_tensor(target_y)
-
+        
     # Move tensors to CPU for compatibility with sklearn metrics
     inferred_y = inferred_y.cpu()
     target_y = target_y.cpu()
