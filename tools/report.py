@@ -125,6 +125,10 @@ def get_test_results(inferred_y, target_y, task_type, num_classes, average='macr
         metrics['recall'] = recall_score(target_y_np, inferred_y_np, average=average, labels=range(num_classes), zero_division=0)
         metrics['f1_score'] = f1_score(target_y_np, inferred_y_np, average=average, labels=range(num_classes), zero_division=0)
         
+        if task_type == 'binary_classification':
+            # Calculate ROC curve and AUC for binary classification
+            metrics['roc_auc'] = roc_auc_score(target_y_np, inferred_y_np)
+        
         if is_analyze == True:
             if task_type == 'binary_classification':
                 loss_fn = torch.nn.BCEWithLogitsLoss()
