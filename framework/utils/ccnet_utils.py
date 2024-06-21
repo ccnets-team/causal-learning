@@ -1,7 +1,5 @@
 import torch
-import torch.nn.functional as F
 import numpy as np
-from tools.setting.ml_config import modify_network_params
 
 def convert_explanation_to_image_shape(explanation, image_shape, explain_size, image_elements):
     """
