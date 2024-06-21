@@ -6,7 +6,7 @@
 
 import torch.nn as nn
 from nn.utils.init import init_weights
-from tools.setting.ml_params import CCNetConfig
+from tools.setting.ml_params import NetworkConfig
 from nn.utils.transform_layer import TransformLayer
 
 class Explainer(nn.Module):
@@ -40,7 +40,7 @@ class Explainer(nn.Module):
                                                                network_params.reset_pretrained)
 
         self.embedding_layer = TransformLayer(input_shape, d_model, last_act_fn='tanh')
-        explainer_config = CCNetConfig(network_params, self.__model_name, self.embedding_layer.output_shape, output_size, act_fn)
+        explainer_config = NetworkConfig(network_params, self.__model_name, self.embedding_layer.output_shape, output_size, act_fn)
 
         self.net = net(explainer_config)
         

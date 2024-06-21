@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 from nn.utils.init import init_weights
 from nn.utils.joint_layer import JointLayer
-from tools.setting.ml_params import CCNetConfig
+from tools.setting.ml_params import NetworkConfig
 
 class Producer(nn.Module):
     """
@@ -42,7 +42,7 @@ class Producer(nn.Module):
         # Embedding layer for combined condition and explanation inputs
         self.embedding_layer = JointLayer(self.__model_name, d_model, target_size, explain_size)
         
-        producer_config = CCNetConfig(network_params, self.__model_name, d_model, output_shape, act_fn)
+        producer_config = NetworkConfig(network_params, self.__model_name, d_model, output_shape, act_fn)
         
         # Initialize the main network module
         self.net = net(producer_config)

@@ -73,7 +73,7 @@ def modify_network_params(network_params, attribute=None, value=None):
     
     return copy_network_params
 
-def _determine_max_iters_and_epoch(ml_params):
+def determine_max_iters_and_epoch(ml_params):
     """
     The training duration follows based on the shortest ends either 'max_iters' or 'num_epoch', unless one is missing.
     

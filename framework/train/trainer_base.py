@@ -8,8 +8,6 @@ COPYRIGHT (c) 2022. CCNets. All Rights reserved.
 
 from nn.utils.init import set_random_seed
 from framework.train.manager.optimization_manager import OptimizationManager
-from framework.diffusion.noise_diffuser import NoiseDiffuser
-from framework.utils.ccnet_utils import reduce_tensor
 import torch
 
 # Base class for trainers
@@ -27,19 +25,10 @@ class TrainerBase(OptimizationManager):
         OptimizationManager.__init__(self, networks, learning_params)
         self.networks = networks
         self.initial_lr = optimization_params.learning_rate
-        self.enable_diffusion = algorithm_params.enable_diffusion
         self.error_function = algorithm_params.error_function
         
         self.device = device
         self.task_type = data_config.task_type
-        self.noise_diffuser = NoiseDiffuser(device = device) if self.enable_diffusion else None
-
-    def prepare_data(self, x, y = None):
-        if self.enable_diffusion:
-            input_data, target_data, input_y = self.noise_diffuser.diffuse(x, y, self.task_type)
-        else:
-            input_data = x; target_data = x; input_y = y
-        return input_data, target_data, input_y
 
     def set_train(self, train: bool):
         for network in self.networks:

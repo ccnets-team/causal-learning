@@ -32,12 +32,11 @@ class TrainerHubHelper:
         self.use_image = len(data_config.obs_shape) != 1
         
         self.is_ccnet_seq = self.parent.is_ccnet_seq
-        self.use_ccnet = self.parent.use_ccnet
         self.use_image_debugger = data_config.show_image_indices is not None
         
         if self.use_image_debugger:
             image_model = self.parent.ccnet
-            self.image_debugger = ImageDebugger(image_model, data_config, self.device, use_ccnet = self.use_ccnet)
+            self.image_debugger = ImageDebugger(image_model, data_config, self.device)
         
         self.data_config = data_config 
         self.ml_params = ml_params
@@ -96,10 +95,10 @@ class TrainerHubHelper:
         self.save_trainers()
         self.reset_metrics()
 
-        if self.use_ccnet and train_results is not None and self.use_wandb:
+        if train_results is not None and self.use_wandb:
             wandb_log_train_data(train_results, wb_image, iters = self.iters)
                 
-        if self.use_ccnet and test_results is not None:
+        if test_results is not None:
             self.handle_results(test_results)
             if self.use_wandb:
                 wandb_log_eval_data(test_results, wb_image, iters = self.iters)

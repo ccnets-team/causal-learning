@@ -17,14 +17,14 @@ from tools.setting.data_config import DataConfig
 from torch.utils.data import Dataset
 
 from tools.loader import get_data_loader, get_test_loader, _load_trainer
-from nn.utils.init import set_random_seed
 from tools.wandb_logger import wandb_end, wandb_log_test_data
 from tools.report import calculate_test_results
 from tools.print import print_ml_params, DEFAULT_PRINT_INTERVAL
 
 from framework.ccnet.cooperative_network import CooperativeNetwork
-from tools.setting.ml_config import configure_ccnet_network, _determine_max_iters_and_epoch
+from tools.setting.ml_config import configure_ccnet_network, determine_max_iters_and_epoch
 from tools.tensor_utils import select_last_sequence_elements, manage_batch_dimensions, prepare_batches, get_random_batch
+from nn.utils.init import set_random_seed
 import torch
 
 class TrainerHub:
@@ -50,12 +50,11 @@ class TrainerHub:
             wandb_end()
 
     def initialize_usage_flags(self, ml_params):
-        self.use_ccnet = ml_params.ccnet_network != 'none'
         self.is_ccnet_seq = ml_params.ccnet_network == 'gpt'
         
     def initialize_training_params(self, ml_params):
         
-        _determine_max_iters_and_epoch(ml_params)
+        determine_max_iters_and_epoch(ml_params)
         
         training_params = ml_params.training
         batch_size = training_params.batch_size
@@ -100,7 +99,7 @@ class TrainerHub:
                 self.helper.finalize_training_step(epoch, iters, len(dataloader), ccnet_metric, train_results, test_results)
 
     def evaluate(self, dataset):
-        if dataset is None or not self.use_ccnet:
+        if dataset is None:
             return None
         
         if self.helper.should_checkpoint():

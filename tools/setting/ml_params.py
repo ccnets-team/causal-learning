@@ -1,10 +1,10 @@
-import pandas as pd
 from nn.gpt import GPT
 from nn.resnet import ResNet18, ResNet34, ResNet50
 from nn.transpose_resnet import TransposeResnet
 from nn.mlp import MLP
 from nn.tabnet import EncoderTabNet, DecoderTabNet
 from dataclasses import dataclass, field
+from typing import Generator, Any
 import torch
 
 GPT_COOPERATIVE_NETWORK = [GPT, GPT, GPT]
@@ -17,44 +17,59 @@ MLP_COOPERATIVE_NETWORK = [MLP, MLP, MLP]
 TABNET_COOPERATIVE_NETWORK = [EncoderTabNet, EncoderTabNet, DecoderTabNet]
 
 @dataclass
-class ModelConfig:
-    model_name: str
-    
+class BaseNetworkConfig:
     num_layers: int = 5
     d_model: int = 256
     dropout: float = 0.05
-    
     obs_shape: list = field(default_factory=list)
-    y_dim: int = None
-    e_dim: int = None
-    
     reset_pretrained: bool = False
 
-    def __post_init__(self):
-        if self.model_name.lower() == 'none':
-            # Handle the case where no model is required
-            self.num_layers = 0
-            self.d_model = 0
-            self.dropout = 0
-            self.obs_shape = []
-            self.y_dim = None
-            self.e_dim = None
-            self.reset_pretrained = False
-    
-class CCNetConfig:
-    def __init__(self, model_config: ModelConfig, role_name, input_shape, output_shape, act_fn):
-        super(CCNetConfig, self).__init__()
-        self.role_name = role_name
+    def reset(self):
+        """Reset all attributes to their default values."""
+        self.num_layers = 0
+        self.d_model = 0
+        self.dropout = 0
+        self.obs_shape = []
+        self.reset_pretrained = False
+        self.device = None
 
-        # if input_shape is not a list, torch.Size, or tuple, convert it to a list
+    def apply_config(self, config_gen: Generator):
+        """
+        Apply settings from a generator.
+        
+        Args:
+            config_gen (generator): Generator yielding key-value pairs.
+        """
+        for key, value in config_gen:
+            setattr(self, key, value)
+
+    def config_generator(self):
+        """
+        Generator to yield key-value pairs from a BaseNetworkConfig instance.
+        """
+        for key, value in self.__dict__.items():
+            yield key, value
+    
+class NetworkConfig(BaseNetworkConfig):
+    def __init__(self, base_network_config: BaseNetworkConfig, network_role_name: str, input_shape: Any, output_shape: Any, act_fn: str):
+        super().__init__()
+        self.apply_config(base_network_config.config_generator())  # Call the generator
+
+        self.network_role_name = network_role_name
         self.input_shape = input_shape if isinstance(input_shape, (list, torch.Size, tuple)) else [input_shape]
         self.output_shape = output_shape if isinstance(output_shape, (list, torch.Size, tuple)) else [output_shape]
         self.act_fn = act_fn
+                    
+@dataclass
+class CCNetConfig(BaseNetworkConfig):
+    network_name: str = ''
+    y_dim: int = None
+    e_dim: int = None
+    device: torch.device = None
 
-        self.d_model = model_config.d_model
-        self.dropout = model_config.dropout
-        self.num_layers = model_config.num_layers
-        self.reset_pretrained = model_config.reset_pretrained
+    def __post_init__(self):
+        if self.network_name.lower() == 'none':
+            self.reset()
         
 @dataclass
 class ModelParameters:
@@ -63,15 +78,15 @@ class ModelParameters:
     
     Attributes:
         ccnet_network (str): Identifier for the core model. A value of 'none' indicates no core model is used.
-        ccnet_config (ModelConfig or None): Configuration object for the core model, if applicable.
+        ccnet_config (CCNetConfig or None): Configuration object for the core model, if applicable.
     """
     ccnet_network: str = 'gpt'
-    ccnet_config: ModelConfig = field(init=False)
+    ccnet_config: CCNetConfig = field(init=False)
 
     def __post_init__(self):
         # Conditionally initialize the ccnet_config
         if self.ccnet_network.lower() != 'none':
-            self.ccnet_config = ModelConfig(model_name=self.ccnet_network)
+            self.ccnet_config = CCNetConfig(model_name=self.ccnet_network)
         else:
             self.ccnet_config = None  # Properly handle 'none' to avoid creating a config
 
@@ -137,19 +152,16 @@ class AlgorithmParameters:
     Parameters defining the algorithm configuration for machine learning models.
     
     Attributes:
-        enable_diffusion (bool): Flag to enable the diffusion model, which is combined with the NoiseDiffuser class.
         reset_pretrained (bool): Determines if pretrained models are used for the ccnet network. At least one network in the ccnet uses a pretrained model.
         error_function (str): Error function used for the cooperative network (ccnet) which includes explainer, reasoner, and producer networks.
                               Two options are available: 'mae' (Mean Absolute Error) or 'mse' (Mean Squared Error).
                               'mae' is good for general cases or outliers, while 'mse' is suitable for generation tasks.
     """
-    enable_diffusion: bool = False
     reset_pretrained: bool = False
     error_function: str = 'mse'
 
     def __repr__(self):
-        return (f"AlgorithmParameters(enable_diffusion={self.enable_diffusion}, "
-                f"reset_pretrained={self.reset_pretrained}, error_function={self.error_function})\n")
+        return (f"AlgorithmParameters(reset_pretrained={self.reset_pretrained}, error_function={self.error_function})\n")
 
 class MLParameters:
     def __init__(self, 

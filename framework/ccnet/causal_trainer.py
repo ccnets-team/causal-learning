@@ -25,11 +25,9 @@ class CausalTrainer(TrainerBase):
         # Set the models to training mode and perform the forward pass.
         self.set_train(train=True)
         
-        input_state, target_state, label = self.prepare_data(state, label)
-        
         ################################  Forward Pass  ################################################
-        explain = self.explainer(input_state, padding_mask)
-        inferred_label = self.reasoner(input_state, explain, padding_mask)
+        explain = self.explainer(state, padding_mask)
+        inferred_label = self.reasoner(state, explain, padding_mask)
         
         # reset random seed for internal noise factor
         self.reset_seed()
@@ -42,8 +40,8 @@ class CausalTrainer(TrainerBase):
         ################################  Prediction Losses  ###########################################
         # Calculate prediction losses for inference, generation, and reconstruction.
         inference_loss = self.loss_fn(reconstructed_state, generated_state, padding_mask)
-        generation_loss = self.loss_fn(generated_state, target_state, padding_mask)
-        reconstruction_loss = self.loss_fn(reconstructed_state, target_state, padding_mask)
+        generation_loss = self.loss_fn(generated_state, state, padding_mask)
+        reconstruction_loss = self.loss_fn(reconstructed_state, state, padding_mask)
 
         ################################  Model Losses  ################################################
         # Calculate model errors based on the losses.
