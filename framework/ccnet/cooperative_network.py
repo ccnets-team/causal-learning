@@ -172,10 +172,9 @@ class CooperativeNetwork:
         """
         with torch.no_grad():
             self.__set_train(False)
-            encoded_input = self.encode(input_data, padding_mask, batch_size = batch_size)
             if self.use_seq:
-                encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
-            explanation = self._explain(encoded_input, padding_mask, batch_size = batch_size)
+                input_data = adjust_tensor_dim(input_data, target_dim=3)
+            explanation = self._explain(input_data, padding_mask, batch_size = batch_size)
             self.__set_train(True)
         return explanation
 
