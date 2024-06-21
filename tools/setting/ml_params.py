@@ -86,7 +86,7 @@ class ModelParameters:
     def __post_init__(self):
         # Conditionally initialize the ccnet_config
         if self.ccnet_network.lower() != 'none':
-            self.ccnet_config = CCNetConfig(model_name=self.ccnet_network)
+            self.ccnet_config = CCNetConfig(network_name=self.ccnet_network)
         else:
             self.ccnet_config = None  # Properly handle 'none' to avoid creating a config
 
