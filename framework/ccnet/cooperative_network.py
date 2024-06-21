@@ -36,7 +36,7 @@ class CooperativeNetwork:
         self.model_name = model_name
         self.network_names = [f"{model_name}_{name}" for name in network_names]
         network_params.reset_pretrained = algorithm_params.reset_pretrained
-        self.explainer =  Explainer(model_networks[0], network_params, act_fn=data_config.explain_layer).to(device)
+        self.explainer =  Explainer(model_networks[0], network_params, act_fn='tanh').to(device)
         self.reasoner =  Reasoner(model_networks[1], network_params, act_fn=task_act_fn).to(device)
         self.producer =  Producer(model_networks[2], network_params, act_fn="none").to(device)
         self.networks = [self.explainer, self.reasoner, self.producer]

@@ -50,7 +50,7 @@ class TrainerHub:
             wandb_end()
 
     def initialize_usage_flags(self, ml_params):
-        self.is_ccnet_seq = ml_params.ccnet_network == 'gpt'
+        self.is_seq_input = ml_params.ccnet_network == 'gpt'
         
     def initialize_training_params(self, ml_params):
         
@@ -65,21 +65,21 @@ class TrainerHub:
         self.max_iters = training_params.max_iters
     
     def load_trainer(self):
-        _load_trainer(self.helper.model_path, self.ccnet_trainer)
+        _load_trainer(self.helper.model_path, self.causal_trainer)
             
     def setup_models(self, ml_params):
         model_params, training_params, optimization_params, algorithm_params = ml_params
         ccnet_networks, network_params = configure_ccnet_network(model_params.ccnet_network, model_params.ccnet_config, self.data_config)
-        self.ccnet = CooperativeNetwork(ccnet_networks, network_params, algorithm_params, self.data_config, self.device)
-        self.ccnet_trainer = CausalTrainer(self.ccnet, algorithm_params, optimization_params, self.data_config)
+        self.cooperative_network = CooperativeNetwork(ccnet_networks, network_params, algorithm_params, self.data_config, self.device)
+        self.causal_trainer = CausalTrainer(self.cooperative_network, algorithm_params, optimization_params, self.data_config)
         
     def train_iteration(self, source_batch, target_batch):
         self.start_iteration()
         
         source_batch, target_batch, padding_mask = prepare_batches(source_batch, target_batch, self.label_size, self.task_type, self.device)        
 
-        source_batch, target_batch, padding_mask = manage_batch_dimensions(self.is_ccnet_seq, source_batch, target_batch, padding_mask)
-        ccnet_metric = self.ccnet_trainer.train_models(source_batch, target_batch, padding_mask)
+        source_batch, target_batch, padding_mask = manage_batch_dimensions(self.is_seq_input, source_batch, target_batch, padding_mask)
+        ccnet_metric = self.causal_trainer.train_models(source_batch, target_batch, padding_mask)
             
         return ccnet_metric
             
@@ -128,7 +128,7 @@ class TrainerHub:
         for source_batch, target_batch in dataloader:
             source_batch, target_batch, padding_mask = prepare_batches(source_batch, target_batch, self.label_size, self.task_type, self.device)        
             
-            inferred_batch = self.ccnet.infer(source_batch, padding_mask)
+            inferred_batch = self.cooperative_network.infer(source_batch, padding_mask)
 
             if self.should_select_last_sequence(padding_mask):
                 inferred_batch, target_batch = select_last_sequence_elements(inferred_batch, target_batch, padding_mask)
@@ -143,7 +143,7 @@ class TrainerHub:
         return test_metrics
     
     def should_select_last_sequence(self, padding_mask):
-        return self.is_ccnet_seq and padding_mask is not None
+        return self.is_seq_input and padding_mask is not None
         
     def start_iteration(self):
         set_random_seed(self.helper.iters)

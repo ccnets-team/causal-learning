@@ -31,11 +31,11 @@ class TrainerHubHelper:
         self.use_wandb = use_wandb
         self.use_image = len(data_config.obs_shape) != 1
         
-        self.is_ccnet_seq = self.parent.is_ccnet_seq
+        self.is_seq_input = self.parent.is_seq_input
         self.use_image_debugger = data_config.show_image_indices is not None
         
         if self.use_image_debugger:
-            image_model = self.parent.ccnet
+            image_model = self.parent.cooperative_network
             self.image_debugger = ImageDebugger(image_model, data_config, self.device)
         
         self.data_config = data_config 
@@ -125,12 +125,12 @@ class TrainerHubHelper:
     def save_trainers(self):
         save_path = self.determine_save_path()
         """Saves the current state of the trainers."""
-        ccnet_trainer = self.parent.ccnet_trainer
+        causal_trainer = self.parent.causal_trainer
     
-        save_trainer(save_path, ccnet_trainer)
+        save_trainer(save_path, causal_trainer)
             
     def log_checkpoint_details(self, time_cost, epoch_idx, iter_idx, len_dataloader, train_results, wb_image):
-        trainer = self.parent.ccnet_trainer
+        trainer = self.parent.causal_trainer
         
         """Calculates average metrics over the checkpoints."""
         avg_ccnet_metric = self.ccnet_metrics / float(self.num_checkpoints) 

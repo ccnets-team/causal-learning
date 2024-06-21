@@ -9,7 +9,7 @@ class DataConfig:
         dataset_name (str): Specifies the dataset, such as 'CelebA' or 'MNIST'.
         task_type (str): Determines the neural model configuration. Supported types include:
                          'binary_classification', 'multi_class_classification', 'multi_label_classification',
-                         'regression', 'ordinal_regression', 'compositional_regression', 'encoding', 'generation'.
+                         'regression', 'ordinal_regression', 'compositional_regression'.
         obs_shape (list): Defines the input dimensions appropriate for the data type:
                         - For image data, this is typically specified as [channels, height, width].
                         - For tabular data, specify the number of features as [num_features].
@@ -23,8 +23,6 @@ class DataConfig:
         explain_size (int, optional): Dimensionality of the latent space from the explainer network, essential for 
                                       generating compressed, efficient explanations during inference and data generation.
                                       Defaults to half of `d_model` if not set.
-        explain_layer (str, optional): Output layer type for the ccnet's explainer network. 
-                                       Supported options include 'layer_norm', 'tanh', 'sigmoid' and 'none'.
         show_image_indices (list, optional): Indices of images to be displayed for debugging or visualization purposes.
 
     Methods:
@@ -34,10 +32,9 @@ class DataConfig:
     """
     def __init__(self, dataset_name: str, task_type: str, obs_shape: list, 
                  label_size: int = None, label_scale: list[float] = None, 
-                 explain_size: int = None, explain_layer: str = 'tanh',
-                 show_image_indices: list = None):
+                 explain_size: int = None, show_image_indices: list = None):
         valid_task_types = ['binary_classification', 'multi_class_classification','multi_label_classification', 
-                            'regression', 'ordinal_regression', 'compositional_regression', 'generation']
+                            'regression', 'ordinal_regression', 'compositional_regression']
         if task_type not in valid_task_types:
             raise ValueError(f"Invalid task type '{task_type}'. Valid options are {valid_task_types}")
         
@@ -48,7 +45,6 @@ class DataConfig:
         self.label_size = label_size
         self.label_scale = label_scale
         self.explain_size = explain_size
-        self.explain_layer = explain_layer
         self.show_image_indices = show_image_indices
 
     def __repr__(self):

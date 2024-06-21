@@ -162,7 +162,6 @@ def extract_dataconfig_as_dataframe(data_config):
         "obs_shape": [data_config.obs_shape],
         "label_size": [data_config.label_size],
         "explain_size": [data_config.explain_size],
-        "explain_layer": [data_config.explain_layer],
         "show_image_indices": [data_config.show_image_indices]
     }
     return pd.DataFrame(data)
