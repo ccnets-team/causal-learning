@@ -74,7 +74,7 @@ class CCNetConfig(BaseNetworkConfig):
 @dataclass
 class ModelParameters:
     """
-    Comprehensive parameters defining core and encoding model configurations.
+    Comprehensive parameters defining ccnet model configurations.
     
     Attributes:
         ccnet_network (str): Identifier for the core model. A value of 'none' indicates no core model is used.

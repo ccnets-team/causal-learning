@@ -12,7 +12,7 @@ from tools.tensor_utils import adjust_tensor_dim
 from framework.utils.ccnet_utils import determine_activation_by_task_type, generate_condition_data
 
 class CooperativeNetwork:
-    def __init__(self, model_networks, network_params, algorithm_params, data_config, device, encoder = None):
+    def __init__(self, model_networks, network_params, algorithm_params, data_config, device):
         """
         Initializes the Cooperative Network with specified model parameters and computational device.
 
@@ -45,7 +45,6 @@ class CooperativeNetwork:
         self.label_size = network_params.y_dim
         self.device = device
         self.task_act_fn = task_act_fn
-        self.encoder = encoder
     
     def __set_train(self, train: bool):
         for network in self.networks:
@@ -55,34 +54,6 @@ class CooperativeNetwork:
             else:
                 network.eval()
 
-    def encode(self, data, padding_mask = None, batch_size = 256):
-        """
-        Encodes the input data using the encoder if available.
-
-        Args:
-            data (Tensor): Input data tensor.
-
-        Returns:
-            Tensor: Encoded data.
-        """
-        if self.encoder:
-            data = self.encoder.encode(data, padding_mask, batch_size = batch_size)
-        return data
-
-    def decode(self, encoded_data, padding_mask = None, batch_size = 256):
-        """
-        Decodes the input data using the decoder if available.
-
-        Args:
-            encoded_data (Tensor): Encoded data tensor.
-
-        Returns:
-            Tensor: Decoded data.
-        """
-        if self.encoder:
-            encoded_data = self.encoder.decode(encoded_data, padding_mask, batch_size = batch_size)
-        return encoded_data
-    
     def _explain(self, input_data, padding_mask=None, batch_size=256):
         """
         Generates an explanation for the input data by processing it in batches. This method is useful
@@ -220,12 +191,11 @@ class CooperativeNetwork:
         """
         with torch.no_grad():
             self.__set_train(False)
-            encoded_input = self.encode(input_data, padding_mask, batch_size = batch_size)
             if self.use_seq:
-                original_dim = len(encoded_input.shape)
-                encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
-            explanation = self._explain(encoded_input, padding_mask, batch_size = batch_size)
-            reasoned_output = self._reason(encoded_input, explanation, padding_mask, batch_size = batch_size)
+                original_dim = len(input_data.shape)
+                input_data = adjust_tensor_dim(input_data, target_dim=3)
+            explanation = self._explain(input_data, padding_mask, batch_size = batch_size)
+            reasoned_output = self._reason(input_data, explanation, padding_mask, batch_size = batch_size)
             if self.use_seq:
                 reasoned_output = adjust_tensor_dim(reasoned_output, target_dim=original_dim)
             self.__set_train(True)
@@ -244,11 +214,10 @@ class CooperativeNetwork:
         """
         with torch.no_grad():
             self.__set_train(False)
-            encoded_input = self.encode(input_data, padding_mask, batch_size = batch_size)
             if self.use_seq:
-                original_dim = len(encoded_input.shape)
-                encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
-            reasoned_output = self._reason(encoded_input, explanation, padding_mask, batch_size = batch_size)
+                original_dim = len(input_data.shape)
+                input_data = adjust_tensor_dim(input_data, target_dim=3)
+            reasoned_output = self._reason(input_data, explanation, padding_mask, batch_size = batch_size)
             if self.use_seq:
                 reasoned_output = adjust_tensor_dim(reasoned_output, target_dim=original_dim)
             self.__set_train(True)
@@ -269,10 +238,9 @@ class CooperativeNetwork:
             label_shape = explanation.shape[:-1] + (self.label_size,)
             condition_data = generate_condition_data(label_shape, self.task_type, self.device)
             generated_output = self._produce(condition_data, explanation, padding_mask, batch_size = batch_size)
-            generated_data = self.decode(generated_output, padding_mask, batch_size = batch_size)
             self.__set_train(True)
 
-        return generated_data, condition_data
+        return generated_output, condition_data
 
     def produce(self, condition_data, explanation, padding_mask = None, batch_size = 256):
         """
@@ -294,9 +262,8 @@ class CooperativeNetwork:
             produced_output = self._produce(condition_data, explanation, padding_mask, batch_size = batch_size)
             if self.use_seq:
                 produced_output = adjust_tensor_dim(produced_output, target_dim=original_dim)
-            produced_data = self.decode(produced_output, padding_mask, batch_size = batch_size)
             self.__set_train(True)
-        return produced_data
+        return produced_output
     
     def reconstruct(self, input_data, padding_mask = None, batch_size = 256):
         """
@@ -311,18 +278,16 @@ class CooperativeNetwork:
         """
         with torch.no_grad():
             self.__set_train(False)
-            encoded_input = self.encode(input_data, padding_mask, batch_size = batch_size)
             if self.use_seq:
-                original_dim = len(encoded_input.shape)
-                encoded_input = adjust_tensor_dim(encoded_input, target_dim=3)
-            explanation = self._explain(encoded_input, padding_mask, batch_size = batch_size)
-            inferred_output = self._reason(encoded_input, explanation, padding_mask, batch_size = batch_size)
+                original_dim = len(input_data.shape)
+                input_data = adjust_tensor_dim(input_data, target_dim=3)
+            explanation = self._explain(input_data, padding_mask, batch_size = batch_size)
+            inferred_output = self._reason(input_data, explanation, padding_mask, batch_size = batch_size)
             reconstructed_output = self._produce(inferred_output, explanation, padding_mask, batch_size = batch_size)
             if self.use_seq:
                 reconstructed_output = adjust_tensor_dim(reconstructed_output, target_dim=original_dim)
-            reconstructed_data = self.decode(reconstructed_output, padding_mask, batch_size = batch_size)
             self.__set_train(True)
-        return reconstructed_data
+        return reconstructed_output
     
     def causal_generate(self, input_data, desired_target, padding_mask=None, batch_size=256):
         """
@@ -344,16 +309,14 @@ class CooperativeNetwork:
         """
         with torch.no_grad():
             self.__set_train(False)
-            encoded_input = self.encode(input_data, padding_mask, batch_size=batch_size)
             if self.use_seq:
-                original_dim = len(encoded_input.shape)
-                encoded_input = adjust_tensor_dim(encoded_input, desired_target_dim=3)
+                original_dim = len(input_data.shape)
+                input_data = adjust_tensor_dim(input_data, desired_target_dim=3)
                 desired_target = adjust_tensor_dim(desired_target, desired_target_dim=3)
-            explanation = self._explain(encoded_input, padding_mask, batch_size=batch_size)
-            counter_output = self._produce(desired_target, explanation, padding_mask, batch_size=batch_size)
+            explanation = self._explain(input_data, padding_mask, batch_size=batch_size)
+            causal_generated_data = self._produce(desired_target, explanation, padding_mask, batch_size=batch_size)
             if self.use_seq:
-                counter_output = adjust_tensor_dim(counter_output, target_dim=original_dim)
-            causal_generated_data = self.decode(counter_output, padding_mask, batch_size=batch_size)
+                causal_generated_data = adjust_tensor_dim(causal_generated_data, target_dim=original_dim)
             self.__set_train(True)
         return causal_generated_data
 

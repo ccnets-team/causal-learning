@@ -37,8 +37,7 @@ class DataConfig:
                  explain_size: int = None, explain_layer: str = 'tanh',
                  show_image_indices: list = None):
         valid_task_types = ['binary_classification', 'multi_class_classification','multi_label_classification', 
-                            'regression', 'ordinal_regression', 'compositional_regression',
-                            'encoding', 'generation']
+                            'regression', 'ordinal_regression', 'compositional_regression', 'generation']
         if task_type not in valid_task_types:
             raise ValueError(f"Invalid task type '{task_type}'. Valid options are {valid_task_types}")
         
