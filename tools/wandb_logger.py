@@ -55,16 +55,11 @@ def wandb_init(data_config, ml_params):
     data_config_dict = convert_to_dict(data_config)
     
     delete_keys = ['obs_shape', 'y_dim', 'e_dim']
-    if ml_params.ccnet_config is not None:
-        ccnet_config_dict = convert_to_dict(ml_params.ccnet_config)
-        ml_params.ccnet_config = remove_fields(ccnet_config_dict, delete_keys)
-    if ml_params.encoder_config is not None:
-        encoder_config_dict = convert_to_dict(ml_params.encoder_config)
-        ml_params.encoder_config = remove_fields(encoder_config_dict, delete_keys)
+    ccnet_config_dict = convert_to_dict(ml_params.ccnet_config)
+    ml_params.ccnet_config = remove_fields(ccnet_config_dict, delete_keys)
     
     ml_params_dict = convert_to_dict(ml_params)
     ml_params_dict['ccnet_config'] = ml_params.ccnet_config
-    ml_params_dict['encoder_config'] = ml_params.encoder_config
 
     data_config_dict = {k: v for k, v in data_config_dict.items() if isinstance(v, (int, float, str, bool))}
     data_config_dict = dict(sorted(data_config_dict.items(), key=sort_key))
@@ -118,7 +113,7 @@ def _wandb_log_data(metrics, log_data = None, iters = None):
         return
     wandb.log(log_data, step=iters)  # Log all data including the metrics
 
-def wandb_log_train_metrics(time_cost, lr, ccnet_metric=None, encoder_metric=None, images=None, iters = None):
+def wandb_log_train_metrics(time_cost, lr, ccnet_metric=None, images=None, iters = None):
     # Define step_logs as a dictionary with relevant key-value pairs
     
     if ccnet_metric is not None:
@@ -132,18 +127,6 @@ def wandb_log_train_metrics(time_cost, lr, ccnet_metric=None, encoder_metric=Non
     else:
         ccnet_metric = {
         }
-        
-    if encoder_metric is not None:
-        encoder_ccnet_losses = dict(encoder_metric.losses.data)
-        encoder_ccnet_errors = dict(encoder_metric.errors.data)
-        
-        encoder_metric = {
-        'Encoder/Losses': encoder_ccnet_losses,
-        'Encoder/Errors': encoder_ccnet_errors,
-        }    
-    else:
-        encoder_metric = {
-        }
     
     additional_logs = {"Step/LearningRate": lr, 
                        "Step/TimeCost": time_cost
@@ -152,7 +135,7 @@ def wandb_log_train_metrics(time_cost, lr, ccnet_metric=None, encoder_metric=Non
         additional_logs["WB Images"] = images
     
     log_data = {**additional_logs}
-    train_metrics = {**ccnet_metric, **encoder_metric}
+    train_metrics = {**ccnet_metric}
     _wandb_log_data(train_metrics, log_data, iters = iters)
 
 def wandb_log_train_data(metrics, images, iters):

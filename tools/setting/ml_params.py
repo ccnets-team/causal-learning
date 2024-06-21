@@ -63,14 +63,10 @@ class ModelParameters:
     
     Attributes:
         ccnet_network (str): Identifier for the core model. A value of 'none' indicates no core model is used.
-        encoder_network (str): Identifier for the encoder model. A value of 'none' indicates no encoder model is used.
         ccnet_config (ModelConfig or None): Configuration object for the core model, if applicable.
-        encoder_config (ModelConfig or None): Configuration object for the encoder model, if applicable.
     """
     ccnet_network: str = 'gpt'
-    encoder_network: str = 'none'
     ccnet_config: ModelConfig = field(init=False)
-    encoder_config: ModelConfig = field(init=False)
 
     def __post_init__(self):
         # Conditionally initialize the ccnet_config
@@ -79,14 +75,8 @@ class ModelParameters:
         else:
             self.ccnet_config = None  # Properly handle 'none' to avoid creating a config
 
-        # Conditionally initialize the encoder_config
-        if self.encoder_network.lower() != 'none':
-            self.encoder_config = ModelConfig(model_name=self.encoder_network)
-        else:
-            self.encoder_config = None  # Properly handle 'none' to avoid creating a config
-
     def __repr__(self):
-        return (f"ModelParameters(ccnet_network={self.ccnet_network}, encoder_network={self.encoder_network}\n")
+        return (f"ModelParameters(ccnet_network={self.ccnet_network}\n")
         
 @dataclass
 class TrainingParameters:

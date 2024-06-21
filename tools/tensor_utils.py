@@ -152,11 +152,6 @@ def convert_to_device(source_batch, target_batch, device):
         target_batch = target_batch.float().to(device)
     return source_batch, target_batch
 
-def encode_inputs(encoder, observation, labels):
-    with torch.no_grad():
-        encoded_obseartion = observation if encoder is None else encoder.encode(observation)
-    return encoded_obseartion, labels
-
 def convert_to_one_hot(target_batch, label_size, task_type):
     if target_batch is None or label_size is None or task_type is None:
         return None

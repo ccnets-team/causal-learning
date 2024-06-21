@@ -10,7 +10,6 @@ Author:
 
 from tqdm.notebook import tqdm_notebook
 from framework.ccnet.causal_trainer import CausalTrainer
-from framework.ccnet.causal_encoding_trainer import CausalEncodingTrainer
 
 from tools.trainer_hub_helper import TrainerHubHelper
 from tools.setting.ml_params import MLParameters
@@ -24,8 +23,7 @@ from tools.report import calculate_test_results
 from tools.print import print_ml_params, DEFAULT_PRINT_INTERVAL
 
 from framework.ccnet.cooperative_network import CooperativeNetwork
-from framework.ccnet.cooperative_encoding_network import CooperativeEncodingNetwork
-from tools.setting.ml_config import configure_ccnet_network, configure_encoder_network, _determine_max_iters_and_epoch
+from tools.setting.ml_config import configure_ccnet_network, _determine_max_iters_and_epoch
 from tools.tensor_utils import select_last_sequence_elements, manage_batch_dimensions, prepare_batches, get_random_batch
 import torch
 
@@ -33,7 +31,6 @@ class TrainerHub:
     def __init__(self, ml_params: MLParameters, data_config: DataConfig, device, use_print=False, use_wandb=False, print_interval=DEFAULT_PRINT_INTERVAL):
         self.data_config = data_config
         self.device = device
-        
         
         self.initialize_usage_flags(ml_params)
         
@@ -53,9 +50,7 @@ class TrainerHub:
             wandb_end()
 
     def initialize_usage_flags(self, ml_params):
-        self.use_encoder = ml_params.encoder_network != 'none'
         self.use_ccnet = ml_params.ccnet_network != 'none'
-        self.is_encoder_seq = ml_params.encoder_network == 'gpt'
         self.is_ccnet_seq = ml_params.ccnet_network == 'gpt'
         
     def initialize_training_params(self, ml_params):
@@ -70,48 +65,24 @@ class TrainerHub:
         self.num_epoch = training_params.num_epoch
         self.max_iters = training_params.max_iters
     
-    def load_trainer(self, ccnet_network = True):
-        if ccnet_network:
-            _load_trainer(self.helper.model_path, self.ccnet_trainer)
-        else:
-            _load_trainer(self.helper.model_path, self.encoder_trainer)
+    def load_trainer(self):
+        _load_trainer(self.helper.model_path, self.ccnet_trainer)
             
     def setup_models(self, ml_params):
         model_params, training_params, optimization_params, algorithm_params = ml_params
-        if self.use_encoder:
-            encoder_networks, network_params = configure_encoder_network(model_params.encoder_network, model_params.encoder_config, self.data_config)
-            self.encoder = CooperativeEncodingNetwork(encoder_networks, network_params, algorithm_params, self.data_config, self.device)
-            self.encoder_trainer = CausalEncodingTrainer(self.encoder, algorithm_params, optimization_params, self.data_config)
-        else:
-            self.encoder = None
-            self.encoder_trainer = None
-        
-        if self.use_ccnet:
-            ccnet_networks, network_params = configure_ccnet_network(model_params.ccnet_network, model_params.ccnet_config, self.data_config, use_encoder=self.use_encoder)
-            self.ccnet = CooperativeNetwork(ccnet_networks, network_params, algorithm_params, self.data_config, self.device, encoder=self.encoder)
-            self.ccnet_trainer = CausalTrainer(self.ccnet, algorithm_params, optimization_params, self.data_config)
-        else:
-            self.ccnet = None
-            self.ccnet_trainer = None
+        ccnet_networks, network_params = configure_ccnet_network(model_params.ccnet_network, model_params.ccnet_config, self.data_config)
+        self.ccnet = CooperativeNetwork(ccnet_networks, network_params, algorithm_params, self.data_config, self.device)
+        self.ccnet_trainer = CausalTrainer(self.ccnet, algorithm_params, optimization_params, self.data_config)
         
     def train_iteration(self, source_batch, target_batch):
         self.start_iteration()
         
         source_batch, target_batch, padding_mask = prepare_batches(source_batch, target_batch, self.label_size, self.task_type, self.device)        
-        if self.use_encoder:
-            source_batch, target_batch, padding_mask = manage_batch_dimensions(self.is_encoder_seq, source_batch, target_batch, padding_mask)
-            encoder_metric = self.encoder_trainer.train_models(source_batch, padding_mask)
-        else:
-            encoder_metric = None
 
-        if self.use_ccnet:
-            source_batch, target_batch = self.encode_inputs(source_batch, target_batch, padding_mask)
-            source_batch, target_batch, padding_mask = manage_batch_dimensions(self.is_ccnet_seq, source_batch, target_batch, padding_mask)
-            ccnet_metric = self.ccnet_trainer.train_models(source_batch, target_batch, padding_mask)
-        else:
-            ccnet_metric = None
+        source_batch, target_batch, padding_mask = manage_batch_dimensions(self.is_ccnet_seq, source_batch, target_batch, padding_mask)
+        ccnet_metric = self.ccnet_trainer.train_models(source_batch, target_batch, padding_mask)
             
-        return ccnet_metric, encoder_metric
+        return ccnet_metric
             
     def train(self, trainset: Dataset, testset: Dataset = None):
         self.helper.begin_train(trainset)
@@ -120,13 +91,13 @@ class TrainerHub:
             dataloader = get_data_loader(trainset, min(len(trainset), self.batch_size))
 
             for iters, (source_batch, target_batch) in enumerate(tqdm_notebook(dataloader, desc='Iterations', leave=False)):
-                ccnet_metric, encoder_metric = self.train_iteration(source_batch, target_batch)
+                ccnet_metric = self.train_iteration(source_batch, target_batch)
 
                 train_results = self.evaluate(trainset)
                 
                 test_results = self.evaluate(testset)
 
-                self.helper.finalize_training_step(epoch, iters, len(dataloader), ccnet_metric, encoder_metric, train_results, test_results)
+                self.helper.finalize_training_step(epoch, iters, len(dataloader), ccnet_metric, train_results, test_results)
 
     def evaluate(self, dataset):
         if dataset is None or not self.use_ccnet:
@@ -178,9 +149,3 @@ class TrainerHub:
     def start_iteration(self):
         set_random_seed(self.helper.iters)
         self.helper.init_time_step()
-        
-    def encode_inputs(self, observation, labels, padding_mask = None):
-        with torch.no_grad():
-            encoded_observation = observation if self.encoder is None else self.encoder.encode(observation, padding_mask = padding_mask)
-        return encoded_observation, labels
-        

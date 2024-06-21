@@ -63,11 +63,8 @@ def get_eval_loader(evalset, batch_size, num_workers = 0, collate = collate_fn):
 def get_test_loader(testset, batch_size, num_workers=0, collate=collate_fn):
     return torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=num_workers, collate_fn=collate, drop_last=False)
 
-def load_trainer(self, ccnet_network = True):
-    if ccnet_network:
-        _load_trainer(self.helper.model_path, self.ccnet_trainer)
-    else:
-        _load_trainer(self.helper.model_path, self.encoder_trainer)
+def load_trainer(self):
+    _load_trainer(self.helper.model_path, self.ccnet_trainer)
 
 def save_trainer(model_path, trainer):
     # Lists of components to be saved for GPT

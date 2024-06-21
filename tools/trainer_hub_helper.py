@@ -23,7 +23,6 @@ class TrainerHubHelper:
         self.pivot_time = None
 
         self.ccnet_metrics = MetricsTracker()
-        self.encoder_metrics = MetricsTracker() 
 
         self.num_checkpoints = print_interval
         self.model_path, self.temp_path, self.log_path = setup_directories()
@@ -33,13 +32,11 @@ class TrainerHubHelper:
         self.use_image = len(data_config.obs_shape) != 1
         
         self.is_ccnet_seq = self.parent.is_ccnet_seq
-        self.is_encoder_seq = self.parent.is_encoder_seq
         self.use_ccnet = self.parent.use_ccnet
-        self.use_encoder = self.parent.use_encoder
         self.use_image_debugger = data_config.show_image_indices is not None
         
         if self.use_image_debugger:
-            image_model = self.parent.ccnet if self.use_ccnet else self.parent.encoder 
+            image_model = self.parent.ccnet
             self.image_debugger = ImageDebugger(image_model, data_config, self.device, use_ccnet = self.use_ccnet)
         
         self.data_config = data_config 
@@ -76,14 +73,12 @@ class TrainerHubHelper:
         return self.model_path if self.cnt_print % 2 == 0 else self.temp_path
 
     def finalize_training_step(self, epoch_idx, iter_idx, len_dataloader, 
-                               ccnet_metric=None, encoder_metric=None, train_results = None, test_results=None) -> None:
+                               ccnet_metric=None, train_results = None, test_results=None) -> None:
         """Perform end-of-step operations including metrics update and checkpointing."""
 
         """Update training metrics if available."""
         if ccnet_metric is not None:
             self.ccnet_metrics += ccnet_metric
-        if encoder_metric is not None:
-            self.encoder_metrics += encoder_metric
         
         if self.should_checkpoint():
             self.perform_checkpoint_operations(epoch_idx, iter_idx, len_dataloader, train_results, test_results)
@@ -132,33 +127,27 @@ class TrainerHubHelper:
         save_path = self.determine_save_path()
         """Saves the current state of the trainers."""
         ccnet_trainer = self.parent.ccnet_trainer
-        encoder_trainer = self.parent.encoder_trainer
     
-        if self.use_ccnet:
-            save_trainer(save_path, ccnet_trainer)
-        if self.use_encoder:
-            save_trainer(save_path, encoder_trainer)
+        save_trainer(save_path, ccnet_trainer)
             
     def log_checkpoint_details(self, time_cost, epoch_idx, iter_idx, len_dataloader, train_results, wb_image):
         trainer = self.parent.ccnet_trainer if self.parent.ccnet_trainer is not None else self.parent.encoder_trainer
         
         """Calculates average metrics over the checkpoints."""
-        avg_ccnet_metric = self.ccnet_metrics / float(self.num_checkpoints) if self.use_ccnet else None
-        avg_encoder_metric = self.encoder_metrics / float(self.num_checkpoints) if self.use_encoder else None
+        avg_ccnet_metric = self.ccnet_metrics / float(self.num_checkpoints) 
         
         if self.use_print:
-            print_checkpoint_info(self.parent, time_cost, epoch_idx, iter_idx, len_dataloader, avg_ccnet_metric, avg_encoder_metric, train_results)
+            print_checkpoint_info(self.parent, time_cost, epoch_idx, iter_idx, len_dataloader, avg_ccnet_metric, train_results)
 
-        tensorboard_log_train_metrics(self.tensorboard, self.iters, ccnet_metric=avg_ccnet_metric, encoder_metric=avg_encoder_metric)
+        tensorboard_log_train_metrics(self.tensorboard, self.iters, ccnet_metric=avg_ccnet_metric)
         """Logs training data to Weights & Biases if enabled."""
         if self.use_wandb:
             lr = trainer.get_lr() 
-            wandb_log_train_metrics(time_cost, lr=lr, ccnet_metric=avg_ccnet_metric, encoder_metric=avg_encoder_metric, images=wb_image, iters = self.iters)
+            wandb_log_train_metrics(time_cost, lr=lr, ccnet_metric=avg_ccnet_metric, images=wb_image, iters = self.iters)
 
     def reset_metrics(self):
         """resets metrics trackers."""
         self.pivot_time = None
         self.ccnet_metrics.reset()
-        self.encoder_metrics.reset()
         self.cnt_checkpoints = 0
         self.cnt_print += 1

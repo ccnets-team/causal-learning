@@ -22,7 +22,6 @@ class CooperativeNetwork:
             label_size (int): Size of the output labels.
             explain_size (int): Size of the explanations generated.
             device (str): Device ('cpu' or 'cuda') to run the models on.
-            encoder (optional): Encoder object for input data preprocessing.
         """
         # Initialize model names and configurations.        
         if network_params.model_name == 'gpt':

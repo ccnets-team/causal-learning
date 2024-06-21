@@ -28,16 +28,7 @@ def configure_model(model_name, params, obs_shape, y_dim, e_dim):
     params.e_dim = e_dim    
     return cooperative_network, params
 
-def configure_encoder_network(model_name, model_config, data_config):
-    obs_shape = data_config.obs_shape
-    if data_config.state_size is None:
-        stoch_size, det_size = max(model_config.d_model//2, 1), max(model_config.d_model//2, 1)
-        data_config.state_size = det_size
-    else:
-        stoch_size, det_size = data_config.state_size, data_config.state_size
-    return configure_model(model_name, model_config, obs_shape, y_dim=stoch_size, e_dim=det_size)
-    
-def configure_ccnet_network(model_name, model_config, data_config, use_encoder):
+def configure_ccnet_network(model_name, model_config, data_config):
     obs_shape = data_config.obs_shape if data_config.state_size is None else [data_config.state_size]
     label_size = data_config.label_size
     if data_config.task_type == 'ordinal_regression':
@@ -47,16 +38,10 @@ def configure_ccnet_network(model_name, model_config, data_config, use_encoder):
     else:
         label_size = data_config.label_size
     if data_config.explain_size is None:
-        if use_encoder:
-            if len(data_config.obs_shape) != 1:
-                explain_size = obs_shape[-1]
-            else:
-                explain_size = int(max(round((data_config.obs_shape[-1] - data_config.label_size)/2), 1))
+        if len(data_config.obs_shape) != 1:
+            explain_size = max(model_config.d_model//2, 1)
         else:
-            if len(data_config.obs_shape) != 1:
-                explain_size = max(model_config.d_model//2, 1)
-            else:
-                explain_size = int(max(round((data_config.obs_shape[-1] - data_config.label_size)/2), 1))
+            explain_size = int(max(round((data_config.obs_shape[-1] - data_config.label_size)/2), 1))
         data_config.explain_size = explain_size
     else:
         explain_size = data_config.explain_size
