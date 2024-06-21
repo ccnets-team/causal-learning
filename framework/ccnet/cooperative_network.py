@@ -18,7 +18,6 @@ class CooperativeNetwork:
 
         Args:
             model_params (object): Contains individual network parameters and configurations.
-            state_size (int): Size of the state input to the models.
             label_size (int): Size of the output labels.
             explain_size (int): Size of the explanations generated.
             device (str): Device ('cpu' or 'cuda') to run the models on.

@@ -29,7 +29,7 @@ def configure_model(model_name, params, obs_shape, y_dim, e_dim):
     return cooperative_network, params
 
 def configure_ccnet_network(model_name, model_config, data_config):
-    obs_shape = data_config.obs_shape if data_config.state_size is None else [data_config.state_size]
+    obs_shape = data_config.obs_shape
     label_size = data_config.label_size
     if data_config.task_type == 'ordinal_regression':
         label_size = 1

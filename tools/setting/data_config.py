@@ -10,7 +10,6 @@ class DataConfig:
         task_type (str): Determines the neural model configuration. Supported types include:
                          'binary_classification', 'multi_class_classification', 'multi_label_classification',
                          'regression', 'ordinal_regression', 'compositional_regression', 'encoding', 'generation'.
-                         'Encoding' and 'generation' generally apply when no labels are provided, primarily in encoder models.
         obs_shape (list): Defines the input dimensions appropriate for the data type:
                         - For image data, this is typically specified as [channels, height, width].
                         - For tabular data, specify the number of features as [num_features].
@@ -26,21 +25,17 @@ class DataConfig:
                                       Defaults to half of `d_model` if not set.
         explain_layer (str, optional): Output layer type for the ccnet's explainer network. 
                                        Supported options include 'layer_norm', 'tanh', 'sigmoid' and 'none'.
-        state_size (int, optional): Total dimensionality for the internal state of the encoder network, calculated as the 
-                                    sum of half the `d_model` from both the explainer and reasoner if not explicitly defined.
-                                    This replaces traditional input shapes when both encoder and core models are utilized, 
-                                    directing encoded state data as input to the core model.
         show_image_indices (list, optional): Indices of images to be displayed for debugging or visualization purposes.
 
     Methods:
-        __init__(self, dataset_name, task_type, obs_shape, label_size=None, explain_size=None, state_size=None, show_image_indices=None):
+        __init__(self, dataset_name, task_type, obs_shape, label_size=None, explain_size=None, show_image_indices=None):
             Initializes the DataConfig with the specified dataset characteristics.
             Raises an error if an unsupported task type is specified.
     """
     def __init__(self, dataset_name: str, task_type: str, obs_shape: list, 
                  label_size: int = None, label_scale: list[float] = None, 
                  explain_size: int = None, explain_layer: str = 'tanh',
-                 state_size: int = None, show_image_indices: list = None):
+                 show_image_indices: list = None):
         valid_task_types = ['binary_classification', 'multi_class_classification','multi_label_classification', 
                             'regression', 'ordinal_regression', 'compositional_regression',
                             'encoding', 'generation']
@@ -55,14 +50,12 @@ class DataConfig:
         self.label_scale = label_scale
         self.explain_size = explain_size
         self.explain_layer = explain_layer
-        self.state_size = state_size
         self.show_image_indices = show_image_indices
 
     def __repr__(self):
         label_size_repr = f", label_size={self.label_size}" if self.label_size is not None else ""
         explain_size_repr = f", explain_size={self.explain_size}" if self.explain_size is not None else ""
-        state_size_repr = f", state_size={self.state_size}" if self.state_size is not None else ""
         show_image_indices_repr = f", show_image_indices={self.show_image_indices}" if self.show_image_indices is not None else ""
         return (f"DataConfig(dataset_name={self.dataset_name}, task_type={self.task_type}, "
-                f"obs_shape={self.obs_shape}{label_size_repr}{explain_size_repr}{state_size_repr}{show_image_indices_repr})")
+                f"obs_shape={self.obs_shape}{label_size_repr}{explain_size_repr}{show_image_indices_repr})")
         

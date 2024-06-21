@@ -130,7 +130,7 @@ class TrainerHubHelper:
         save_trainer(save_path, ccnet_trainer)
             
     def log_checkpoint_details(self, time_cost, epoch_idx, iter_idx, len_dataloader, train_results, wb_image):
-        trainer = self.parent.ccnet_trainer if self.parent.ccnet_trainer is not None else self.parent.encoder_trainer
+        trainer = self.parent.ccnet_trainer
         
         """Calculates average metrics over the checkpoints."""
         avg_ccnet_metric = self.ccnet_metrics / float(self.num_checkpoints) 
