@@ -6,7 +6,7 @@
 
 import torch.nn as nn
 from nn.utils.init import init_weights
-from tools.setting.ml_params import NetworkConfig
+from tools.setting.ml_params import CooperativeNetworkConfig
 from nn.utils.transform_layer import TransformLayer
 
 class Explainer(nn.Module):
@@ -34,17 +34,16 @@ class Explainer(nn.Module):
         
         self.__model_name = self._get_name()
 
-        input_shape, d_model, output_size, reset_pretrained = (network_params.obs_shape, 
-                                                               network_params.d_model, 
-                                                               network_params.e_dim,
-                                                               network_params.reset_pretrained)
+        input_shape, d_model, output_size = (network_params.obs_shape, 
+                                             network_params.d_model, 
+                                             network_params.e_dim)
 
         self.embedding_layer = TransformLayer(input_shape, d_model, last_act_fn='tanh')
-        explainer_config = NetworkConfig(network_params, self.__model_name, self.embedding_layer.output_shape, output_size, act_fn)
+        explainer_config = CooperativeNetworkConfig(network_params, self.__model_name, self.embedding_layer.output_shape, output_size, act_fn)
 
         self.net = net(explainer_config)
         
-        self.apply(lambda module: init_weights(module, reset_pretrained, init_type='normal'))
+        self.apply(lambda module: init_weights(module, init_type='normal'))
 
     def forward(self, x, padding_mask=None):
         """

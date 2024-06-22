@@ -37,19 +37,15 @@ def get_activation_function(activation_function, feature_size=None):
     else:
         raise ValueError(f"Unsupported activation function: {activation_function}")
     
-def init_weights(module, reset_pretrained=False, init_type='xavier_uniform'):
+def init_weights(module, init_type='xavier_uniform'):
     """
     Applies Xavier uniform or normal initialization to layers in a module that have 'weight' and 'bias' attributes.
     Excludes modules where parameters are directly set if the variable name includes "pretrained".
 
     Args:
         module (nn.Module): The module to initialize.
-        reset_pretrained (bool): Whether to reset initialization for modules with "pretrained" in their names.
         init_type (str): The type of initialization ('xavier_uniform' or 'normal').
     """
-    # Skip initialization if the module name includes 'pretrained' and reset_pretrained is True
-    if reset_pretrained and 'pretrained' in module._get_name().lower():
-        return
 
     # Initialize weight and bias if present
     if hasattr(module, 'weight') and isinstance(module.weight, nn.Parameter) and module.weight.dim() >= 2:
@@ -76,4 +72,4 @@ def init_weights(module, reset_pretrained=False, init_type='xavier_uniform'):
             
     # Apply recursively to child submodules regardless of the parent's type
     for child in module.children():
-        init_weights(child, reset_pretrained = reset_pretrained, init_type = init_type)
+        init_weights(child, init_type = init_type)

@@ -12,7 +12,7 @@ from tools.tensor_utils import adjust_tensor_dim
 from framework.utils.ccnet_utils import determine_activation_by_task_type, generate_condition_data
 
 class CooperativeNetwork:
-    def __init__(self, model_networks, network_params, algorithm_params, data_config, device):
+    def __init__(self, model_networks, network_params, data_config, device):
         """
         Initializes the Cooperative Network with specified model parameters and computational device.
 
@@ -35,7 +35,6 @@ class CooperativeNetwork:
         network_names = ["explainer", "reasoner", "producer"]
         self.model_name = model_name
         self.network_names = [f"{model_name}_{name}" for name in network_names]
-        network_params.reset_pretrained = algorithm_params.reset_pretrained
         self.explainer =  Explainer(model_networks[0], network_params, act_fn='tanh').to(device)
         self.reasoner =  Reasoner(model_networks[1], network_params, act_fn=task_act_fn).to(device)
         self.producer =  Producer(model_networks[2], network_params, act_fn="none").to(device)

@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 from nn.utils.init import init_weights
 from nn.utils.joint_layer import JointLayer
-from tools.setting.ml_params import NetworkConfig
+from tools.setting.ml_params import CooperativeNetworkConfig
 
 class Producer(nn.Module):
     """
@@ -32,17 +32,16 @@ class Producer(nn.Module):
         """
         super(Producer, self).__init__()
         
-        output_shape, d_model, explain_size, target_size, reset_pretrained = (network_params.obs_shape, 
-                                                                                 network_params.d_model, 
-                                                                                 network_params.e_dim, 
-                                                                                 network_params.y_dim,
-                                                                                 network_params.reset_pretrained)
+        output_shape, d_model, explain_size, target_size = (network_params.obs_shape, 
+                                                            network_params.d_model, 
+                                                            network_params.e_dim, 
+                                                            network_params.y_dim)
         self.__model_name = self._get_name()
         
         # Embedding layer for combined condition and explanation inputs
         self.embedding_layer = JointLayer(self.__model_name, d_model, target_size, explain_size)
         
-        producer_config = NetworkConfig(network_params, self.__model_name, d_model, output_shape, act_fn)
+        producer_config = CooperativeNetworkConfig(network_params, self.__model_name, d_model, output_shape, act_fn)
         
         # Initialize the main network module
         self.net = net(producer_config)
@@ -50,7 +49,7 @@ class Producer(nn.Module):
         self.use_image = len(output_shape) != 1
         
         # Apply initial weights
-        self.apply(lambda module: init_weights(module, reset_pretrained))
+        self.apply(lambda module: init_weights(module))
 
     def forward(self, labels, explains, padding_mask=None):
         """

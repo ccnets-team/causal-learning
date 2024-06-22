@@ -12,7 +12,7 @@ import torch
 
 # Base class for trainers
 class TrainerBase(OptimizationManager):
-    def __init__(self, networks, algorithm_params, optimization_params, data_config, device):
+    def __init__(self, networks, training_params, optimization_params, data_config, device):
         self.train_iter = 0
         learning_params = [
             {'lr': optimization_params.learning_rate, 
@@ -25,7 +25,7 @@ class TrainerBase(OptimizationManager):
         OptimizationManager.__init__(self, networks, learning_params)
         self.networks = networks
         self.initial_lr = optimization_params.learning_rate
-        self.error_function = algorithm_params.error_function
+        self.error_function = training_params.error_function
         
         self.device = device
         self.task_type = data_config.task_type

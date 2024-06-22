@@ -10,7 +10,7 @@ import torch.nn as nn
 from nn.utils.init import init_weights
 from nn.utils.joint_layer import JointLayer
 from framework.utils.ccnet_utils import extend_obs_shape_channel, convert_explanation_to_image_shape
-from tools.setting.ml_params import NetworkConfig
+from tools.setting.ml_params import CooperativeNetworkConfig
 
 class Reasoner(nn.Module):
     """
@@ -38,13 +38,12 @@ class Reasoner(nn.Module):
         super(Reasoner, self).__init__()
 
         self.__model_name = self._get_name()
-        reset_pretrained = network_params.reset_pretrained
 
         self.embedding_layer, reasoner_config = self._create_embedding_layer(network_params, act_fn)
 
         self.net = net(reasoner_config)
         
-        self.apply(lambda module: init_weights(module, reset_pretrained))
+        self.apply(lambda module: init_weights(module))
 
     def forward(self, obs, e, padding_mask=None):
         """
@@ -86,7 +85,7 @@ class Reasoner(nn.Module):
         if len(input_shape) != 1:  # Handle image data
             extended_obs_shape = extend_obs_shape_channel(input_shape)
             image_elements = torch.prod(torch.tensor(extended_obs_shape[1:], dtype=torch.int)).item()
-            reasoner_config = NetworkConfig(network_params, self.__model_name, extended_obs_shape, output_size, act_fn)
+            reasoner_config = CooperativeNetworkConfig(network_params, self.__model_name, extended_obs_shape, output_size, act_fn)
 
             def embedding_layer_with_image(obs, e):
                 image_e = convert_explanation_to_image_shape(
@@ -101,5 +100,5 @@ class Reasoner(nn.Module):
 
         else:  # Handle non-image data
             embedding_layer = JointLayer(self.__model_name, d_model, input_shape, explain_size)
-            reasoner_config = NetworkConfig(network_params, self.__model_name, d_model, output_size, act_fn)
+            reasoner_config = CooperativeNetworkConfig(network_params, self.__model_name, d_model, output_size, act_fn)
             return embedding_layer, reasoner_config

@@ -50,7 +50,7 @@ class TrainerHub:
             wandb_end()
 
     def initialize_usage_flags(self, ml_params):
-        self.is_seq_input = ml_params.ccnet_network == 'gpt'
+        self.is_seq_input = ml_params.model_name == 'gpt'
         
     def initialize_training_params(self, ml_params):
         
@@ -68,10 +68,10 @@ class TrainerHub:
         _load_trainer(self.helper.model_path, self.causal_trainer)
             
     def setup_models(self, ml_params):
-        model_params, training_params, optimization_params, algorithm_params = ml_params
-        ccnet_networks, network_params = configure_ccnet_network(model_params.ccnet_network, model_params.ccnet_config, self.data_config)
-        self.cooperative_network = CooperativeNetwork(ccnet_networks, network_params, algorithm_params, self.data_config, self.device)
-        self.causal_trainer = CausalTrainer(self.cooperative_network, algorithm_params, optimization_params, self.data_config)
+        model_params, training_params, optimization_params = ml_params
+        ccnet_networks, network_params = configure_ccnet_network(model_params.model_name, model_params.ccnet_config, self.data_config)
+        self.cooperative_network = CooperativeNetwork(ccnet_networks, network_params, self.data_config, self.device)
+        self.causal_trainer = CausalTrainer(self.cooperative_network, training_params, optimization_params, self.data_config)
         
     def train_iteration(self, source_batch, target_batch):
         self.start_iteration()
