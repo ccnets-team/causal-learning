@@ -12,32 +12,32 @@ from tools.tensor_utils import adjust_tensor_dim
 from ccnet.utils import determine_activation_function, generate_condition_data
 
 class CausalCooperativeNet:
-    def __init__(self, networks, model_config, device):
+    def __init__(self, networks, ccnet_config, device):
         """
         Initializes the Cooperative Network with specified model parameters and computational device.
 
         Args:
-            model_config (object): Contains individual network parameters and configurations.
+            ccnet_config (object): Contains individual network parameters and configurations.
             label_size (int): Size of the output labels.
             explain_size (int): Size of the explanations generated.
             device (str): Device ('cpu' or 'cuda') to run the models on.
         """
         # Initialize model names and configurations.        
-        self.use_seq_input = model_config.use_seq_input
-        self.task_type, self.label_scale = model_config.task_type, model_config.y_scale
+        self.use_seq_input = ccnet_config.use_seq_input
+        self.task_type, self.label_scale = ccnet_config.task_type, ccnet_config.y_scale
         task_act_fn = determine_activation_function(self.task_type)
             
         # Add model_name prefix to the network names
         network_names = ["explainer", "reasoner", "producer"]
-        self.model_name = model_config.model_name
+        self.model_name = ccnet_config.model_name
         self.network_names = [f"{self.model_name}_{name}" for name in network_names]
-        self.explainer =  Explainer(networks[0], model_config, act_fn='tanh').to(device)
-        self.reasoner =  Reasoner(networks[1], model_config, act_fn=task_act_fn).to(device)
-        self.producer =  Producer(networks[2], model_config, act_fn="none").to(device)
+        self.explainer =  Explainer(networks[0], ccnet_config, act_fn='tanh').to(device)
+        self.reasoner =  Reasoner(networks[1], ccnet_config, act_fn=task_act_fn).to(device)
+        self.producer =  Producer(networks[2], ccnet_config, act_fn="none").to(device)
         self.networks = [self.explainer, self.reasoner, self.producer]
         
-        self.explain_size = model_config.e_dim
-        self.label_size = model_config.y_dim
+        self.explain_size = ccnet_config.e_dim
+        self.label_size = ccnet_config.y_dim
         self.device = device
         self.task_act_fn = task_act_fn
     

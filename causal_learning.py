@@ -40,8 +40,8 @@ class CausalLearning:
         self.label_scale = ccnet_config.y_scale
 
         networks = configure_networks(ccnet_config)
-        self.ccnet = CausalCooperativeNet(networks, model_config, self.device)
-        self.trainer = CausalTrainer(self.ccnet, model_config, train_config, opt_config)
+        self.ccnet = CausalCooperativeNet(networks, ccnet_config, self.device)
+        self.trainer = CausalTrainer(self.ccnet, ccnet_config, train_config, opt_config)
         
         batch_size = train_config.batch_size
         self.batch_size = batch_size

@@ -15,6 +15,7 @@ class ModelConfig:
     num_layers: int = 5
     d_model: int = 256
     dropout: float = 0.05
+    use_seq_input: bool = False
     
     def __post_init__(self):
         if self.model_name == 'gpt':

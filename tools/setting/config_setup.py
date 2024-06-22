@@ -60,6 +60,7 @@ def configure_ccnet_config(data_config, model_config):
         num_layers=model_config.num_layers,
         d_model=model_config.d_model,
         dropout=model_config.dropout,
+        use_seq_input=model_config.use_seq_input,
         obs_shape=obs_shape,
         y_dim=label_size,
         e_dim=explain_size,

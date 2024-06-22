@@ -60,7 +60,10 @@ class CCNetConfig(NetworkConfig):
     Comprehensive configuration defining ccnet model settings.
     
     Attributes:
-        model_name (str): Identifier for the core model. A value of 'none' indicates no core model is used.
+        model_name (str): Identifier for the core model.
+        num_layers (int): Number of layers in the network.
+        d_model (int): Dimensionality of the model's hidden layers.
+        dropout (float): Dropout rate for regularization.
         obs_shape (list): Observational shape of the input.
         y_dim (int or None): Dimension parameter y.
         e_dim (int or None): Dimension parameter e.
@@ -69,7 +72,10 @@ class CCNetConfig(NetworkConfig):
         device (torch.device or None): Device to run the model on.
         use_seq_input (bool): Flag to indicate if sequential input is used.
     """
-    model_name: str
+    model_name: str = None
+    num_layers: int = 5
+    d_model: int = 256
+    dropout: float = 0.05
     obs_shape: List[Any] = field(default_factory=list)
     y_dim: int = None
     e_dim: int = None
@@ -78,15 +84,6 @@ class CCNetConfig(NetworkConfig):
     device: torch.device = None
     use_seq_input: bool = False
     
-    def __post_init__(self):
-        if self.model_name == 'gpt':
-            self.use_seq_input = True
-
-    def __setattr__(self, name, value):
-        if name == 'model_name' and hasattr(self, 'model_name'):
-            raise AttributeError("model_name attribute is read-only after initialization")
-        super().__setattr__(name, value)
-
     def __repr__(self):
         return (f"CCNetConfig(model_name='{self.model_name}', num_layers={self.num_layers}, "
                 f"d_model={self.d_model}, dropout={self.dropout}, obs_shape={self.obs_shape}, "

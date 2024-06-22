@@ -15,8 +15,8 @@ from ccnet.causal_cooperative_net import CausalCooperativeNet as CCNet
 from ccnet.trainer_base import TrainerBase
 
 class CausalTrainer(TrainerBase):
-    def __init__(self, ccnet: CCNet, model_config, train_config, opt_config):
-        TrainerBase.__init__(self, ccnet.networks, model_config, train_config, opt_config, ccnet.device)
+    def __init__(self, ccnet: CCNet, ccnet_config, train_config, opt_config):
+        TrainerBase.__init__(self, ccnet.networks, ccnet_config, train_config, opt_config, ccnet.device)
         self.explainer, self.reasoner, self.producer = self.networks  
         self.network_names = ccnet.network_names
     
