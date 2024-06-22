@@ -7,7 +7,7 @@ COPYRIGHT (c) 2022. CCNets. All Rights reserved.
 '''
 
 from nn.utils.init_layer import set_random_seed
-from framework.train.optimization_manager import OptimizationManager
+from ccnet.manager.optimization_manager import OptimizationManager
 import torch
 
 # Base class for trainers
