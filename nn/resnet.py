@@ -2,7 +2,7 @@ import math
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
-from nn.utils.init import init_weights
+from nn.utils.init_layer import init_weights
 from nn.utils.transform_layer import TransformLayer
 
 class ResNet(nn.Module):

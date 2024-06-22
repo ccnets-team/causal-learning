@@ -67,7 +67,7 @@ class ModelParameters(NetworkConfig):
         device (torch.device or None): Device to run the model on.
     """
     model_name: str = 'gpt'
-    obs_shape: list = []
+    obs_shape: list = field(default_factory=list)
     y_dim: int = None
     e_dim: int = None
     device: torch.device = None
@@ -143,11 +143,10 @@ class MLParameters:
         self.model = model or ModelParameters(**filter_kwargs(ModelParameters))
         self.training = training or TrainingParameters(**filter_kwargs(TrainingParameters))
         self.optimization = optimization or OptimizationParameters(**filter_kwargs(OptimizationParameters))
-        self.ml_param_list = [self.model, self.training, self.optimization]
         
     def __getattr__(self, name):
         # Check if the attribute is part of any of the parameter classes
-        for param in self.ml_param_list:
+        for param in [self.model, self.training, self.optimization]:
             if hasattr(param, name):
                 return getattr(param, name)
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
@@ -166,4 +165,4 @@ class MLParameters:
             super().__setattr__(name, value)
 
     def __iter__(self):
-        yield from self.ml_param_list
+        yield from [self.model, self.training, self.optimization]

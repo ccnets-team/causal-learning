@@ -6,7 +6,7 @@ Reference:
 COPYRIGHT (c) 2022. CCNets. All Rights reserved.
 '''
 
-from nn.utils.init import set_random_seed
+from nn.utils.init_layer import set_random_seed
 from framework.train.manager.optimization_manager import OptimizationManager
 import torch
 

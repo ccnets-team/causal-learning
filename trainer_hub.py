@@ -24,7 +24,7 @@ from tools.print import print_ml_params, DEFAULT_PRINT_INTERVAL
 from framework.ccnet.cooperative_network import CooperativeNetwork
 from tools.setting.ml_config import configure_ccnet_network, determine_max_iters_and_epoch
 from tools.tensor_utils import select_last_sequence_elements, manage_batch_dimensions, prepare_batches, get_random_batch
-from nn.utils.init import set_random_seed
+from nn.utils.init_layer import set_random_seed
 import torch
 
 class TrainerHub:
@@ -69,7 +69,7 @@ class TrainerHub:
             
     def setup_models(self, ml_params):
         model_params, training_params, optimization_params = ml_params
-        ccnet_networks, network_params = configure_ccnet_network(model_params.model_name, model_params.ccnet_config, self.data_config)
+        ccnet_networks, network_params = configure_ccnet_network(model_params, self.data_config)
         self.cooperative_network = CooperativeNetwork(ccnet_networks, network_params, self.data_config, self.device)
         self.causal_trainer = CausalTrainer(self.cooperative_network, training_params, optimization_params, self.data_config)
         

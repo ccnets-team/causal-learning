@@ -17,16 +17,6 @@ import os
 now = datetime.now()
 formatted_date = now.strftime("%y-%m-%d %H:%M:%S")
 
-def convert_to_dict(ml_params):
-    if ml_params is not None:
-        params_dict = ml_params.__dict__.copy()
-
-        for key, value in params_dict.items():
-            if hasattr(value, '__dict__'):
-                params_dict[key] = value.__dict__
-
-        return params_dict
-
 def sort_key(item):
     key, value = item
     if isinstance(value, str):
@@ -46,31 +36,45 @@ METRICS_CATEGORY_MAP = {
     'losses': 'Losses',
     'errors': 'Errors'
 }
+# Conversion function to turn nested dataclasses into dictionaries
+def convert_to_dict(obj):
+    """Convert a dataclass object to a dictionary, including nested objects."""
+    if obj is not None:
+        params_dict = obj.__dict__.copy()
+        for key, value in params_dict.items():
+            if hasattr(value, '__dict__'):
+                params_dict[key] = convert_to_dict(value)
+        return params_dict
+
+def rename_this_function(data_config, name_prefix=None):
+    """Convert a dataclass to a dictionary, filter out non-primitive types, and sort it."""
+    data_config_dict = convert_to_dict(data_config)
+    data_config_dict = {k: v for k, v in data_config_dict.items() if isinstance(v, (int, float, str, bool))}
+    data_config_dict = dict(sorted(data_config_dict.items()))
+    if name_prefix:
+        data_config_dict = {name_prefix: data_config_dict}
+    return data_config_dict
 
 def wandb_init(data_config, ml_params):
     if wandb is None:
         raise RuntimeError("wandb is not installed. Please install wandb to use wandb_init.")
     wandb.login()
     
-    data_config_dict = convert_to_dict(data_config)
+    data_config_dict = rename_this_function(data_config, 'data')
+    model_params_dict = rename_this_function(ml_params.model, 'model')
+    optimization_params_dict = rename_this_function(ml_params.optimization, 'optimization')
+    training_params_dict = rename_this_function(ml_params.training, 'training')
     
-    delete_keys = ['obs_shape', 'y_dim', 'e_dim']
-    ccnet_config_dict = convert_to_dict(ml_params.ccnet_config)
-    ml_params.ccnet_config = remove_fields(ccnet_config_dict, delete_keys)
+    # Remove duplicate variables from model_params_dict
+    for key in ['obs_shape', 'y_dim', 'e_dim']:
+        model_params_dict['model'].pop(key, None)
     
-    ml_params_dict = convert_to_dict(ml_params)
-    ml_params_dict['ccnet_config'] = ml_params.ccnet_config
-
-    data_config_dict = {k: v for k, v in data_config_dict.items() if isinstance(v, (int, float, str, bool))}
-    data_config_dict = dict(sorted(data_config_dict.items(), key=sort_key))
-    data_config_dict = {'data_config': data_config_dict}
-    
-    merged_config_dict = {**data_config_dict, **ml_params_dict}
+    merged_config_dict = {**data_config_dict, **model_params_dict, **optimization_params_dict, **training_params_dict}
     
     trainer_name = 'causal-learning'
     
     wandb.init(
-        project='causal-learning',
+        project=trainer_name,
         name=f'{data_config.dataset_name} : {formatted_date}',
         save_code=False,
         monitor_gym=False, 

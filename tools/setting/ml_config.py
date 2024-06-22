@@ -3,8 +3,9 @@ from tools.setting.ml_params import MLP_COOPERATIVE_NETWORK, TABNET_COOPERATIVE_
 from tools.setting.ml_params import RESNET18_COOPERATIVE_NETWORK, RESNET34_COOPERATIVE_NETWORK, RESNET50_COOPERATIVE_NETWORK
 from copy import deepcopy
 
-def configure_model(model_name, params, obs_shape, y_dim, e_dim):
+def configure_model(params, obs_shape, y_dim, e_dim):
     cooperative_network = None
+    model_name = params.model_name
     if  model_name == 'gpt':
         cooperative_network = GPT_COOPERATIVE_NETWORK
     elif model_name == 'mlp':
@@ -22,13 +23,12 @@ def configure_model(model_name, params, obs_shape, y_dim, e_dim):
     else:
         raise ValueError(f"Model name '{model_name}' is not supported.")
         
-    params.model_name = model_name
     params.obs_shape = obs_shape
     params.y_dim = y_dim    
     params.e_dim = e_dim    
     return cooperative_network, params
 
-def configure_ccnet_network(model_name, model_config, data_config):
+def configure_ccnet_network(model_params, data_config):
     obs_shape = data_config.obs_shape
     label_size = data_config.label_size
     if data_config.task_type == 'ordinal_regression':
@@ -39,13 +39,13 @@ def configure_ccnet_network(model_name, model_config, data_config):
         label_size = data_config.label_size
     if data_config.explain_size is None:
         if len(data_config.obs_shape) != 1:
-            explain_size = max(model_config.d_model//2, 1)
+            explain_size = max(model_params.d_model//2, 1)
         else:
             explain_size = int(max(round((data_config.obs_shape[-1] - data_config.label_size)/2), 1))
         data_config.explain_size = explain_size
     else:
         explain_size = data_config.explain_size
-    return configure_model(model_name, model_config, obs_shape, y_dim=label_size, e_dim=explain_size)
+    return configure_model(model_params, obs_shape, y_dim=label_size, e_dim=explain_size)
 
 def modify_network_params(network_params, attribute=None, value=None):
     """

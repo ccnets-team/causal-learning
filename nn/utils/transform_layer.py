@@ -4,7 +4,7 @@
 
 import torch
 from torch import nn
-from nn.utils.init import get_activation_function
+from nn.utils.init_layer import get_activation_function
 
 class FeatureTransformLayer(nn.Module):
     """ Layer that applies a linear transformation to the input features """

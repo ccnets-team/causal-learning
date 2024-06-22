@@ -5,7 +5,7 @@
 '''
 
 import torch.nn as nn
-from nn.utils.init import init_weights
+from nn.utils.init_layer import init_weights
 from tools.setting.ml_params import CooperativeNetworkConfig
 from nn.utils.transform_layer import TransformLayer
 
