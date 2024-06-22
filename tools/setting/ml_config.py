@@ -3,49 +3,58 @@ from tools.setting.ml_params import MLP_COOPERATIVE_NETWORK, TABNET_COOPERATIVE_
 from tools.setting.ml_params import RESNET18_COOPERATIVE_NETWORK, RESNET34_COOPERATIVE_NETWORK, RESNET50_COOPERATIVE_NETWORK
 from copy import deepcopy
 
-def configure_model(params, obs_shape, y_dim, e_dim):
-    cooperative_network = None
-    model_name = params.model_name
+def configure_networks(model_name):
+    networks = None
     if  model_name == 'gpt':
-        cooperative_network = GPT_COOPERATIVE_NETWORK
+        networks = GPT_COOPERATIVE_NETWORK
     elif model_name == 'mlp':
-        cooperative_network = MLP_COOPERATIVE_NETWORK
+        networks = MLP_COOPERATIVE_NETWORK
     elif model_name == 'tabnet':
-        cooperative_network = TABNET_COOPERATIVE_NETWORK
+        networks = TABNET_COOPERATIVE_NETWORK
     elif model_name == 'resnet':
-        cooperative_network = RESNET18_COOPERATIVE_NETWORK
+        networks = RESNET18_COOPERATIVE_NETWORK
     elif model_name == 'resnet18':
-        cooperative_network = RESNET18_COOPERATIVE_NETWORK
+        networks = RESNET18_COOPERATIVE_NETWORK
     elif model_name == 'resnet34':
-        cooperative_network = RESNET34_COOPERATIVE_NETWORK
+        networks = RESNET34_COOPERATIVE_NETWORK
     elif model_name == 'resnet50':
-        cooperative_network = RESNET50_COOPERATIVE_NETWORK
+        networks = RESNET50_COOPERATIVE_NETWORK
     else:
         raise ValueError(f"Model name '{model_name}' is not supported.")
-        
-    params.obs_shape = obs_shape
-    params.y_dim = y_dim    
-    params.e_dim = e_dim    
-    return cooperative_network, params
 
-def configure_ccnet_network(model_params, data_config):
+    return networks
+
+def configure_ccnet(model_params, data_config):
+    """
+    Configures the Causal Cooperative Network and its parameters.
+
+    Args:
+        model_params (ModelParameters): Model parameters including model name and configuration details.
+        data_config (DataConfig): Data configuration including observational shape, task type, and label sizes.
+
+    Returns:
+        tuple: A tuple containing the configured cooperative network and updated model parameters.
+    """
     obs_shape = data_config.obs_shape
     label_size = data_config.label_size
-    if data_config.task_type == 'ordinal_regression':
+    task_type = data_config.task_type
+    explain_size = data_config.explain_size
+
+    if task_type in ['ordinal_regression', 'binary_classification']:
         label_size = 1
-    elif data_config.task_type == 'binary_classification':        
-        label_size = 1
-    else:
-        label_size = data_config.label_size
-    if data_config.explain_size is None:
-        if len(data_config.obs_shape) != 1:
-            explain_size = max(model_params.d_model//2, 1)
+    model_params.y_dim = label_size    
+
+    if explain_size is None:
+        if len(obs_shape) != 1:
+            explain_size = max(model_params.d_model // 2, 1)
         else:
-            explain_size = int(max(round((data_config.obs_shape[-1] - data_config.label_size)/2), 1))
-        data_config.explain_size = explain_size
-    else:
-        explain_size = data_config.explain_size
-    return configure_model(model_params, obs_shape, y_dim=label_size, e_dim=explain_size)
+            explain_size = int(max(round((obs_shape[-1] - label_size) / 2), 1))
+    data_config.explain_size = explain_size
+    model_params.e_dim = explain_size    
+
+    networks = configure_networks(model_params.model_name)
+    
+    return networks, model_params
 
 def modify_network_params(network_params, attribute=None, value=None):
     """

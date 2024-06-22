@@ -21,8 +21,8 @@ from tools.wandb_logger import wandb_end, wandb_log_test_data
 from tools.report import calculate_test_results
 from tools.print import print_ml_params, DEFAULT_PRINT_INTERVAL
 
-from framework.ccnet.cooperative_network import CooperativeNetwork
-from tools.setting.ml_config import configure_ccnet_network, determine_max_iters_and_epoch
+from framework.ccnet.causal_cooperative_net import CausalCooperativeNet
+from tools.setting.ml_config import configure_ccnet, determine_max_iters_and_epoch
 from tools.tensor_utils import select_last_sequence_elements, manage_batch_dimensions, prepare_batches, get_random_batch
 from nn.utils.init_layer import set_random_seed
 import torch
@@ -65,13 +65,13 @@ class TrainerHub:
         self.max_iters = training_params.max_iters
     
     def load_trainer(self):
-        _load_trainer(self.helper.model_path, self.causal_trainer)
+        _load_trainer(self.helper.model_path, self.trainer)
             
     def setup_models(self, ml_params):
         model_params, training_params, optimization_params = ml_params
-        ccnet_networks, network_params = configure_ccnet_network(model_params, self.data_config)
-        self.cooperative_network = CooperativeNetwork(ccnet_networks, network_params, self.data_config, self.device)
-        self.causal_trainer = CausalTrainer(self.cooperative_network, training_params, optimization_params, self.data_config)
+        networks, network_params = configure_ccnet(model_params, self.data_config)
+        self.ccnet = CausalCooperativeNet(networks, network_params, self.data_config, self.device)
+        self.trainer = CausalTrainer(self.ccnet, training_params, optimization_params, self.data_config)
         
     def train_iteration(self, source_batch, target_batch):
         self.start_iteration()
@@ -79,7 +79,7 @@ class TrainerHub:
         source_batch, target_batch, padding_mask = prepare_batches(source_batch, target_batch, self.label_size, self.task_type, self.device)        
 
         source_batch, target_batch, padding_mask = manage_batch_dimensions(self.is_seq_input, source_batch, target_batch, padding_mask)
-        ccnet_metric = self.causal_trainer.train_models(source_batch, target_batch, padding_mask)
+        ccnet_metric = self.trainer.train_models(source_batch, target_batch, padding_mask)
             
         return ccnet_metric
             
@@ -128,7 +128,7 @@ class TrainerHub:
         for source_batch, target_batch in dataloader:
             source_batch, target_batch, padding_mask = prepare_batches(source_batch, target_batch, self.label_size, self.task_type, self.device)        
             
-            inferred_batch = self.cooperative_network.infer(source_batch, padding_mask)
+            inferred_batch = self.ccnet.infer(source_batch, padding_mask)
 
             if self.should_select_last_sequence(padding_mask):
                 inferred_batch, target_batch = select_last_sequence_elements(inferred_batch, target_batch, padding_mask)

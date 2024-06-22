@@ -32,7 +32,7 @@ def convert_explanation_to_image_shape(explanation, image_shape, explain_size, i
     
     return expanded_e
 
-def determine_activation_by_task_type(task_type):
+def determine_activation_function(task_type):
     """
     Determines the appropriate activation function for a model component based on the machine learning task type.
 

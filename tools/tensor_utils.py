@@ -61,20 +61,16 @@ def generate_padding_mask(source_data, target_data, padding_values = [0, -1]):
         return source_data, target_data, None
     
     # Identify padding positions
-    padding_positions_x = (source_data == padding_values[0]).any(dim=-1)
-    padding_positions_y = (target_data == padding_values[1]).any(dim=-1) if target_data is not None else torch.ones_like(padding_positions_x)
+    padding_positions_x = (source_data == padding_values[0]).all(dim=-1, keepdim=True)
+    padding_positions_y = (target_data == padding_values[1]).all(dim=-1, keepdim=True) if target_data is not None else torch.ones_like(padding_positions_x)
     padding_positions = padding_positions_x & padding_positions_y
+    
     # Create a mask where true values indicate non-padding, false indicate padding
     padding_mask = ~padding_positions
-    padding_mask = padding_mask.unsqueeze(-1).float()
-    
-    # Expand the mask to the size of source_data for element-wise multiplication
-    expanded_non_padding_mask = padding_mask.expand_as(source_data)
-
+        
     # Zero out padding positions in the source_data and target_data
-    source_data = source_data * expanded_non_padding_mask
-    if target_data is not None:
-        target_data = target_data * padding_mask
+    source_data = source_data * padding_mask
+    target_data = target_data * padding_mask if target_data is not None else target_data
 
     return source_data, target_data, padding_mask
 
@@ -148,18 +144,16 @@ def get_random_batch(dataset, batch_size):
 
 def convert_to_device(source_batch, target_batch, device):
     source_batch = source_batch.float().to(device)
-    if target_batch is not None:
-        target_batch = target_batch.float().to(device)
+    target_batch = target_batch.float().to(device) if target_batch is not None else target_batch
     return source_batch, target_batch
 
 def convert_to_one_hot(target_batch, label_size, task_type):
-    if target_batch is None or label_size is None or task_type is None:
+    if None in {target_batch, label_size, task_type}:
         return None
-    
+
     if task_type == 'multi_class_classification' and target_batch.shape[-1] != label_size:
-        mask = target_batch == -1
-        target_batch[mask] = 0
+        mask = target_batch < 0
         target_batch = torch.nn.functional.one_hot(target_batch.long(), num_classes=label_size).float().squeeze(-2)
-        expanded_mask = mask.expand_as(target_batch)    
-        target_batch[expanded_mask] = -1
+        target_batch *= -mask.float()
+
     return target_batch

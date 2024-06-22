@@ -11,15 +11,14 @@
 '''
 
 from tools.metric_tracker import create_causal_training_metrics
-from framework.ccnet.cooperative_network import CooperativeNetwork
+from framework.ccnet.causal_cooperative_net import CausalCooperativeNet as CCNet
 from framework.train.trainer_base import TrainerBase
 
 class CausalTrainer(TrainerBase):
-    def __init__(self, ccnet: CooperativeNetwork, training_params, optimization_params, data_config):
+    def __init__(self, ccnet: CCNet, training_params, optimization_params, data_config):
         TrainerBase.__init__(self, ccnet.networks, training_params, optimization_params, data_config, ccnet.device)
         self.explainer, self.reasoner, self.producer = self.networks  
         self.network_names = ccnet.network_names
-        self.obs_shape = data_config.obs_shape
     
     def train_models(self, state, label, padding_mask=None):
         # Set the models to training mode and perform the forward pass.

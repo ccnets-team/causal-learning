@@ -85,17 +85,17 @@ def print_results(metrics, is_eval=False):
 def print_checkpoint_info(parent, time_cost, epoch_idx, iter_idx, len_dataloader, 
                             ccnet_metric = None, train_metrics=None):
     """Prints formatted information about the current checkpoint."""
-    cooperative_network = parent.cooperative_network
-    causal_trainer = parent.causal_trainer
+    ccnet = parent.ccnet
+    trainer = parent.trainer
         
     print_iter(epoch_idx, parent.num_epoch, iter_idx, len_dataloader, time_cost)
     if ccnet_metric is not None:
-        print_lr(causal_trainer.optimizers)
+        print_lr(trainer.optimizers)
     print('=====================Train Metrics=======================')
     
     if ccnet_metric is not None:
         ccnet_type = "CCNet" 
-        ccnet_name = cooperative_network.model_name.capitalize()
+        ccnet_name = ccnet.model_name.capitalize()
         print_trainer(ccnet_type, ccnet_name, ccnet_metric)
     if train_metrics is not None:
         print_results(train_metrics, is_eval=False)

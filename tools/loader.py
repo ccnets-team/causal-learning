@@ -64,7 +64,7 @@ def get_test_loader(testset, batch_size, num_workers=0, collate=collate_fn):
     return torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=num_workers, collate_fn=collate, drop_last=False)
 
 def load_trainer(self):
-    _load_trainer(self.helper.model_path, self.causal_trainer)
+    _load_trainer(self.helper.model_path, self.trainer)
 
 def save_trainer(model_path, trainer):
     # Lists of components to be saved for GPT
