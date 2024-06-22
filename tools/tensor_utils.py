@@ -153,8 +153,13 @@ def convert_to_one_hot(target_batch, label_size, task_type):
         return None
 
     if task_type == 'multi_class_classification' and target_batch.shape[-1] != label_size:
+        # Create mask for negative values
         mask = target_batch < 0
-        target_batch = torch.nn.functional.one_hot(target_batch.long(), num_classes=label_size).float().squeeze(-2)
-        target_batch *= -mask.float()
+
+        # Convert to one-hot encoding and squeeze unnecessary dimensions
+        target_batch = torch.nn.functional.one_hot(target_batch.clamp(min=0).long(), num_classes=label_size).float().squeeze(-2)
+
+        # Apply mask to set invalid (originally negative) entries to zeros
+        target_batch[mask.expand_as(target_batch)] = 0.0
 
     return target_batch
