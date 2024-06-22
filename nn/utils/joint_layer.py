@@ -5,7 +5,7 @@
 import torch
 from torch import nn
 from nn.utils.transform_layer import get_activation_function
-from framework.utils.ccnet_utils import convert_shape_to_size
+from ccnet.utils import convert_shape_to_size
 
 try:
     from nn.utils.test import JointLayer

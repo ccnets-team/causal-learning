@@ -11,8 +11,8 @@
 '''
 
 from tools.metric_tracker import create_causal_training_metrics
-from framework.ccnet.causal_cooperative_net import CausalCooperativeNet as CCNet
-from framework.train.trainer_base import TrainerBase
+from ccnet.causal_cooperative_net import CausalCooperativeNet as CCNet
+from ccnet.trainer_base import TrainerBase
 
 class CausalTrainer(TrainerBase):
     def __init__(self, ccnet: CCNet, model_params, training_params, optimization_params):

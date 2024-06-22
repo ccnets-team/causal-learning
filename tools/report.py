@@ -135,11 +135,6 @@ def get_test_results(inferred_y, target_y, task_type, num_classes, average='macr
         accuracy = accuracy_score(target_y.numpy().reshape(-1), inferred_y.numpy().reshape(-1), normalize=True)
         metrics['accuracy'] = accuracy
         
-        if is_analyze == True:
-            loss_fn = torch.nn.BCEWithLogitsLoss()
-            loss = loss_fn(inferred_y.float(), target_y.float())  # Ensure target is float for BCE loss
-            metrics['loss'] = loss.item()
-        
     elif task_type in ['regression', 'compositional_regression']:
         mse = torch.mean((target_y - inferred_y) ** 2)
         mae = torch.mean(torch.abs(target_y - inferred_y))

@@ -13,7 +13,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tools.setting.ml_params import MLParameters 
 from tools.setting.data_config import DataConfig
 
-class TrainerHubHelper:
+class CausalLearningHelper:
     def __init__(self, parent, data_config: DataConfig, ml_params: MLParameters, device, use_print, use_wandb, print_interval):
         self.parent = parent
         self.device = device

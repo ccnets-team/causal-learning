@@ -9,9 +9,10 @@ Author:
 '''
 
 from tqdm.notebook import tqdm_notebook
-from framework.ccnet.causal_trainer import CausalTrainer
+from ccnet.causal_trainer import CausalTrainer
+from ccnet.causal_cooperative_net import CausalCooperativeNet
 
-from tools.trainer_hub_helper import TrainerHubHelper
+from tools.causal_learning_helper import CausalLearningHelper
 from tools.setting.ml_params import MLParameters
 from tools.setting.data_config import DataConfig
 from torch.utils.data import Dataset
@@ -21,13 +22,12 @@ from tools.wandb_logger import wandb_end, wandb_log_test_data
 from tools.report import calculate_test_results
 from tools.print import print_ml_params, DEFAULT_PRINT_INTERVAL
 
-from framework.ccnet.causal_cooperative_net import CausalCooperativeNet
 from tools.setting.ml_config import determine_max_iters_and_epoch, update_model_params_from_data, configure_networks
 from tools.tensor_utils import select_last_sequence_elements, manage_batch_dimensions, prepare_batches, get_random_batch
 from nn.utils.init_layer import set_random_seed
 import torch
 
-class TrainerHub:
+class CausalLearning:
     def __init__(self, ml_params: MLParameters, data_config: DataConfig, device, use_print=False, use_wandb=False, print_interval=DEFAULT_PRINT_INTERVAL):
         self.data_config = data_config
         self.device = device
@@ -44,7 +44,7 @@ class TrainerHub:
         
         print_ml_params("causal_trainer", ml_params, data_config)
         
-        self.helper = TrainerHubHelper(self, data_config, ml_params, device, use_print, use_wandb, print_interval)
+        self.helper = CausalLearningHelper(self, data_config, ml_params, device, use_print, use_wandb, print_interval)
         
     def __exit__(self):
         if self.helper.use_wandb:
