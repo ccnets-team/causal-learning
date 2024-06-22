@@ -19,7 +19,7 @@ def transform_labels_to_original_scale(inferred_y, target_y, task_type, label_si
             target_y = target_y * tensor_scale
     return inferred_y, target_y
 
-def calculate_test_results(inferred_y, target_y, task_type, label_size, label_scale, is_analyze):
+def calculate_test_results(inferred_y, target_y, task_type, label_size, label_scale):
     inferred_y, target_y = transform_labels_to_original_scale(inferred_y, target_y, task_type, label_size, label_scale)
     
     if task_type == 'binary_classification':
@@ -37,7 +37,7 @@ def calculate_test_results(inferred_y, target_y, task_type, label_size, label_sc
     else:
         num_classes = label_size
         
-    return get_test_results(inferred_y, target_y, task_type, num_classes, is_analyze=is_analyze)
+    return get_test_results(inferred_y, target_y, task_type, num_classes)
 
 def convert_to_tensor(values):
     """
@@ -84,7 +84,7 @@ def convert_to_tensor(values):
     except ValueError as e:
         raise ValueError(f"Unsupported data type for tensor conversion: {type(values)}. Error: {e}")
 
-def get_test_results(inferred_y, target_y, task_type, num_classes, average='macro', is_analyze=False):
+def get_test_results(inferred_y, target_y, task_type, num_classes, average='macro'):
     """
     Calculates performance metrics for tasks using PyTorch tensors that might have batch and sequence dimensions.
     Parameters:
@@ -128,26 +128,6 @@ def get_test_results(inferred_y, target_y, task_type, num_classes, average='macr
         if task_type == 'binary_classification':
             # Calculate ROC curve and AUC for binary classification
             metrics['roc_auc'] = roc_auc_score(target_y_np, inferred_y_np)
-        
-        if is_analyze == True:
-            if task_type == 'binary_classification':
-                loss_fn = torch.nn.BCEWithLogitsLoss()
-                loss = loss_fn(inferred_y.float(), target_y.float())
-                
-                metrics['loss'] = loss.item()
-                metrics['roc_auc'] = roc_auc_score(target_y_np, inferred_y_np)
-                metrics['confusion_matrix'] = confusion_matrix(target_y.int(), inferred_y.int())
-            
-            elif task_type == 'multi_class_classification':
-                loss_fn = torch.nn.CrossEntropyLoss()
-                loss = loss_fn(inferred_y.float(), target_y.float())  # Ensure target is float for BCE loss
-                metrics['loss'] = loss.item()        
-                metrics['confusion_matrix'] = confusion_matrix(target_y.int(), inferred_y.int())
-                
-            elif task_type == 'ordinal_regression':
-                loss_fn = torch.nn.MSELoss()
-                loss = loss_fn(inferred_y.float(), target_y.float())
-                metrics['loss'] = loss.item()
             
     elif task_type == 'multi_label_classification':
         inferred_y = (inferred_y > 0.5).float()

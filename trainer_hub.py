@@ -139,7 +139,7 @@ class TrainerHub:
         all_inferred_batches = torch.cat(all_inferred_batches, dim=0)
         all_target_batches = torch.cat(all_target_batches, dim=0)
         
-        test_metrics = calculate_test_results(all_inferred_batches, all_target_batches, self.task_type, self.label_size, self.label_scale, is_analyze=False)
+        test_metrics = calculate_test_results(all_inferred_batches, all_target_batches, self.task_type, self.label_size, self.label_scale)
         return test_metrics
     
     def should_select_last_sequence(self, padding_mask):
