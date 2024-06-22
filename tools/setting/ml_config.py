@@ -51,6 +51,7 @@ def configure_ccnet(model_params, data_config):
             explain_size = int(max(round((obs_shape[-1] - label_size) / 2), 1))
     data_config.explain_size = explain_size
     model_params.e_dim = explain_size    
+    model_params.obs_shape = obs_shape    
 
     networks = configure_networks(model_params.model_name)
     

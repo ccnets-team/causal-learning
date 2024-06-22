@@ -29,6 +29,7 @@ class TrainerBase(OptimizationManager):
         
         self.device = device
         self.task_type = data_config.task_type
+        self.obs_shape = data_config.obs_shape
 
     def set_train(self, train: bool):
         for network in self.networks:
