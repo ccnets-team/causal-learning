@@ -13,17 +13,17 @@ from ccnet.causal_trainer import CausalTrainer
 from ccnet.causal_cooperative_net import CausalCooperativeNet
 
 from tools.causal_learning_helper import CausalLearningHelper
-from tools.setting.ml_config import MLConfig
-from tools.setting.data_config import DataConfig
+from tools.config.ml_config import MLConfig
+from tools.config.data_config import DataConfig
 from torch.utils.data import Dataset
 
-from tools.loader import get_data_loader, get_test_loader, _load_trainer
-from tools.wandb_logger import wandb_end, wandb_log_test_data
-from tools.report import calculate_test_results
-from tools.print import print_ml_params, DEFAULT_PRINT_INTERVAL
+from tools.IO.loader import get_data_loader, get_test_loader, _load_trainer
+from tools.logging.wandb_logger import wandb_end, wandb_log_test_data
+from tools.IO.report import calculate_test_results
+from tools.IO.print import print_ml_params, DEFAULT_PRINT_INTERVAL
 
-from tools.setting.config_setup import configure_ccnet_config, configure_networks
-from tools.tensor_utils import select_last_sequence_elements, manage_batch_dimensions, prepare_batches, get_random_batch
+from tools.config.config_setup import configure_ccnet_config, configure_networks
+from tools.tensor.batch import select_last_sequence_elements, manage_batch_dimensions, prepare_batches, get_random_batch
 from nn.utils.init_layer import set_random_seed
 import torch
 

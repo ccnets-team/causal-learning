@@ -12,8 +12,8 @@ Author:
 import pandas as pd
 from typing import Tuple
 from sklearn.preprocessing import LabelEncoder
-from tools.preprocessing.utils import convert_to_indices
-from tools.preprocessing.utils import PROCESSED_PREFIX 
+from preprocessing.utils import convert_to_indices
+from preprocessing.utils import PROCESSED_PREFIX 
 
 def encode_label_columns(df: pd.DataFrame) -> Tuple[pd.DataFrame, dict]:
     """

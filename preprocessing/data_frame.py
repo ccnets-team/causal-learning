@@ -12,12 +12,12 @@ Author:
 import numpy as np
 import pandas as pd
 from typing import Tuple, List, Tuple
-from tools.preprocessing.utils import generate_description, remove_process_prefix
-from tools.preprocessing.utils import calculate_num_classes, convert_to_indices, handle_missing_values, display_statistics
-from tools.preprocessing.scaler import auto_scale_columns
-from tools.preprocessing.encode import one_hot_encode_columns, encode_label_columns
-from tools.preprocessing.datetime import auto_encode_datetime_columns
-from tools.preprocessing.utils import PROCESSED_PREFIX 
+from preprocessing.utils import generate_description, remove_process_prefix
+from preprocessing.utils import calculate_num_classes, convert_to_indices, handle_missing_values, display_statistics
+from preprocessing.scaler import auto_scale_columns
+from preprocessing.encode import one_hot_encode_columns, encode_label_columns
+from preprocessing.datetime import auto_encode_datetime_columns
+from preprocessing.utils import PROCESSED_PREFIX 
 
 def auto_encode_cyclical_columns(df: pd.DataFrame, columns: List[str]) -> pd.DataFrame:
     """

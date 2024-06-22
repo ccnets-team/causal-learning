@@ -12,7 +12,7 @@ Author:
 import os
 from datetime import datetime
 from typing import Optional, Dict
-from tools.report import *
+from tools.data.report import *
 
 METRICS_CATEGORY_MAP = {
     'losses': 'Losses',

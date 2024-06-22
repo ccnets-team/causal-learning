@@ -8,7 +8,7 @@ import torch
 from .roles.explainer import Explainer
 from .roles.reasoner import Reasoner
 from .roles.producer import Producer
-from tools.tensor_utils import adjust_tensor_dim
+from tools.tensor.batch import adjust_tensor_dim
 from ccnet.utils import determine_activation_function, generate_condition_data
 
 class CausalCooperativeNet:

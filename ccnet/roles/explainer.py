@@ -6,7 +6,7 @@
 
 import torch.nn as nn
 from nn.utils.init_layer import init_weights
-from tools.setting.ccnet_config import CooperativeNetworkConfig
+from tools.config.ccnet_config import CooperativeNetworkConfig
 from nn.utils.transform_layer import TransformLayer
 
 class Explainer(nn.Module):

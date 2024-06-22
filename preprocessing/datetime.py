@@ -12,8 +12,8 @@ Author:
 import numpy as np
 import pandas as pd
 from typing import List
-from tools.preprocessing.utils import convert_to_indices
-from tools.preprocessing.utils import PROCESSED_PREFIX 
+from preprocessing.utils import convert_to_indices
+from preprocessing.utils import PROCESSED_PREFIX 
 
 def auto_encode_cyclical_columns(df: pd.DataFrame, columns: List[str]) -> pd.DataFrame:
     """

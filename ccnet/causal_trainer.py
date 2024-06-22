@@ -10,7 +10,7 @@
     COPYRIGHT (c) 2022. CCNets. All Rights reserved.
 '''
 
-from tools.metric_tracker import create_causal_training_metrics
+from tools.logging.metric_tracker import create_causal_training_metrics
 from ccnet.causal_cooperative_net import CausalCooperativeNet as CCNet
 from ccnet.trainer_base import TrainerBase
 

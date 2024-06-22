@@ -10,7 +10,7 @@ import torch.nn as nn
 from nn.utils.init_layer import init_weights
 from nn.utils.joint_layer import JointLayer
 from ccnet.utils import extend_obs_shape_channel, convert_explanation_to_image_shape
-from tools.setting.ccnet_config import CooperativeNetworkConfig
+from tools.config.ccnet_config import CooperativeNetworkConfig
 
 class Reasoner(nn.Module):
     """

@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 from typing import Tuple
 from scipy.stats import skew
-from tools.preprocessing.utils import PROCESSED_PREFIX 
+from preprocessing.utils import PROCESSED_PREFIX 
 
 def auto_determine_scaler(data, skew_threshold=0.5, abs_mean_threshold=2.0, outlier_threshold=1.5):
     """

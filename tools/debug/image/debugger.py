@@ -5,7 +5,7 @@ import io
 import base64
 from IPython.display import display, clear_output, HTML
 from PIL import Image as PILImage, ImageDraw, ImageFont
-from tools.utils.image_utils import text_on_image, load_images_and_labels, prepare_canvas, place_image_on_canvas
+from tools.debug.image.utils import text_on_image, load_images_and_labels, prepare_canvas, place_image_on_canvas
 import os
 
 class ImageDebugger:

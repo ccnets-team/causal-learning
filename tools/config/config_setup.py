@@ -1,7 +1,7 @@
-from tools.setting.ccnet_config import GPT_COOPERATIVE_NETWORK
-from tools.setting.ccnet_config import MLP_COOPERATIVE_NETWORK, TABNET_COOPERATIVE_NETWORK
-from tools.setting.ccnet_config import RESNET18_COOPERATIVE_NETWORK, RESNET34_COOPERATIVE_NETWORK, RESNET50_COOPERATIVE_NETWORK
-from tools.setting.ccnet_config import CCNetConfig
+from tools.config.ccnet_config import GPT_COOPERATIVE_NETWORK
+from tools.config.ccnet_config import MLP_COOPERATIVE_NETWORK, TABNET_COOPERATIVE_NETWORK
+from tools.config.ccnet_config import RESNET18_COOPERATIVE_NETWORK, RESNET34_COOPERATIVE_NETWORK, RESNET50_COOPERATIVE_NETWORK
+from tools.config.ccnet_config import CCNetConfig
 
 def configure_networks(model_config):
     model_name = model_config.model_name

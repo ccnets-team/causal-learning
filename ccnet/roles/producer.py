@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 from nn.utils.init_layer import init_weights
 from nn.utils.joint_layer import JointLayer
-from tools.setting.ccnet_config import CooperativeNetworkConfig
+from tools.config.ccnet_config import CooperativeNetworkConfig
 
 class Producer(nn.Module):
     """

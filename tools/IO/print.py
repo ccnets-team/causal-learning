@@ -15,8 +15,8 @@ DEFAULT_PRINT_INTERVAL = 100
 import pandas as pd
 import numpy as np
 from IPython.display import display
-from tools.setting.ml_config import MLConfig
-from tools.setting.data_config import DataConfig
+from tools.config.ml_config import MLConfig
+from tools.config.data_config import DataConfig
 
 def print_iter(epoch, num_epoch, iters, len_dataloader, et):
     print('[%d/%d][%d/%d][Time %.2f]'

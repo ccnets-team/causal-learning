@@ -1,17 +1,17 @@
 import time
-from tools.wandb_logger import wandb_init 
-from tools.loader import save_trainer, setup_directories
-from tools.logger import tensorboard_log_train_metrics, log_eval_results
-from tools.print import print_checkpoint_info, print_results
-from tools.wandb_logger import wandb_log_train_metrics, wandb_log_train_data, wandb_log_eval_data, wandb_image
-from tools.image_debugger import ImageDebugger
-from tools.logger import get_log_name
+from tools.logging.wandb_logger import wandb_init 
+from tools.IO.loader import save_trainer, setup_directories
+from tools.logging.logger import tensorboard_log_train_metrics, log_eval_results
+from tools.IO.print import print_checkpoint_info, print_results
+from tools.logging.wandb_logger import wandb_log_train_metrics, wandb_log_train_data, wandb_log_eval_data, wandb_image
+from tools.debug.image.debugger import ImageDebugger
+from tools.logging.logger import get_log_name
 import logging
-from tools.metric_tracker import MetricsTracker
+from tools.logging.metric_tracker import MetricsTracker
 from torch.utils.tensorboard import SummaryWriter
 
-from tools.setting.ml_config import MLConfig 
-from tools.setting.data_config import DataConfig
+from tools.config.ml_config import MLConfig 
+from tools.config.data_config import DataConfig
 
 class CausalLearningHelper:
     def __init__(self, parent, ml_config: MLConfig, data_config: DataConfig, device, use_print, use_wandb, print_interval):
