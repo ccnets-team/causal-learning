@@ -67,7 +67,8 @@ def generate_padding_mask(source_data, target_data, padding_values = [0, -1]):
     
     # Create a mask where true values indicate non-padding, false indicate padding
     padding_mask = ~padding_positions
-        
+    padding_mask = padding_mask.float()
+    
     # Zero out padding positions in the source_data and target_data
     source_data = source_data * padding_mask
     target_data = target_data * padding_mask if target_data is not None else target_data
