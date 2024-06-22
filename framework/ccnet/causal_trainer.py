@@ -20,27 +20,27 @@ class CausalTrainer(TrainerBase):
         self.explainer, self.reasoner, self.producer = self.networks  
         self.network_names = ccnet.network_names
     
-    def train_models(self, state, label, padding_mask=None):
+    def train_models(self, observation, label, padding_mask=None):
         # Set the models to training mode and perform the forward pass.
         self.set_train(train=True)
         
         ################################  Forward Pass  ################################################
-        explain = self.explainer(state, padding_mask)
-        inferred_label = self.reasoner(state, explain, padding_mask)
+        explain = self.explainer(observation, padding_mask)
+        inferred_label = self.reasoner(observation, explain, padding_mask)
         
         # reset random seed for internal noise factor
         self.reset_seed()
-        generated_state = self.producer(label, explain, padding_mask)
+        generated_observation = self.producer(label, explain, padding_mask)
         
         # reset random seed for internal noise factor
         self.reset_seed()
-        reconstructed_state = self.producer(inferred_label, explain.detach(), padding_mask)
+        reconstructed_observation = self.producer(inferred_label, explain.detach(), padding_mask)
 
         ################################  Prediction Losses  ###########################################
         # Calculate prediction losses for inference, generation, and reconstruction.
-        inference_loss = self.loss_fn(reconstructed_state, generated_state, padding_mask)
-        generation_loss = self.loss_fn(generated_state, state, padding_mask)
-        reconstruction_loss = self.loss_fn(reconstructed_state, state, padding_mask)
+        inference_loss = self.loss_fn(reconstructed_observation, generated_observation, padding_mask)
+        generation_loss = self.loss_fn(generated_observation, observation, padding_mask)
+        reconstruction_loss = self.loss_fn(reconstructed_observation, observation, padding_mask)
 
         ################################  Model Losses  ################################################
         # Calculate model errors based on the losses.
