@@ -3,7 +3,8 @@ from tools.setting.ml_params import MLP_COOPERATIVE_NETWORK, TABNET_COOPERATIVE_
 from tools.setting.ml_params import RESNET18_COOPERATIVE_NETWORK, RESNET34_COOPERATIVE_NETWORK, RESNET50_COOPERATIVE_NETWORK
 from copy import deepcopy
 
-def configure_networks(model_name):
+def configure_networks(model_params):
+    model_name = model_params.model_name
     networks = None
     if  model_name == 'gpt':
         networks = GPT_COOPERATIVE_NETWORK
@@ -24,38 +25,39 @@ def configure_networks(model_name):
 
     return networks
 
-def configure_ccnet(model_params, data_config):
+def update_model_params_from_data(data_config, model_params):
     """
-    Configures the Causal Cooperative Network and its parameters.
+    Updates the model parameters based on the data configuration.
 
     Args:
-        model_params (ModelParameters): Model parameters including model name and configuration details.
         data_config (DataConfig): Data configuration including observational shape, task type, and label sizes.
+        model_params (ModelParameters): Model parameters including model name and configuration details.
 
     Returns:
-        tuple: A tuple containing the configured cooperative network and updated model parameters.
+        ModelParameters: Updated model parameters based on data configuration.
     """
     obs_shape = data_config.obs_shape
     label_size = data_config.label_size
     task_type = data_config.task_type
     explain_size = data_config.explain_size
+    label_scale = data_config.label_scale
 
     if task_type in ['ordinal_regression', 'binary_classification']:
         label_size = 1
-    model_params.y_dim = label_size    
 
     if explain_size is None:
         if len(obs_shape) != 1:
             explain_size = max(model_params.d_model // 2, 1)
         else:
             explain_size = int(max(round((obs_shape[-1] - label_size) / 2), 1))
-    data_config.explain_size = explain_size
-    model_params.e_dim = explain_size    
+            
     model_params.obs_shape = obs_shape    
-
-    networks = configure_networks(model_params.model_name)
+    model_params.y_dim = label_size    
+    model_params.e_dim = explain_size 
+    model_params.task_type = task_type
+    model_params.label_scale = label_scale
     
-    return networks, model_params
+    return model_params
 
 def modify_network_params(network_params, attribute=None, value=None):
     """

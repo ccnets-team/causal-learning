@@ -68,16 +68,16 @@ class TransposeResnet(nn.Module):
         self.d_model = network_config.d_model
         self.num_channels, self.height, self.width = network_config.output_shape
 
-        # Calculate the maximum number of layers based on the image size
-        max_layers_height = math.ceil(math.log2(self.height))
-        max_layers_width = math.ceil(math.log2(self.width))
-        max_layers = min(max_layers_height, max_layers_width)
+        # Set initial width and height
+        self.initial_w = 2
+        self.initial_h = 2
 
-        # Ensure the number of layers does not exceed the maximum possible layers
-        num_layers = min(network_config.num_layers, max_layers)
+        # Calculate the number of layers required to reach the target width and height
+        required_layers_height = max(math.ceil(math.log2(self.height / self.initial_h)), 0)
+        required_layers_width = max(math.ceil(math.log2(self.width / self.initial_w)), 0)
 
-        self.initial_w = max(math.ceil(self.width / 2**num_layers), 1)
-        self.initial_h = max(math.ceil(self.height / 2**num_layers), 1)
+        # Ensure the number of layers does not exceed the maximum possible layers based on image dimensions
+        num_layers = max(required_layers_height, required_layers_width)
         
         minimum_channel_size = 16
         initial_channel_size = max(self.d_model, minimum_channel_size * (2 ** (num_layers - 1)))
@@ -100,7 +100,7 @@ class TransposeResnet(nn.Module):
             nn.Conv2d(
                 in_channels=out_channels[-1],  # output channels of the last decoder block
                 out_channels=self.num_channels,
-                kernel_size=1
+                kernel_size=1,
             ),
             nn.Tanh()  # Using Tanh activation function
         )
@@ -114,7 +114,7 @@ class TransposeResnet(nn.Module):
             x = decoder_block(x, skip)
 
         if x.size(2) != self.height or x.size(3) != self.width:
-            x = F.interpolate(x, size=(self.height, self.width), mode='bilinear', align_corners=True)
+            x = F.interpolate(x, size=(self.height, self.width), mode='bilinear', align_corners=False)
 
         # Apply the final layer
         x = self.final_layer(x)

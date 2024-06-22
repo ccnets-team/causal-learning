@@ -31,7 +31,7 @@ class TrainerHubHelper:
         self.use_wandb = use_wandb
         self.use_image = len(data_config.obs_shape) != 1
         
-        self.is_seq_input = self.parent.is_seq_input
+        self.use_seq_input = self.parent.use_seq_input
         self.use_image_debugger = data_config.show_image_indices is not None
         
         if self.use_image_debugger:

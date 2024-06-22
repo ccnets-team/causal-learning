@@ -26,7 +26,6 @@ class NetworkConfig:
         self.num_layers = 0
         self.d_model = 0
         self.dropout = 0
-        self.device = None
 
     def apply_config(self, config_gen: Generator):
         """
@@ -62,23 +61,31 @@ class ModelParameters(NetworkConfig):
     
     Attributes:
         model_name (str): Identifier for the core model. A value of 'none' indicates no core model is used.
+        obs_shape (list): Observational shape of the input.
         y_dim (int or None): Dimension parameter y.
         e_dim (int or None): Dimension parameter e.
+        y_scale (int or None): Scaling factor for dimension y.
+        task_type (str or None): Type of task the model is addressing.
         device (torch.device or None): Device to run the model on.
+        use_seq_input (bool): Flag to indicate if sequential input is used.
     """
     model_name: str = 'gpt'
     obs_shape: list = field(default_factory=list)
     y_dim: int = None
     e_dim: int = None
+    y_scale: int = None
+    task_type: str = None
     device: torch.device = None
-
+    use_seq_input: bool = False
+    
     def __post_init__(self):
-        if self.model_name.lower() == 'none':
-            self.reset()
+        if self.model_name == 'gpt':
+            self.use_seq_input = True
 
     def __repr__(self):
-        return (f"ModelParameters(model_name='{self.model_name}', obs_shape={self.obs_shape}, "
-                f"y_dim={self.y_dim}, e_dim={self.e_dim}, device={self.device})")
+        return (f"ModelParameters(model_name='{self.model_name}', num_layers={self.num_layers}, "
+                f"d_model={self.d_model}, dropout={self.dropout}, y_dim={self.y_dim}, e_dim={self.e_dim}, "
+                f"device={self.device}, use_seq_input={self.use_seq_input})\n")
         
 @dataclass
 class TrainingParameters:

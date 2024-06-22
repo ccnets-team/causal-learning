@@ -12,7 +12,7 @@ from tools.tensor_utils import adjust_tensor_dim
 from framework.utils.ccnet_utils import determine_activation_function, generate_condition_data
 
 class CausalCooperativeNet:
-    def __init__(self, networks, model_params, data_config, device):
+    def __init__(self, networks, model_params, device):
         """
         Initializes the Cooperative Network with specified model parameters and computational device.
 
@@ -23,18 +23,14 @@ class CausalCooperativeNet:
             device (str): Device ('cpu' or 'cuda') to run the models on.
         """
         # Initialize model names and configurations.        
-        model_name = model_params.model_name
-        if model_name == 'gpt':
-            self.use_seq_input = True 
-        else:
-            self.use_seq_input = False
-        self.task_type, self.label_size, self.label_scale = data_config.task_type, data_config.label_size, data_config.label_scale
+        self.use_seq_input = model_params.use_seq_input
+        self.task_type, self.label_scale = model_params.task_type, model_params.y_scale
         task_act_fn = determine_activation_function(self.task_type)
             
         # Add model_name prefix to the network names
         network_names = ["explainer", "reasoner", "producer"]
-        self.model_name = model_name
-        self.network_names = [f"{model_name}_{name}" for name in network_names]
+        self.model_name = model_params.model_name
+        self.network_names = [f"{self.model_name}_{name}" for name in network_names]
         self.explainer =  Explainer(networks[0], model_params, act_fn='tanh').to(device)
         self.reasoner =  Reasoner(networks[1], model_params, act_fn=task_act_fn).to(device)
         self.producer =  Producer(networks[2], model_params, act_fn="none").to(device)

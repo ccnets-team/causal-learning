@@ -12,7 +12,7 @@ import torch
 
 # Base class for trainers
 class TrainerBase(OptimizationManager):
-    def __init__(self, networks, training_params, optimization_params, data_config, device):
+    def __init__(self, networks, model_params, training_params, optimization_params, device):
         self.train_iter = 0
         learning_params = [
             {'lr': optimization_params.learning_rate, 
@@ -28,8 +28,8 @@ class TrainerBase(OptimizationManager):
         self.error_function = training_params.error_function
         
         self.device = device
-        self.task_type = data_config.task_type
-        self.obs_shape = data_config.obs_shape
+        self.task_type = model_params.task_type
+        self.obs_shape = model_params.obs_shape
 
     def set_train(self, train: bool):
         for network in self.networks:

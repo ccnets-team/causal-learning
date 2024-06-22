@@ -22,7 +22,7 @@ from tools.report import calculate_test_results
 from tools.print import print_ml_params, DEFAULT_PRINT_INTERVAL
 
 from framework.ccnet.causal_cooperative_net import CausalCooperativeNet
-from tools.setting.ml_config import configure_ccnet, determine_max_iters_and_epoch
+from tools.setting.ml_config import determine_max_iters_and_epoch, update_model_params_from_data, configure_networks
 from tools.tensor_utils import select_last_sequence_elements, manage_batch_dimensions, prepare_batches, get_random_batch
 from nn.utils.init_layer import set_random_seed
 import torch
@@ -32,7 +32,8 @@ class TrainerHub:
         self.data_config = data_config
         self.device = device
         
-        self.initialize_usage_flags(ml_params)
+        update_model_params_from_data(self.data_config, ml_params.model)
+        self.initialize_usage_flags(ml_params.model)
         
         self.task_type = self.data_config.task_type
         self.label_size = self.data_config.label_size
@@ -49,13 +50,12 @@ class TrainerHub:
         if self.helper.use_wandb:
             wandb_end()
 
-    def initialize_usage_flags(self, ml_params):
-        self.is_seq_input = ml_params.model_name == 'gpt'
+    def initialize_usage_flags(self, model_params):
+        self.use_seq_input = model_params.use_seq_input
         
     def initialize_training_params(self, ml_params):
         
         determine_max_iters_and_epoch(ml_params)
-        
         training_params = ml_params.training
         batch_size = training_params.batch_size
         self.batch_size = batch_size
@@ -69,16 +69,16 @@ class TrainerHub:
             
     def setup_models(self, ml_params):
         model_params, training_params, optimization_params = ml_params
-        networks, network_params = configure_ccnet(model_params, self.data_config)
-        self.ccnet = CausalCooperativeNet(networks, network_params, self.data_config, self.device)
-        self.trainer = CausalTrainer(self.ccnet, training_params, optimization_params, self.data_config)
+        networks = configure_networks(model_params)
+        self.ccnet = CausalCooperativeNet(networks, model_params, self.device)
+        self.trainer = CausalTrainer(self.ccnet, model_params, training_params, optimization_params)
         
     def train_iteration(self, source_batch, target_batch):
         self.start_iteration()
         
         source_batch, target_batch, padding_mask = prepare_batches(source_batch, target_batch, self.label_size, self.task_type, self.device)        
 
-        source_batch, target_batch, padding_mask = manage_batch_dimensions(self.is_seq_input, source_batch, target_batch, padding_mask)
+        source_batch, target_batch, padding_mask = manage_batch_dimensions(self.use_seq_input, source_batch, target_batch, padding_mask)
         ccnet_metric = self.trainer.train_models(source_batch, target_batch, padding_mask)
             
         return ccnet_metric
@@ -143,7 +143,7 @@ class TrainerHub:
         return test_metrics
     
     def should_select_last_sequence(self, padding_mask):
-        return self.is_seq_input and padding_mask is not None
+        return self.use_seq_input and padding_mask is not None
         
     def start_iteration(self):
         set_random_seed(self.helper.iters)

@@ -60,16 +60,11 @@ def wandb_init(data_config, ml_params):
         raise RuntimeError("wandb is not installed. Please install wandb to use wandb_init.")
     wandb.login()
     
-    data_config_dict = rename_this_function(data_config, 'data')
     model_params_dict = rename_this_function(ml_params.model, 'model')
     optimization_params_dict = rename_this_function(ml_params.optimization, 'optimization')
     training_params_dict = rename_this_function(ml_params.training, 'training')
     
-    # Remove duplicate variables from model_params_dict
-    for key in ['obs_shape', 'y_dim', 'e_dim']:
-        model_params_dict['model'].pop(key, None)
-    
-    merged_config_dict = {**data_config_dict, **model_params_dict, **optimization_params_dict, **training_params_dict}
+    merged_config_dict = {**model_params_dict, **optimization_params_dict, **training_params_dict}
     
     trainer_name = 'causal-learning'
     
