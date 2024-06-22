@@ -61,7 +61,7 @@ class TransposeResnet(nn.Module):
             x = decoder_block(x, skip)
 
         if x.size(2) != self.height or x.size(3) != self.width:
-            x = F.interpolate(x, size=(self.height, self.width), mode='bilinear', align_corners=False)
+            x = F.interpolate(x, size=(self.height, self.width), mode='bilinear', align_corners=True)
 
         # Apply the final layer
         x = self.final_layer(x)
