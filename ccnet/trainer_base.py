@@ -12,24 +12,24 @@ import torch
 
 # Base class for trainers
 class TrainerBase(OptimizationManager):
-    def __init__(self, networks, model_params, training_params, optimization_params, device):
+    def __init__(self, networks, model_config, train_config, opt_config, device):
         self.train_iter = 0
         learning_params = [
-            {'lr': optimization_params.learning_rate, 
-             'decay_rate_100k': optimization_params.decay_rate_100k,
-             'scheduler_type': optimization_params.scheduler_type, 
-             'clip_grad_range': optimization_params.clip_grad_range, 
-             'max_grad_norm': optimization_params.max_grad_norm}
+            {'lr': opt_config.learning_rate, 
+             'decay_rate_100k': opt_config.decay_rate_100k,
+             'scheduler_type': opt_config.scheduler_type, 
+             'clip_grad_range': opt_config.clip_grad_range, 
+             'max_grad_norm': opt_config.max_grad_norm}
             for _ in networks
         ]
         OptimizationManager.__init__(self, networks, learning_params)
         self.networks = networks
-        self.initial_lr = optimization_params.learning_rate
-        self.error_function = training_params.error_function
+        self.initial_lr = opt_config.learning_rate
+        self.error_function = train_config.error_function
         
         self.device = device
-        self.task_type = model_params.task_type
-        self.obs_shape = model_params.obs_shape
+        self.task_type = model_config.task_type
+        self.obs_shape = model_config.obs_shape
 
     def set_train(self, train: bool):
         for network in self.networks:

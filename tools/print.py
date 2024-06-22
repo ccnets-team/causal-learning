@@ -15,7 +15,7 @@ DEFAULT_PRINT_INTERVAL = 100
 import pandas as pd
 import numpy as np
 from IPython.display import display
-from tools.setting.ml_params import MLParameters
+from tools.setting.ml_config import MLConfig
 from tools.setting.data_config import DataConfig
 
 def print_iter(epoch, num_epoch, iters, len_dataloader, et):
@@ -101,12 +101,12 @@ def print_checkpoint_info(parent, time_cost, epoch_idx, iter_idx, len_dataloader
         print_results(train_metrics, is_eval=False)
 
 # Main function to print all configurations including ML parameters and data configurations.
-def print_ml_params(trainer_name, ml_params: MLParameters, data_config: DataConfig):
+def print_ml_params(trainer_name, ml_config: MLConfig, data_config: DataConfig):
     print("Trainer Name:", trainer_name)
     print("\n")
 
     # Print all ML parameters
-    print_parameters(ml_params)
+    print_parameters(ml_config)
     
     # Print data configuration details
     print_dataconfig(data_config)

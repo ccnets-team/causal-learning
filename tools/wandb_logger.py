@@ -55,14 +55,14 @@ def rename_this_function(data_config, name_prefix=None):
         data_config_dict = {name_prefix: data_config_dict}
     return data_config_dict
 
-def wandb_init(data_config, ml_params):
+def wandb_init(data_config, ml_config):
     if wandb is None:
         raise RuntimeError("wandb is not installed. Please install wandb to use wandb_init.")
     wandb.login()
     
-    model_params_dict = rename_this_function(ml_params.model, 'model')
-    optimization_params_dict = rename_this_function(ml_params.optimization, 'optimization')
-    training_params_dict = rename_this_function(ml_params.training, 'training')
+    model_params_dict = rename_this_function(ml_config.model, 'model')
+    optimization_params_dict = rename_this_function(ml_config.optimization, 'optimization')
+    training_params_dict = rename_this_function(ml_config.training, 'training')
     
     merged_config_dict = {**model_params_dict, **optimization_params_dict, **training_params_dict}
     

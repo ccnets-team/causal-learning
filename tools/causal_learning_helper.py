@@ -10,11 +10,11 @@ import logging
 from tools.metric_tracker import MetricsTracker
 from torch.utils.tensorboard import SummaryWriter
 
-from tools.setting.ml_params import MLParameters 
+from tools.setting.ml_config import MLConfig 
 from tools.setting.data_config import DataConfig
 
 class CausalLearningHelper:
-    def __init__(self, parent, data_config: DataConfig, ml_params: MLParameters, device, use_print, use_wandb, print_interval):
+    def __init__(self, parent, ml_config: MLConfig, data_config: DataConfig, device, use_print, use_wandb, print_interval):
         self.parent = parent
         self.device = device
         
@@ -39,7 +39,7 @@ class CausalLearningHelper:
             self.image_debugger = ImageDebugger(image_model, data_config, self.device)
         
         self.data_config = data_config 
-        self.ml_params = ml_params
+        self.ml_config = ml_config
         self.begin_training = False
         
     def begin_train(self, dataset):
@@ -48,13 +48,13 @@ class CausalLearningHelper:
         
         self.begin_training = True
         if hasattr(dataset, 'max_seq_len'):
-            self.ml_params.training.max_seq_len = dataset.max_seq_len
+            self.ml_config.training.max_seq_len = dataset.max_seq_len
         
         if hasattr(dataset, 'min_seq_len'):
-            self.ml_params.training.min_seq_len = dataset.min_seq_len
+            self.ml_config.training.min_seq_len = dataset.min_seq_len
         
         if self.use_wandb:
-            wandb_init(self.data_config, self.ml_params)
+            wandb_init(self.data_config, self.ml_config)
         
         self.iters, self.cnt_checkpoints, self.cnt_print = 0, 0, 0  
         if self.use_image_debugger:

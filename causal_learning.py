@@ -13,7 +13,7 @@ from ccnet.causal_trainer import CausalTrainer
 from ccnet.causal_cooperative_net import CausalCooperativeNet
 
 from tools.causal_learning_helper import CausalLearningHelper
-from tools.setting.ml_params import MLParameters
+from tools.setting.ml_config import MLConfig
 from tools.setting.data_config import DataConfig
 from torch.utils.data import Dataset
 
@@ -22,56 +22,43 @@ from tools.wandb_logger import wandb_end, wandb_log_test_data
 from tools.report import calculate_test_results
 from tools.print import print_ml_params, DEFAULT_PRINT_INTERVAL
 
-from tools.setting.ml_config import determine_max_iters_and_epoch, update_model_params_from_data, configure_networks
+from tools.setting.config_setup import configure_ccnet_config, configure_networks
 from tools.tensor_utils import select_last_sequence_elements, manage_batch_dimensions, prepare_batches, get_random_batch
 from nn.utils.init_layer import set_random_seed
 import torch
 
 class CausalLearning:
-    def __init__(self, ml_params: MLParameters, data_config: DataConfig, device, use_print=False, use_wandb=False, print_interval=DEFAULT_PRINT_INTERVAL):
-        self.data_config = data_config
+    def __init__(self, ml_config: MLConfig, data_config: DataConfig, device, use_print=False, use_wandb=False, print_interval=DEFAULT_PRINT_INTERVAL):
         self.device = device
         
-        update_model_params_from_data(self.data_config, ml_params.model)
-        self.initialize_usage_flags(ml_params.model)
+        model_config, train_config, opt_config = ml_config
+        ccnet_config = configure_ccnet_config(data_config, model_config)
         
-        self.task_type = self.data_config.task_type
-        self.label_size = self.data_config.label_size
-        self.label_scale = self.data_config.label_scale
+        self.use_seq_input = ccnet_config.use_seq_input
+        self.task_type = ccnet_config.task_type
+        self.label_size = ccnet_config.y_dim
+        self.label_scale = ccnet_config.y_scale
+
+        networks = configure_networks(ccnet_config)
+        self.ccnet = CausalCooperativeNet(networks, model_config, self.device)
+        self.trainer = CausalTrainer(self.ccnet, model_config, train_config, opt_config)
         
-        self.setup_models(ml_params)
-        self.initialize_training_params(ml_params)
+        batch_size = train_config.batch_size
+        self.batch_size = batch_size
+        self.eval_batch_size = 4 * batch_size
+        self.test_batch_size = 10 * batch_size
+        self.num_epoch = train_config.num_epoch
+                
+        print_ml_params("causal_trainer", ml_config, data_config)
         
-        print_ml_params("causal_trainer", ml_params, data_config)
-        
-        self.helper = CausalLearningHelper(self, data_config, ml_params, device, use_print, use_wandb, print_interval)
+        self.helper = CausalLearningHelper(self, ml_config, data_config, device, use_print, use_wandb, print_interval)
         
     def __exit__(self):
         if self.helper.use_wandb:
             wandb_end()
-
-    def initialize_usage_flags(self, model_params):
-        self.use_seq_input = model_params.use_seq_input
-        
-    def initialize_training_params(self, ml_params):
-        
-        determine_max_iters_and_epoch(ml_params)
-        training_params = ml_params.training
-        batch_size = training_params.batch_size
-        self.batch_size = batch_size
-        self.eval_batch_size = 4 * batch_size
-        self.test_batch_size = 10 * batch_size
-        self.num_epoch = training_params.num_epoch
-        self.max_iters = training_params.max_iters
     
     def load_trainer(self):
         _load_trainer(self.helper.model_path, self.trainer)
-            
-    def setup_models(self, ml_params):
-        model_params, training_params, optimization_params = ml_params
-        networks = configure_networks(model_params)
-        self.ccnet = CausalCooperativeNet(networks, model_params, self.device)
-        self.trainer = CausalTrainer(self.ccnet, model_params, training_params, optimization_params)
         
     def train_iteration(self, source_batch, target_batch):
         self.start_iteration()
