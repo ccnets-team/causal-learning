@@ -32,7 +32,7 @@ class CausalLearning:
         self.device = device
         
         model_config, train_config, opt_config = ml_config
-        ccnet_config = configure_ccnet_config(data_config, model_config)
+        ccnet_config = configure_ccnet_config(data_config, model_config, device)
         
         self.use_seq_input = ccnet_config.use_seq_input
         self.task_type = ccnet_config.task_type

@@ -8,7 +8,7 @@ class FeatureToImageShape(nn.Module):
         self.input_size = input_size
         self.image_shape = image_shape
         self.image_elements = torch.prod(torch.tensor(image_shape[1:])).item()
-        self.feature_shape = (1,) + image_shape[1:]
+        self.feature_shape = [1] + list(image_shape[1:])
         
         # Calculate how many times to repeat the feature to match the target image size
         self.repeat_times = self.image_elements // self.input_size

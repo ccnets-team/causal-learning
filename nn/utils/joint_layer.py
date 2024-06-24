@@ -11,7 +11,7 @@ try:
     from nn.utils.test import JointLayer
 except ImportError:
     class JointLayer(nn.Module):
-        def __init__(self, parent_name, *input_shapes, output_shape = None, act_fn='tanh'):
+        def __init__(self, parent_name, *input_shapes, output_shape = None, act_fn='tanh', device = 'cuda'):
             super(JointLayer, self).__init__()
             
             input_sizes = convert_shape_to_size(input_shapes)
@@ -26,20 +26,23 @@ except ImportError:
                 
                 image_idx = image_indices[0]
                 image_shape = input_shapes[image_idx]
-                self.embedding_layers = nn.ModuleList([
+                embedding_layers = nn.ModuleList([
                     FeatureToImageShape(input_sizes[idx], image_shape)
                     if idx not in image_indices else nn.Identity()
                     for idx in range(len(input_sizes))
                 ])
-                self.final_layer = nn.Identity()
-                self.output_shape = (image_shape[0] + num_features,) + image_shape[1:]
+                final_layer = nn.Identity()
+                self.output_shape = [image_shape[0] + num_features] + list(image_shape[1:])
             else:
-                self.embedding_layers = nn.ModuleList([nn.Sequential(
+                embedding_layers = nn.ModuleList([nn.Sequential(
                         nn.Linear(input_size, output_size)
                     ) for input_size in input_sizes])
-                self.final_layer = get_activation_function(act_fn, output_size)
+                final_layer = get_activation_function(act_fn, output_size)
                 self.output_shape = output_size
-
+                
+            self.embedding_layers = embedding_layers.to(device)
+            self.final_layer = final_layer.to(device)
+        
         def forward(self, *inputs):
             embedded_inputs = [emb_layer(feature) for emb_layer, feature in zip(self.embedding_layers, inputs)]
             if self.use_image:

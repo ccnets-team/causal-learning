@@ -33,14 +33,15 @@ class Producer(nn.Module):
         """
         super(Producer, self).__init__()
         
-        output_shape, d_model, explain_size, target_size = (config.obs_shape, 
-                                                            config.d_model, 
-                                                            config.e_dim, 
-                                                            config.y_dim)
+        output_shape, d_model, explain_size, target_size, device = (config.obs_shape, 
+                                                                    config.d_model, 
+                                                                    config.e_dim, 
+                                                                    config.y_dim,
+                                                                    config.device)
         self.__model_name = self._get_name()
         
         # Embedding layer for combined condition and explanation inputs
-        self.joint_layer = JointLayer(self.__model_name, target_size, explain_size, output_shape = d_model)
+        self.joint_layer = JointLayer(self.__model_name, target_size, explain_size, output_shape = d_model, device = device)
         self.flip_tensor = FlipTensor(output_shape)
         
         producer_config = NetConfig(config, self.__model_name, d_model, output_shape, act_fn)

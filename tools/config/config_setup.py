@@ -25,7 +25,7 @@ def configure_networks(model_config):
 
     return networks
 
-def configure_ccnet_config(data_config, model_config):
+def configure_ccnet_config(data_config, model_config, device):
     """
     Configures CCNet settings based on the provided data and model configurations.
 
@@ -65,7 +65,8 @@ def configure_ccnet_config(data_config, model_config):
         y_dim=label_size,
         e_dim=explain_size,
         task_type=task_type,
-        y_scale=label_scale
+        y_scale=label_scale,
+        device = device
     )
 
     return ccnet_config

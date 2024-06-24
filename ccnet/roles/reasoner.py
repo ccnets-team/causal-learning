@@ -38,13 +38,14 @@ class Reasoner(nn.Module):
 
         self.__model_name = self._get_name()
 
-        input_shape, explain_size, d_model, output_size = (config.obs_shape,
-                                                           config.e_dim,
-                                                           config.d_model,
-                                                           config.y_dim)
+        input_shape, explain_size, d_model, output_size, device = (config.obs_shape,
+                                                                   config.e_dim,
+                                                                   config.d_model,
+                                                                   config.y_dim,
+                                                                   config.device)
 
         joint_shape = d_model if len(input_shape) == 1 else input_shape
-        self.joint_layer = JointLayer(self.__model_name, input_shape, explain_size, output_shape = joint_shape)
+        self.joint_layer = JointLayer(self.__model_name, input_shape, explain_size, output_shape = joint_shape, device = device)
         net_config = NetConfig(config, self.__model_name, self.joint_layer.output_shape, output_size, act_fn)
         self.net = net(net_config)
         
