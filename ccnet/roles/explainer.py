@@ -6,7 +6,7 @@
 
 import torch.nn as nn
 from nn.utils.init_layer import init_weights
-from tools.config.ccnet_config import CooperativeNetworkConfig
+from tools.config.ccnet_config import CooperativeNetworkConfig as NetConfig
 from nn.utils.transform_layer import TransformLayer
 
 class Explainer(nn.Module):
@@ -21,27 +21,27 @@ class Explainer(nn.Module):
         net (nn.Module): The main neural network module that processes the embedded or raw input.
     """
 
-    def __init__(self, net, network_params, act_fn='none'):
+    def __init__(self, net, config, act_fn='none'):
         """
         Initializes the Explainer module with the specified network architecture and parameters.
 
         Parameters:
-            net (callable): A callable that returns an nn.Module when passed network_params.
-            network_params (object): Parameters specific to the neural network being used.
+            net (callable): A callable that returns an nn.Module when passed config.
+            config (object): Parameters specific to the neural network being used.
             act_fn (str): The activation function name to use in the final layer (default 'none').
         """
         super(Explainer, self).__init__()
         
         self.__model_name = self._get_name()
 
-        input_shape, d_model, output_size = (network_params.obs_shape, 
-                                             network_params.d_model, 
-                                             network_params.e_dim)
+        input_shape, d_model, output_size = (config.obs_shape, 
+                                             config.d_model, 
+                                             config.e_dim)
 
         self.embedding_layer = TransformLayer(input_shape, d_model, last_act_fn='tanh')
-        explainer_config = CooperativeNetworkConfig(network_params, self.__model_name, self.embedding_layer.output_shape, output_size, act_fn)
+        net_config = NetConfig(config, self.__model_name, self.embedding_layer.output_shape, output_size, act_fn)
 
-        self.net = net(explainer_config)
+        self.net = net(net_config)
         
         self.apply(lambda module: init_weights(module, init_type='normal'))
 

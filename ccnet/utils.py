@@ -1,36 +1,65 @@
 import torch
+from torch import nn
 import numpy as np
 
-def convert_explanation_to_image_shape(explanation, image_shape, explain_size, image_elements):
-    """
-    Convert the explanation vector to match the target image shape with the first dimension set to 1.
-    
-    Args:
-        explanation (torch.Tensor): The explanation vector of shape [batch_size, explain_size].
-        image_shape (tuple): The shape of the target image, e.g., (channels, height, width).
-        explain_size (int): The size of the explanation vector.
+class FeatureToImageShape(nn.Module):
+    def __init__(self, input_size, image_shape):
+        super(FeatureToImageShape, self).__init__()
+        self.input_size = input_size
+        self.image_shape = image_shape
+        self.image_elements = torch.prod(torch.tensor(image_shape[1:])).item()
+        self.feature_shape = (1,) + image_shape[1:]
+        
+        # Calculate how many times to repeat the feature to match the target image size
+        self.repeat_times = self.image_elements // self.input_size
+        self.remaining_elements = self.image_elements % self.input_size
+        
+    def forward(self, feature):
+        """
+        Convert the feature vector to match the target image shape with the first dimension set to 1.
+        
+        Args:
+            feature (torch.Tensor): The feature vector of shape [batch_size, input_size].
 
-    Returns:
-        torch.Tensor: Explanation vector expanded and reshaped to match the image shape.
-    """
-    # Set first dim to 1, rest match target shape
-    explain_shape = [1] + list(image_shape[1:])
+        Returns:
+            torch.Tensor: Feature vector expanded and reshaped to match the image shape.
+        """
+        batch_size = feature.size(0)
+
+        # Repeat and handle any remaining elements
+        expanded_feature = feature.repeat_interleave(self.repeat_times, dim=-1)
+        if self.remaining_elements > 0:
+            expanded_feature = torch.cat([expanded_feature, feature[:,...,:self.remaining_elements]], dim=-1)
+        
+        # Reshape the feature vector to match the target image shape
+        reshaped_feature = expanded_feature.view(batch_size, *self.feature_shape)
+        
+        return reshaped_feature
     
-    # Repeat the explanation to match the total volume of the target image shape
-    repeat_times = image_elements // explain_size
-    e1 = explanation.repeat(1, repeat_times)
-    
-    # Handle any remaining elements if the image elements aren't perfectly divisible by explain_size
-    remaining_elements = image_elements % explain_size
-    e2 = explanation[:, :remaining_elements]
-    
-    # Concatenate the repeated and zero-padded parts
-    expanded_e = torch.cat([e1, e2], dim=-1)
-    
-    # Reshape the explanation vector to match the new shape
-    expanded_e = expanded_e.view(-1, *explain_shape)
-    
-    return expanded_e
+class FlipTensor(nn.Module):
+    def __init__(self, output_shape):
+        super(FlipTensor, self).__init__()
+        self.use_image = len(output_shape) != 1
+
+    def forward(self, tensor, padding_mask=None):
+        """
+        Reverses the order of elements in the tensor along the specified dimension.
+
+        Parameters:
+            tensor (Tensor): The tensor to be reversed.
+            padding_mask (Tensor, optional): Optional padding mask to reverse.
+
+        Returns:
+            Tuple[Tensor, Tensor]: The reversed tensor and the reversed padding mask.
+        """
+        if self.use_image:
+            return tensor, padding_mask
+        
+        reversed_tensor = torch.flip(tensor, dims=[1])
+        if padding_mask is not None:
+            reversed_padding_mask = torch.flip(padding_mask, dims=[1])
+            return reversed_tensor, reversed_padding_mask
+        return reversed_tensor, None
 
 def determine_activation_function(task_type):
     """
@@ -136,11 +165,10 @@ def convert_shape_to_size(feature_shapes):
     def extract_size(shape):
         """Extract the size from various types of shape representations."""
         if isinstance(shape, (list, tuple, torch.Size)):
-            # If it's a list, tuple, or torch.Size, take the last dimension
-            if isinstance(shape[-1], (list, tuple)):
-                raise ValueError(f"Unsupported nested shape type: {type(shape)}")
-            else:
+            if len(shape) == 1:
                 return shape[-1]
+            else:
+                return list(shape)
         elif isinstance(shape, (int, np.integer)):
             # Handle both Python and numpy integers
             return int(shape)
@@ -148,9 +176,18 @@ def convert_shape_to_size(feature_shapes):
             raise ValueError(f"Unsupported shape type: {type(shape)}")
 
     if isinstance(feature_shapes, (list, tuple)):
-        for nf in feature_shapes:
-            feature_sizes.append(extract_size(nf))
+        for shape in feature_shapes:
+            feature_sizes.append(extract_size(shape))
     else:
         return extract_size(feature_shapes)
     
     return feature_sizes
+
+def find_image_indices(shapes):
+    image_indices = []
+            
+    if isinstance(shapes, (list, tuple)):
+        for idx, shape in enumerate(shapes):
+            if isinstance(shape, (list, tuple)) and len(shape) == 3:
+                image_indices.append(idx)
+    return image_indices
