@@ -79,9 +79,8 @@ class CausalLearning:
             for iters, (source_batch, target_batch) in enumerate(tqdm_notebook(dataloader, desc='Iterations', leave=False)):
                 ccnet_metric = self.train_iteration(source_batch, target_batch)
 
-                train_results = self.evaluate(trainset)
-                
-                test_results = self.evaluate(testset)
+                train_results = self.evaluate(trainset) if testset is not None else None
+                test_results = self.evaluate(testset) if testset is not None else None
 
                 self.helper.finalize_training_step(epoch, iters, len(dataloader), ccnet_metric, train_results, test_results)
 
