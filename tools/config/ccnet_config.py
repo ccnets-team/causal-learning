@@ -73,9 +73,6 @@ class CCNetConfig(NetworkConfig):
         use_seq_input (bool): Flag to indicate if sequential input is used.
     """
     model_name: str = None
-    num_layers: int = 5
-    d_model: int = 256
-    dropout: float = 0.05
     obs_shape: List[Any] = field(default_factory=list)
     y_dim: int = None
     e_dim: int = None
