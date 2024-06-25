@@ -39,15 +39,13 @@ class TemplateDataset(BaseDataset):
         self.pre_batch_size = kwargs.get('pre_batch_size', PRE_BATCH_SIZE)
         self.buffer_size = self.pre_batch_size * (self.buffer_size//self.pre_batch_size)
         
-        self.min_seq_len = min_seq_len
-        self.max_seq_len = max_seq_len
         self.input_wrapper = input_wrapper
         
         self.seed_count = 0
         
-        self.use_seq = bool(self.max_seq_len or self.min_seq_len)
-        self.min_seq_len = self.min_seq_len or (self.max_seq_len // 2 if self.max_seq_len else 1)
-        self.max_seq_len = self.max_seq_len or (2 * self.min_seq_len if self.min_seq_len else 1)
+        self.use_seq = bool(max_seq_len or min_seq_len)
+        self.min_seq_len = min_seq_len or (max_seq_len // 2 if max_seq_len else 1)
+        self.max_seq_len = max_seq_len or (2 * min_seq_len if min_seq_len else 1)
 
         self.shuffle_indices()
         self.precompute_batch()

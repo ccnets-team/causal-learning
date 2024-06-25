@@ -12,6 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from tools.config.ml_config import MLConfig 
 from tools.config.data_config import DataConfig
+from tools.IO.print import print_ml_params
 
 class CausalLearningHelper:
     def __init__(self, parent, ml_config: MLConfig, data_config: DataConfig, device, use_print, use_wandb, print_interval):
@@ -55,10 +56,12 @@ class CausalLearningHelper:
         
         if self.use_wandb:
             wandb_init(self.data_config, self.ml_config)
-        
+
         self.iters, self.cnt_checkpoints, self.cnt_print = 0, 0, 0  
         if self.use_image_debugger:
             self.image_debugger.initialize_(dataset)
+
+        print_ml_params("causal_trainer", self.ml_config, self.data_config)
     
     def should_checkpoint(self):
         return self.cnt_checkpoints % self.num_checkpoints == 0 and self.cnt_checkpoints != 0

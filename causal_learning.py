@@ -20,8 +20,7 @@ from torch.utils.data import Dataset
 from tools.IO.loader import get_data_loader, get_test_loader, _load_trainer
 from tools.logging.wandb_logger import wandb_end, wandb_log_test_data
 from tools.IO.report import calculate_test_results
-from tools.IO.print import print_ml_params, DEFAULT_PRINT_INTERVAL
-
+from tools.IO.print import  DEFAULT_PRINT_INTERVAL
 from tools.config.config_setup import configure_ccnet_config, configure_networks
 from tools.tensor.batch import select_last_sequence_elements, manage_batch_dimensions, prepare_batches, get_random_batch
 from nn.utils.init_layer import set_random_seed
@@ -49,8 +48,6 @@ class CausalLearning:
         self.test_batch_size = 10 * batch_size
         self.num_epoch = train_config.num_epoch
                 
-        print_ml_params("causal_trainer", ml_config, data_config)
-        
         self.helper = CausalLearningHelper(self, ml_config, data_config, device, use_print, use_wandb, print_interval)
         
     def __exit__(self):
