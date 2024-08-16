@@ -123,6 +123,24 @@ class TrainerBase(OptimizationManager):
         # Compute the discrepancy based on the specified error function
         if self.error_function == 'mse':
             discrepancy_tensor = (predict - target.detach()).square()
+            
+        elif self.error_function == 'rmsle':
+            # predict = torch.clamp(predict, min=0)
+            # target = torch.clamp(target, min=0)
+
+            # Compute logs safely
+            log_pred = torch.log1p(predict)
+            log_true = torch.log1p(target)
+
+            # Calculate the squared differences of the logarithmic values
+            squared_log_error = torch.square(log_pred - log_true)
+
+            # Mean squared log error
+            mean_squared_log_error = torch.mean(squared_log_error)
+
+            # Root of the mean squared log error to get RMSLE
+            discrepancy_tensor = torch.sqrt(mean_squared_log_error)
+            
         else:
             discrepancy_tensor = (predict - target.detach()).abs()
         

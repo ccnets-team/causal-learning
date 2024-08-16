@@ -147,10 +147,44 @@ def get_test_results(inferred_y, target_y, task_type, num_classes, average='macr
         else:
             r2 = 1 - ss_res / ss_total
 
+        rmsle = calculate_rmsle(inferred_y, target_y)
+        
         metrics['mse'] = mse.item()
         metrics['mae'] = mae.item()
         metrics['rmse'] = rmse.item()
         metrics['r2'] = r2.item()
-
+        metrics['rmsle'] = rmsle.item()
+        
     return metrics
-    
+
+
+def calculate_rmsle(y_pred, y_true):
+    """
+    Calculate the Root Mean Squared Logarithmic Error (RMSLE) using PyTorch.
+    Ensure non-negative predictions and actuals to avoid NaN values in logs.
+
+    Args:
+    y_pred (torch.Tensor): Predicted values, ensured non-negative
+    y_true (torch.Tensor): Actual values, ensured non-negative
+
+    Returns:
+    torch.Tensor: The RMSLE value
+    """
+    # Ensure non-negative values (RMSLE assumes non-negative targets and predictions)
+    y_pred = torch.clamp(y_pred, min=0)
+    y_true = torch.clamp(y_true, min=0)
+
+    # Compute logs safely
+    log_pred = torch.log1p(y_pred)  # safe as y_pred is non-negative
+    log_true = torch.log1p(y_true)  # safe as y_true is non-negative
+
+    # Calculate squared log error
+    squared_log_error = torch.square(log_pred - log_true)
+
+    # Compute mean squared log error
+    mean_squared_log_error = torch.mean(squared_log_error)
+
+    # Compute RMSLE
+    rmsle = torch.sqrt(mean_squared_log_error)
+
+    return rmsle
