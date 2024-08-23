@@ -84,7 +84,7 @@ def convert_to_tensor(values):
     except ValueError as e:
         raise ValueError(f"Unsupported data type for tensor conversion: {type(values)}. Error: {e}")
 
-def get_test_results(inferred_y, target_y, task_type, num_classes, average='macro'):
+def get_test_results(inferred_y, target_y, task_type, num_classes, average='none'):
     """
     Calculates performance metrics for tasks using PyTorch tensors that might have batch and sequence dimensions.
     Parameters:
@@ -98,6 +98,10 @@ def get_test_results(inferred_y, target_y, task_type, num_classes, average='macr
     - metrics: A dictionary containing relevant performance metrics.
     """
     metrics = {}
+    if task_type in ['binary_classification']:
+        average = 'binary'
+    elif task_type in ['multi_class_classification', 'multi_class_classification', 'ordinal_regression']:
+        average = 'macro'
     
     # Check inferred_y is tensor
     if not isinstance(inferred_y, torch.Tensor):

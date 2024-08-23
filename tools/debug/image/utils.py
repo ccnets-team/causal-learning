@@ -62,7 +62,7 @@ def add_celebA_animal_labels(draw, font, n_img_w, n_img_h):
         draw.text(position, label, font=font, fill=(0, 0, 0))
 
 def add_default_labels(draw, font, n_img_w, n_img_h):
-    labels = ["Explain from the right \n Feature from below"]
+    labels = ["Explain \n from the right \n Label \n from below"]
     positions = [(n_img_w // 8, n_img_h // 2 + n_img_h * i) for i in range(len(labels))]
     for label, position in zip(labels, positions):
         draw.text(position, label, font=font, fill="black")

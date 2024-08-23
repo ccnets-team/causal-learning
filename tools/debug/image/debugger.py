@@ -53,13 +53,13 @@ class ImageDebugger:
                 img_array = vutils.make_grid(generated_images, nrow=self.num_images, padding=0, normalize=True).numpy()
                 img_array = np.transpose(img_array, (1, 2, 0))
                 # Correcting indices for placing images
-                target_row_start = self.n_img_h * (i + 1)
-                target_row_end = self.n_img_h * (i + 2)
-                target_col_start = self.n_img_w * 1
-                target_col_end = self.n_img_w * (self.num_images + 1)
+                target_row_start = self.n_img_h * 1
+                target_row_end = self.n_img_h * (self.num_images + 1)
+                target_col_start = self.n_img_w * (i + 1)
+                target_col_end = self.n_img_w * (i + 2)
 
                 # Insert into canvas
-                self.m_canvas[target_row_start:target_row_end, target_col_start:target_col_end] = (img_array * 255).astype(np.uint8)
+                self.m_canvas[target_col_start:target_col_end, target_row_start:target_row_end] = (img_array * 255).astype(np.uint8)
 
     def display_image(self):
         """Display the image using IPython's display module with HTML for better control over image size and appearance."""
@@ -70,7 +70,9 @@ class ImageDebugger:
 
         # Prepare to draw on the image
         draw = ImageDraw.Draw(img)
-        font = ImageFont.load_default()  # Load default font
+        
+        font_size = 10
+        font = ImageFont.truetype("arial.ttf", font_size)  # Load default font
 
         # Add text to the image
         text_on_image(draw, font, self.n_img_w, self.n_img_h, self.dataset_name)
